@@ -1,70 +1,173 @@
-import Layout from '../components/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Users, Clock, Calendar, CheckCircle } from 'lucide-react';
+import { useEffect, useState } from "react";
+import Layout from "../components/Layout";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Users, Clock, Calendar, CheckCircle } from "lucide-react";
 
 const Dashboard = () => {
-  // Mock data
-  const stats = {
-    totalEmployees: 156,
-    todayClockIns: 134,
-    pendingLeaveRequests: 8,
-    onlineEmployees: 142
-  };
+  const [leaveRequests, setLeaveRequests] = useState([]);
 
-  const recentClockIns = [
-    { name: 'Sarah Johnson', time: '9:15 AM', location: 'Office - Floor 2' },
-    { name: 'Michael Chen', time: '9:02 AM', location: 'Remote - Home' },
-    { name: 'Emily Davis', time: '8:45 AM', location: 'Office - Floor 1' },
-    { name: 'James Wilson', time: '8:30 AM', location: 'Office - Floor 3' },
-  ];
+  const [stats, setStats] = useState({
+    totalEmployees: 0,
+    todayClockIns: 0,
+    pendingLeaveRequests: 0,
+    onlineEmployees: 0,
+  });
 
-  const leaveRequests = [
-    { name: 'Alex Thompson', type: 'Vacation', dates: 'Dec 20-25', days: 5 },
-    { name: 'Lisa Rodriguez', type: 'Sick Leave', dates: 'Dec 18', days: 1 },
-    { name: 'David Kim', type: 'Personal', dates: 'Dec 22-23', days: 2 },
-  ];
-  
+  const [todayClockIns, setTodayClockIns] = useState([]);
+
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+
+    const fetchDashboardData = async () => {
+      try {
+        // Clock-ins
+        const clockRes = await fetch(
+          `http://localhost:4000/api/attendance/admin/all-employee-attendance?startDate=${today}&endDate=${today}`
+        );
+        const clockData = await clockRes.json();
+
+        let todayClockIns = [];
+        if (clockData.data) {
+          todayClockIns = clockData.data
+            .filter((record) => record.type === "in")
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .map((item) => ({
+              name: item.employee_name,
+              location: item.address || "Office",
+              time: new Date(item.timestamp).toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+                timeZone: "Asia/Kolkata",
+              }),
+            }));
+        }
+
+        // Total Employees
+        const empRes = await fetch(
+          "http://localhost:4000/api/employee/getEmployees"
+        );
+        const empData = await empRes.json();
+
+        setTodayClockIns(todayClockIns);
+        setStats((prev) => ({
+          ...prev,
+          todayClockIns: todayClockIns.length,
+          onlineEmployees: todayClockIns.length,
+          totalEmployees: empData.length || 0,
+        }));
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  // Pending Leave Requests
+  useEffect(() => {
+    const fetchPendingLeaves = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:4000/api/admin/leave-requests/pending"
+        );
+        const data = await response.json();
+
+        if (response.ok) {
+          const formatted = data.data.map((item) => {
+            const start = new Date(item.start_date);
+            const end = new Date(item.end_date);
+            const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+            const options = { month: "short", day: "numeric" };
+            const dateString =
+              start.toDateString() === end.toDateString()
+                ? start.toLocaleDateString("en-US", options)
+                : `${start.toLocaleDateString(
+                    "en-US",
+                    options
+                  )} - ${end.toLocaleDateString("en-US", options)}`;
+
+            return {
+              name: item.employee_name,
+              type: item.type,
+              dates: dateString,
+              days: days,
+            };
+          });
+
+          setLeaveRequests(formatted);
+          setStats((prev) => ({
+            ...prev,
+            pendingLeaveRequests: formatted.length,
+          }));
+        } else {
+          console.error("Failed to fetch:", data.message);
+        }
+      } catch (err) {
+        console.error("Error fetching leave requests:", err);
+      }
+    };
+
+    fetchPendingLeaves();
+  }, []);
 
   return (
     <Layout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Welcome back! Here's your employee overview.</p>
+          <p className="text-gray-600">
+            Welcome back! Here's your employee overview.
+          </p>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Employees
+              </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalEmployees}</div>
-              <p className="text-xs text-muted-foreground">+2 from last month</p>
+              <p className="text-xs text-muted-foreground"></p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Clock-ins</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Today's Clock-ins
+              </CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.todayClockIns}</div>
-              <p className="text-xs text-muted-foreground">86% attendance rate</p>
+              <p className="text-xs text-muted-foreground"></p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Leave Requests</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Pending Leave Requests
+              </CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingLeaveRequests}</div>
-              <p className="text-xs text-muted-foreground">Requires your attention</p>
+              <div className="text-2xl font-bold">
+                {stats.pendingLeaveRequests}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Requires your attention
+              </p>
             </CardContent>
           </Card>
 
@@ -75,7 +178,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.onlineEmployees}</div>
-              <p className="text-xs text-muted-foreground">91% of total staff</p>
+              <p className="text-xs text-muted-foreground"></p>
             </CardContent>
           </Card>
         </div>
@@ -88,18 +191,26 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentClockIns.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 rounded bg-gray-50"
-                  >
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-sm text-gray-600">{item.location}</p>
+                {todayClockIns.length === 0 ? (
+                  <p className="text-gray-500 text-sm">
+                    No clock-ins yet for today.
+                  </p>
+                ) : (
+                  todayClockIns.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 rounded bg-gray-50"
+                    >
+                      <div>
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-sm text-gray-600">{item.location}</p>
+                      </div>
+                      <span className="text-sm font-medium text-green-600">
+                        {item.time}
+                      </span>
                     </div>
-                    <span className="text-sm font-medium text-green-600">{item.time}</span>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -121,7 +232,9 @@ const Dashboard = () => {
                         {item.type} - {item.dates}
                       </p>
                     </div>
-                    <span className="text-sm font-medium text-orange-600">{item.days} days</span>
+                    <span className="text-sm font-medium text-orange-600">
+                      {item.days} days
+                    </span>
                   </div>
                 ))}
               </div>

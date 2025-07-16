@@ -1,55 +1,74 @@
-import { useEffect, useState } from 'react';
-import Layout from '../components/Layout';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Calendar, Clock, MapPin, Filter, Search, Download } from 'lucide-react';
-import api from '../hooks/useApi';
+import { useEffect, useState } from "react";
+import Layout from "../components/Layout";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Filter,
+  Search,
+  Download,
+} from "lucide-react";
+import api from "../hooks/useApi";
 
 const Attendance = () => {
-    const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split("T")[0];
   const [filters, setFilters] = useState({
-    employee: 'all',
+    employee: "all",
     startDate: today,
     endDate: today,
-    location: 'all'
+    location: "all",
   });
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [attendance,setAttendance] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(false);
 
-
   const employees = [
-    { id: 1, name: 'Sarah Johnson' },
-    { id: 2, name: 'Michael Chen' },
-    { id: 3, name: 'Emily Davis' },
-    { id: 4, name: 'James Wilson' }
+    { id: 1, name: "Sarah Johnson" },
+    { id: 2, name: "Michael Chen" },
+    { id: 3, name: "Emily Davis" },
+    { id: 4, name: "James Wilson" },
   ];
 
   const locations = [
-    'Office - Floor 1',
-    'Office - Floor 2',
-    'Office - Floor 3',
-    'Remote - Home'
+    "Office - Floor 1",
+    "Office - Floor 2",
+    "Office - Floor 3",
+    "Remote - Home",
   ];
 
   const fetchAttendance = async () => {
     try {
-        setLoading(true);
-        const params = {
-      startDate: filters.startDate,
-      endDate: filters.endDate
-    };
+      setLoading(true);
+      const params = {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      };
 
-      const res = await api.get(`/attendance`,{ params }
-    //     {
-    //     headers:{
-    //         Authorization: `Bearer ${user.token}`
-    //     }
-    //   }
+      const res = await api.get(
+        `/attendance/admin/all-employee-attendance`,
+        { params }
+        //     {
+        //     headers:{
+        //         Authorization: `Bearer ${user.token}`
+        //     }
+        //   }
       );
       console.log(res);
       setAttendance(res.data.data || []);
@@ -64,25 +83,27 @@ const Attendance = () => {
     fetchAttendance();
   }, [filters]);
 
-//   const filteredRecords = attendanceRecords.filter(record => {
-//     const matchesEmployee = filters.employee === 'all' || record.employeeId.toString() === filters.employee;
-//     const matchesSearch = record.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-//       record.location.toLowerCase().includes(searchTerm.toLowerCase());
-//     const matchesLocation = filters.location === 'all' || record.location === filters.location;
-//     const matchesDateRange = true; // Placeholder
-//     return matchesEmployee && matchesSearch && matchesLocation && matchesDateRange;
-//   });
+  //   const filteredRecords = attendanceRecords.filter(record => {
+  //     const matchesEmployee = filters.employee === 'all' || record.employeeId.toString() === filters.employee;
+  //     const matchesSearch = record.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //       record.location.toLowerCase().includes(searchTerm.toLowerCase());
+  //     const matchesLocation = filters.location === 'all' || record.location === filters.location;
+  //     const matchesDateRange = true; // Placeholder
+  //     return matchesEmployee && matchesSearch && matchesLocation && matchesDateRange;
+  //   });
 
   const handleFilterChange = (field, value) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
+    setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleExport = () => {
-    console.log('Exporting attendance records...');
+    console.log("Exporting attendance records...");
   };
 
   const getTotalHours = () => {
-    return attendance.reduce((total, record) => total + record.hours, 0).toFixed(1);
+    return attendance
+      .reduce((total, record) => total + record.hours, 0)
+      .toFixed(1);
   };
 
   return (
@@ -90,7 +111,9 @@ const Attendance = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Attendance Records</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Attendance Records
+            </h1>
             <p className="text-gray-600">View and filter employee attendance</p>
           </div>
           <Button onClick={handleExport}>
@@ -107,30 +130,40 @@ const Attendance = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+              {/* <div className="space-y-2">
                 <Label>Employee</Label>
-                <Select value={filters.employee} onValueChange={(value) => handleFilterChange('employee', value)}>
+                <Select
+                  value={filters.employee}
+                  onValueChange={(value) =>
+                    handleFilterChange("employee", value)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="All employees" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Employees</SelectItem>
                     {employees.map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id.toString()}>
+                      <SelectItem
+                        key={employee.id}
+                        value={employee.id.toString()}
+                      >
                         {employee.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </div> */}
 
               <div className="space-y-2">
                 <Label>Start Date</Label>
                 <Input
                   type="date"
                   value={filters.startDate}
-                  onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("startDate", e.target.value)
+                  }
                 />
               </div>
 
@@ -139,13 +172,20 @@ const Attendance = () => {
                 <Input
                   type="date"
                   value={filters.endDate}
-                  onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("endDate", e.target.value)
+                  }
                 />
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label>Location</Label>
-                <Select value={filters.location} onValueChange={(value) => handleFilterChange('location', value)}>
+                <Select
+                  value={filters.location}
+                  onValueChange={(value) =>
+                    handleFilterChange("location", value)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="All locations" />
                   </SelectTrigger>
@@ -158,10 +198,10 @@ const Attendance = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </div> */}
             </div>
 
-            <div className="flex gap-4">
+            {/* <div className="flex gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
@@ -171,33 +211,42 @@ const Attendance = () => {
                   className="pl-10"
                 />
               </div>
-              <Button onClick={() => {
-                setFilters({ employee: 'all', startDate: '', endDate: '', location: 'all' });
-                setSearchTerm('');
-              }}>
+              <Button
+                onClick={() => {
+                  setFilters({
+                    employee: "all",
+                    startDate: "",
+                    endDate: "",
+                    location: "all",
+                  });
+                  setSearchTerm("");
+                }}
+              >
                 Clear Filters
               </Button>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-2xl font-bold">{attendance.length}</p>
               <p className="text-sm text-gray-600">Total Records</p>
             </CardContent>
           </Card>
-          <Card>
+          {/* <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-2xl font-bold">{getTotalHours()}</p>
               <p className="text-sm text-gray-600">Total Hours</p>
             </CardContent>
-          </Card>
+          </Card> */}
           <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-2xl font-bold">
-                {(parseFloat(getTotalHours()) / attendance.length || 0).toFixed(1)}
+                {(parseFloat(getTotalHours()) / attendance.length || 0).toFixed(
+                  1
+                )}
               </p>
               <p className="text-sm text-gray-600">Average Hours/Day</p>
             </CardContent>
@@ -208,7 +257,7 @@ const Attendance = () => {
           {attendance.map((record) => (
             <Card key={record.id}>
               <CardContent className="pt-6">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <div className="flex items-center space-x-3">
                     <div className="text-2xl">{record.avatar}</div>
                     <div>
@@ -220,18 +269,24 @@ const Attendance = () => {
                   <div className="flex items-center space-x-2">
                     <Calendar className="w-4 h-4 text-gray-500" />
                     <div>
-                      <p className="font-medium">{new Date(record.timestamp).toLocaleDateString()}</p>
+                      <p className="font-medium">
+                        {new Date(record.timestamp).toLocaleDateString()}
+                      </p>
                       <p className="text-sm text-gray-500">Date</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  {/* <div className="flex items-center space-x-2">
                     <Clock className="w-4 h-4 text-gray-500" />
                     <div>
-                      <p className="font-medium">{record.clockIn} - {record.clockOut}</p>
-                      <p className="text-sm text-gray-500">{record.hours} hours</p>
+                      <p className="font-medium">
+                        {record.clockIn} - {record.clockOut}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {record.hours} hours
+                      </p>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* <div className="flex items-center space-x-2">
                     <MapPin className="w-4 h-4 text-gray-500" />
@@ -254,7 +309,9 @@ const Attendance = () => {
         {attendance.length === 0 && !loading && (
           <Card>
             <CardContent className="text-center py-12">
-              <p className="text-gray-500">No attendance records found matching your criteria.</p>
+              <p className="text-gray-500">
+                No attendance records found matching your criteria.
+              </p>
             </CardContent>
           </Card>
         )}

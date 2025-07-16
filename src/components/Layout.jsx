@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '../components/ui/button';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Calendar, 
-  Clock, 
-  LogOut, 
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Button } from "../components/ui/button";
+import {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  Clock,
+  LogOut,
   Menu,
-  User
-} from 'lucide-react';
-import { cn } from '../lib/utils';
+  User,
+} from "lucide-react";
+import { cn } from "../lib/utils";
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -18,10 +18,10 @@ const Layout = ({ children }) => {
   const location = useLocation();
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Employees', href: '/employees', icon: Users },
-    { name: 'Leave Requests', href: '/leaves', icon: Calendar },
-    { name: 'Attendance', href: '/attendance', icon: Clock },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Employees", href: "/employees", icon: Users },
+    { name: "Leave Requests", href: "/leaves", icon: Calendar },
+    { name: "Attendance", href: "/attendance", icon: Clock },
   ];
 
   // useEffect(() => {
@@ -32,28 +32,34 @@ const Layout = ({ children }) => {
   // }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    navigate('/login');
+    localStorage.removeItem("isAuthenticated");
+    navigate("/login");
   };
 
   const isActive = (href) => {
-    return location.pathname === href || location.pathname.startsWith(href + '/');
+    return (
+      location.pathname === href || location.pathname.startsWith(href + "/")
+    );
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <div className={cn(
-        "bg-white shadow-lg transition-all duration-300 flex flex-col",
-        sidebarOpen ? "w-64" : "w-16"
-      )}>
+      <div
+        className={cn(
+          "bg-white shadow-lg transition-all duration-300 flex flex-col",
+          sidebarOpen ? "w-64" : "w-16"
+        )}
+      >
         <div className="p-4 border-b">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <Users className="w-5 h-5 text-white" />
             </div>
             {sidebarOpen && (
-              <h1 className="text-lg font-semibold text-gray-900">Admin Panel</h1>
+              <h1 className="text-lg font-semibold text-gray-900">
+                Admin Panel
+              </h1>
             )}
           </div>
         </div>
@@ -109,16 +115,16 @@ const Layout = ({ children }) => {
                 <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-gray-600" />
                 </div>
-                <span className="text-sm font-medium text-gray-700">Admin User</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Admin User
+                </span>
               </div>
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-6">
-          {children}
-        </main>
+        <main className="flex-1 p-6">{children}</main>
       </div>
     </div>
   );

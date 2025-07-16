@@ -1,52 +1,77 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import Layout from '../components/Layout';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import Layout from "../components/Layout";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import api from "../hooks/useApi"; // ✅ Make sure this path is correct
 
 const EditEmployee = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    role: '',
-    department: '',
-    phone: '',
-    address: '',
-    startDate: '',
-    status: 'active',
+    name: "",
+    email: "",
+    role: "",
+    department: "",
+    phone: "",
+    address: "",
+    startDate: "",
+    status: "active",
   });
 
   useEffect(() => {
-    // Mock data loading
-    const mockEmployee = {
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@company.com',
-      role: 'manager',
-      department: 'marketing',
-      phone: '+1 (555) 123-4567',
-      address: '123 Main St, New York, NY 10001',
-      startDate: '2023-01-15',
-      status: 'active',
+    const fetchEmployee = async () => {
+      try {
+        const res = await api.get(`/employee/getEmployeeById/${id}`);
+        const employee = res.data;
+
+        setFormData({
+          name: employee.name || "",
+          email: employee.email || "",
+          role: employee.role || "",
+          department: employee.department || "",
+          phone: employee.phone || "",
+          address: employee.address || "",
+          startDate: employee.created_at?.split("T")[0] || "",
+          status: employee.status || "active",
+        });
+      } catch (err) {
+        console.error("Error fetching employee:", err);
+      }
     };
-    setFormData(mockEmployee);
+
+    fetchEmployee();
   }, [id]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Updating employee:', formData);
-    navigate('/employees');
+    console.log("Updating employee:", formData);
+    navigate("/employees");
   };
 
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
-      console.log('Deleting employee:', id);
-      navigate('/employees');
+    if (
+      window.confirm(
+        "Are you sure you want to delete this employee? This action cannot be undone."
+      )
+    ) {
+      console.log("Deleting employee:", id);
+      navigate("/employees");
     }
   };
 
@@ -59,7 +84,7 @@ const EditEmployee = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={() => navigate('/employees')}>
+            <Button variant="ghost" onClick={() => navigate("/employees")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Employees
             </Button>
@@ -82,7 +107,7 @@ const EditEmployee = () => {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
                     required
                   />
                 </div>
@@ -93,7 +118,7 @@ const EditEmployee = () => {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
                     required
                   />
                 </div>
@@ -102,7 +127,7 @@ const EditEmployee = () => {
                   <Label htmlFor="role">Role *</Label>
                   <Select
                     value={formData.role}
-                    onValueChange={(value) => handleInputChange('role', value)}
+                    onValueChange={(value) => handleInputChange("role", value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
@@ -111,29 +136,13 @@ const EditEmployee = () => {
                       <SelectItem value="manager">Manager</SelectItem>
                       <SelectItem value="developer">Developer</SelectItem>
                       <SelectItem value="designer">Designer</SelectItem>
-                      <SelectItem value="hr-specialist">HR Specialist</SelectItem>
-                      <SelectItem value="sales-rep">Sales Representative</SelectItem>
+                      <SelectItem value="hr-specialist">
+                        HR Specialist
+                      </SelectItem>
+                      <SelectItem value="sales-rep">
+                        Sales Representative
+                      </SelectItem>
                       <SelectItem value="analyst">Analyst</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department *</Label>
-                  <Select
-                    value={formData.department}
-                    onValueChange={(value) => handleInputChange('department', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="engineering">Engineering</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="sales">Sales</SelectItem>
-                      <SelectItem value="hr">Human Resources</SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                      <SelectItem value="operations">Operations</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -143,25 +152,8 @@ const EditEmployee = () => {
                   <Input
                     id="phone"
                     value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => handleInputChange('status', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="on-leave">On Leave</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
 
@@ -170,18 +162,20 @@ const EditEmployee = () => {
                 <Input
                   id="address"
                   value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  onChange={(e) => handleInputChange("address", e.target.value)}
                   placeholder="Street address, city, state, zip code"
                 />
               </div>
 
               <div className="flex justify-end space-x-4">
-                <Button type="button" variant="outline" onClick={() => navigate('/employees')}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate("/employees")}
+                >
                   Cancel
                 </Button>
-                <Button type="submit">
-                  Update Employee
-                </Button>
+                <Button type="submit">Update Employee</Button>
               </div>
             </form>
           </CardContent>

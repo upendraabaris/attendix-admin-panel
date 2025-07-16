@@ -1,29 +1,66 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { ArrowLeft } from 'lucide-react';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import { ArrowLeft } from "lucide-react";
+import api from "../hooks/useApi";
 
 const AddEmployee = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    role: '',
-    department: '',
-    phone: '',
-    address: '',
-    startDate: ''
+    name: "",
+    email: "",
+    role: "",
+    department: "",
+    phone: "",
+    address: "",
+    startDate: "",
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Adding employee:', formData);
-    navigate('/employees');
+    setLoading(true);
+    console.log("Adding employee:", formData);
+    try {
+      const res = await api.post(`/employee/addEmployee`, { params: formData });
+      console.log(res);
+      if (res.status === 200) {
+        alert("Employee Added");
+      } else if (res.status === 409) {
+        alert("Email Already Exist");
+      }
+      setLoading(false);
+      setTimeout(() => {
+        navigate("/employees");
+      }, 1500);
+    } catch (err) {
+      // eslint-disable-next-line no-debugger
+      debugger;
+      if (err.status === 409) {
+        alert("Error: Email Already Exist");
+      }
+      setLoading(false);
+      console.error("Error fetching client list", err);
+    } finally {
+      setLoading(false);
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (field, value) => {
@@ -34,7 +71,7 @@ const AddEmployee = () => {
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => navigate('/employees')}>
+          <Button variant="ghost" onClick={() => navigate("/employees")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Employees
           </Button>
@@ -52,7 +89,7 @@ const AddEmployee = () => {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
                     required
                   />
                 </div>
@@ -63,14 +100,17 @@ const AddEmployee = () => {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="role">Role *</Label>
-                  <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) => handleInputChange("role", value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
@@ -78,8 +118,12 @@ const AddEmployee = () => {
                       <SelectItem value="manager">Manager</SelectItem>
                       <SelectItem value="developer">Developer</SelectItem>
                       <SelectItem value="designer">Designer</SelectItem>
-                      <SelectItem value="hr-specialist">HR Specialist</SelectItem>
-                      <SelectItem value="sales-rep">Sales Representative</SelectItem>
+                      <SelectItem value="hr-specialist">
+                        HR Specialist
+                      </SelectItem>
+                      <SelectItem value="sales-rep">
+                        Sales Representative
+                      </SelectItem>
                       <SelectItem value="analyst">Analyst</SelectItem>
                     </SelectContent>
                   </Select>
@@ -87,7 +131,12 @@ const AddEmployee = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="department">Department *</Label>
-                  <Select value={formData.department} onValueChange={(value) => handleInputChange('department', value)}>
+                  <Select
+                    value={formData.department}
+                    onValueChange={(value) =>
+                      handleInputChange("department", value)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
@@ -107,7 +156,7 @@ const AddEmployee = () => {
                   <Input
                     id="phone"
                     value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
                   />
                 </div>
 
@@ -117,7 +166,9 @@ const AddEmployee = () => {
                     id="startDate"
                     type="date"
                     value={formData.startDate}
-                    onChange={(e) => handleInputChange('startDate', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("startDate", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -128,17 +179,17 @@ const AddEmployee = () => {
                 <Input
                   id="address"
                   value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  onChange={(e) => handleInputChange("address", e.target.value)}
                   placeholder="Street address, city, state, zip code"
                 />
               </div>
 
               <div className="flex justify-end space-x-4">
-                <Button type="button" variant="outline" onClick={() => navigate('/employees')}>
+                <Button type="button" onClick={() => navigate("/employees")}>
                   Cancel
                 </Button>
-                <Button type="submit">
-                  Add Employee
+                <Button variant="outline">
+                  {loading ? "Adding..." : "Add Employee"}
                 </Button>
               </div>
             </form>
