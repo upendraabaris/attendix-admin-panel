@@ -171,7 +171,7 @@ const Employees = () => {
             <Card
               key={employee.id}
               className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/employees/${employee.id}`)}
+              //onClick={() => navigate(`/employees/${employee.id}`)}
             >
               <CardContent className="p-6">
                 <div className="flex items-start space-x-4">
