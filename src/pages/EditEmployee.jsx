@@ -18,11 +18,12 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { ArrowLeft, Trash2 } from "lucide-react";
-import api from "../hooks/useApi"; // ✅ Make sure this path is correct
+import api from "../hooks/useApi";
 
 const EditEmployee = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -58,10 +59,25 @@ const EditEmployee = () => {
     fetchEmployee();
   }, [id]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Updating employee:", formData);
-    navigate("/employees");
+
+    try {
+      await api.put(`/employee/updateEmployee/${id}`, {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        department: formData.department,
+        phone: formData.phone,
+        address: formData.address,
+        status: formData.status,
+      });
+
+      navigate("/employees");
+    } catch (error) {
+      console.error("Failed to update employee:", error);
+      alert("Failed to update employee. Please try again.");
+    }
   };
 
   const handleDelete = () => {
@@ -71,6 +87,7 @@ const EditEmployee = () => {
       )
     ) {
       console.log("Deleting employee:", id);
+      // Optional: add API call here for delete
       navigate("/employees");
     }
   };
