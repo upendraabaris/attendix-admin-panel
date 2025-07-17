@@ -4,6 +4,7 @@ import Layout from "../components/Layout";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { toast } from "sonner"; // ✅ Make sure this is from `sonner`
 import {
   Card,
   CardContent,
@@ -37,32 +38,25 @@ const AddEmployee = () => {
     e.preventDefault();
     setLoading(true);
     console.log("Adding employee:", formData);
+
     try {
       const res = await api.post(`/employee/addEmployee`, { params: formData });
-      console.log(res);
-      if (res.status === 200) {
-        alert("Employee Added");
-      } else if (res.status === 409) {
-        alert("Email Already Exist");
-      }
-      setLoading(false);
-      setTimeout(() => {
-        navigate("/employees");
-      }, 1500);
+
+      // Success toast
+      toast.success(res.data.message || "Employee added successfully");
+      setTimeout(() => navigate("/employees"), 1500);
     } catch (err) {
-      // eslint-disable-next-line no-debugger
-      debugger;
-      if (err.status === 409) {
-        alert("Error: Email Already Exist");
-      }
-      setLoading(false);
-      console.error("Error fetching client list", err);
+      // Smart error fallback
+      const errorData = err.response?.data;
+      const errorMsg =
+        errorData?.error || errorData?.message || "Something went wrong";
+
+      toast.error(errorMsg);
+      console.error("Error adding employee:", err);
     } finally {
-      setLoading(false);
       setLoading(false);
     }
   };
-
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -121,15 +115,11 @@ const AddEmployee = () => {
                       <SelectItem value="hr-specialist">
                         HR Specialist
                       </SelectItem>
-                      <SelectItem value="sales-rep">
-                        Sales Representative
-                      </SelectItem>
-                      <SelectItem value="analyst">Analyst</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="department">Department *</Label>
                   <Select
                     value={formData.department}
@@ -149,18 +139,19 @@ const AddEmployee = () => {
                       <SelectItem value="operations">Operations</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+                </div> */}
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone">Phone Number *</Label>
                   <Input
                     id="phone"
                     value={formData.phone}
                     onChange={(e) => handleInputChange("phone", e.target.value)}
+                    required
                   />
                 </div>
 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="startDate">Start Date *</Label>
                   <Input
                     id="startDate"
@@ -171,7 +162,7 @@ const AddEmployee = () => {
                     }
                     required
                   />
-                </div>
+                </div> */}
               </div>
 
               <div className="space-y-2">
