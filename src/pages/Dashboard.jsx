@@ -27,7 +27,7 @@ const Dashboard = () => {
       try {
         // Clock-ins
         const clockRes = await fetch(
-          `http://localhost:4000/api/attendance/admin/all-employee-attendance?startDate=${today}&endDate=${today}`
+          `/attendance/admin/all-employee-attendance?startDate=${today}&endDate=${today}`
         );
         const clockData = await clockRes.json();
 
@@ -49,9 +49,7 @@ const Dashboard = () => {
         }
 
         // Total Employees
-        const empRes = await fetch(
-          "http://localhost:4000/api/employee/getEmployees"
-        );
+        const empRes = await fetch("/employee/getEmployees");
         const empData = await empRes.json();
 
         setTodayClockIns(todayClockIns);
@@ -73,9 +71,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchPendingLeaves = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:4000/api/admin/leave-requests/pending"
-        );
+        const response = await fetch("/admin/leave-requests/pending");
         const data = await response.json();
 
         if (response.ok) {
