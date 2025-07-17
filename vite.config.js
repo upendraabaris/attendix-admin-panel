@@ -19,6 +19,9 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss()],
     server: {
       port: 5175,
+      allowedHosts: [
+        'shcanary.platinum-infotech.com'
+      ],
       proxy: {
         // https://vitejs.dev/config/server-options.html
       }
