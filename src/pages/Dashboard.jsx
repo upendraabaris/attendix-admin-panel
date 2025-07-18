@@ -40,12 +40,12 @@ const Dashboard = () => {
             .map((item) => ({
               name: item.employee_name,
               location: item.address || "Office",
-              time: new Intl.DateTimeFormat("en-IN", {
+              time: new Date(item.timestamp).toLocaleTimeString("en-IN", {
                 hour: "2-digit",
                 minute: "2-digit",
                 hour12: false,
-                timeZone: "Asia/Kolkata",
-              }).format(new Date(item.timestamp)),
+                // ❌ Removed timeZone
+              }),
             }));
         }
 
