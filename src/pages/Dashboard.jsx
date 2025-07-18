@@ -1,3 +1,4 @@
+import api from "../hooks/useApi";
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import {
@@ -26,10 +27,10 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         // Clock-ins
-        const clockRes = await fetch(
+        const clockRes = await api.get(
           `/attendance/admin/all-employee-attendance?startDate=${today}&endDate=${today}`
         );
-        const clockData = await clockRes.json();
+        const clockData = await clockRes.data;
 
         let todayClockIns = [];
         if (clockData.data) {
@@ -39,18 +40,18 @@ const Dashboard = () => {
             .map((item) => ({
               name: item.employee_name,
               location: item.address || "Office",
-              time: new Date(item.timestamp).toLocaleTimeString("en-IN", {
+              time: new Intl.DateTimeFormat("en-IN", {
                 hour: "2-digit",
                 minute: "2-digit",
                 hour12: false,
                 timeZone: "Asia/Kolkata",
-              }),
+              }).format(new Date(item.timestamp)),
             }));
         }
 
         // Total Employees
-        const empRes = await fetch("/employee/getEmployees");
-        const empData = await empRes.json();
+        const empRes = await api.get("/employee/getEmployees");
+        const empData = await empRes.data;
 
         setTodayClockIns(todayClockIns);
         setStats((prev) => ({
@@ -71,14 +72,17 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchPendingLeaves = async () => {
       try {
-        const response = await fetch("/admin/leave-requests/pending");
-        const data = await response.json();
+        const response = await api.get("/leave/admin/leave-requests/pending");
 
-        if (response.ok) {
+        // Directly extract data
+        const data = response.data;
+
+        if (response.status === 200 && data.success) {
           const formatted = data.data.map((item) => {
             const start = new Date(item.start_date);
             const end = new Date(item.end_date);
             const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
             const options = { month: "short", day: "numeric" };
             const dateString =
               start.toDateString() === end.toDateString()
@@ -102,10 +106,10 @@ const Dashboard = () => {
             pendingLeaveRequests: formatted.length,
           }));
         } else {
-          console.error("Failed to fetch:", data.message);
+          console.error("Failed to fetch pending leaves:", data.message);
         }
       } catch (err) {
-        console.error("Error fetching leave requests:", err);
+        console.error("Error fetching leave requests:", err.message || err);
       }
     };
 

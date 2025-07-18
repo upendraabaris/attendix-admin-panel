@@ -165,7 +165,7 @@ const AddEmployee = () => {
                 </div> */}
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="address">Address</Label>
                 <Input
                   id="address"
@@ -173,7 +173,7 @@ const AddEmployee = () => {
                   onChange={(e) => handleInputChange("address", e.target.value)}
                   placeholder="Street address, city, state, zip code"
                 />
-              </div>
+              </div> */}
 
               <div className="flex justify-end space-x-4">
                 <Button type="button" onClick={() => navigate("/employees")}>

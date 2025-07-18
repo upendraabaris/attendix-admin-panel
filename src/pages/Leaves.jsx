@@ -28,19 +28,12 @@ const Leaves = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchLeaves = async () => {
+    setLoading(true);
     try {
-      const res = await api.get(
-        `/leave/get`
-        //     {
-        //     headers:{
-        //         Authorization: `Bearer ${user.token}`
-        //     }
-        //   }
-      );
-      console.log(res);
+      const res = await api.get(`/leave/get`);
       setLeaves(res.data.data);
     } catch (err) {
-      console.error("Error fetching client list", err);
+      console.error("Error fetching leaves", err);
     } finally {
       setLoading(false);
     }
@@ -50,94 +43,26 @@ const Leaves = () => {
     fetchLeaves();
   }, []);
 
-  const leaveRequests = [
-    {
-      id: 1,
-      employeeName: "Sarah Johnson",
-      employeeId: 1,
-      type: "Vacation",
-      startDate: "2024-02-15",
-      endDate: "2024-02-20",
-      days: 5,
-      status: "pending",
-      reason: "Family vacation to Hawaii",
-      submittedDate: "2024-01-10",
-      avatar: "👩‍💼",
-    },
-    {
-      id: 2,
-      employeeName: "Michael Chen",
-      employeeId: 2,
-      type: "Sick Leave",
-      startDate: "2024-01-18",
-      endDate: "2024-01-19",
-      days: 2,
-      status: "pending",
-      reason: "Flu symptoms",
-      submittedDate: "2024-01-17",
-      avatar: "👨‍💻",
-    },
-    {
-      id: 3,
-      employeeName: "Emily Davis",
-      employeeId: 3,
-      type: "Personal",
-      startDate: "2024-01-22",
-      endDate: "2024-01-23",
-      days: 2,
-      status: "approved",
-      reason: "Family emergency",
-      submittedDate: "2024-01-15",
-      adminComment: "Approved due to family emergency",
-      avatar: "👩‍🏫",
-    },
-    {
-      id: 4,
-      employeeName: "James Wilson",
-      employeeId: 4,
-      type: "Vacation",
-      startDate: "2024-01-10",
-      endDate: "2024-01-12",
-      days: 3,
-      status: "denied",
-      reason: "Weekend getaway",
-      submittedDate: "2024-01-05",
-      adminComment: "Insufficient notice period",
-      avatar: "👨‍💼",
-    },
-  ];
-
-  const filteredRequests = leaveRequests.filter((request) => {
+  const filteredRequests = leaves.filter((request) => {
     const matchesStatus =
       statusFilter === "all" || request.status === statusFilter;
     const matchesSearch =
-      request.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.type.toLowerCase().includes(searchTerm.toLowerCase());
+      request.employee_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.type?.toLowerCase().includes(searchTerm.toLowerCase());
 
     return matchesStatus && matchesSearch;
   });
 
   const handleLeaveAction = async (requestId, action, comment) => {
-    // console.log(`${action} leave request ${requestId}`, comment)
-    // implement leave approval/denial logic here
-
     try {
-      const res = await api.put(
-        `/leave/update/${requestId}`,
-        {
-          status: action, // "approved" or "rejected"
-          comment: comment || "", // Optional comment
-          id: 1,
-        }
-        // If you're using auth:
-        // , { headers: { Authorization: `Bearer ${user.token}` } }
-      );
-
-      console.log("✅ Leave updated:", res.data);
-      // Optional: refresh leave list
-      fetchLeaves(); // if you have this function
+      const res = await api.put(`/leave/update/${requestId}`, {
+        status: action,
+        comment: comment || "",
+        id: 1,
+      });
+      fetchLeaves();
     } catch (err) {
-      console.error("❌ Failed to update leave request", err);
+      console.error("Failed to update leave request", err);
     }
   };
 
@@ -196,7 +121,7 @@ const Leaves = () => {
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="denied">Denied</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -204,12 +129,12 @@ const Leaves = () => {
         </Card>
 
         <div className="space-y-4">
-          {leaves?.map((request) => (
+          {filteredRequests.map((request) => (
             <Card key={request.id}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className="text-2xl">{request.avatar}</div>
+                    <div className="text-2xl">{request.avatar || "👤"}</div>
                     <div>
                       <div className="flex items-center space-x-2">
                         <CardTitle className="text-lg">
@@ -297,6 +222,7 @@ const Leaves = () => {
                           onClick={() =>
                             handleLeaveAction(request.id, "rejected", "done")
                           }
+                          className="bg-red-400 hover:bg-red-500"
                           variant="destructive"
                         >
                           <XCircle className="w-4 h-4 mr-2" />
@@ -311,7 +237,7 @@ const Leaves = () => {
           ))}
         </div>
 
-        {filteredRequests.length === 0 && (
+        {!loading && filteredRequests.length === 0 && (
           <Card>
             <CardContent className="text-center py-12">
               <p className="text-gray-500">

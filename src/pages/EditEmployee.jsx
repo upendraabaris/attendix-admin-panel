@@ -106,10 +106,10 @@ const EditEmployee = () => {
               Back to Employees
             </Button>
           </div>
-          <Button variant="destructive" onClick={handleDelete}>
+          {/* <Button variant="destructive" onClick={handleDelete}>
             <Trash2 className="w-4 h-4 mr-2" />
             Delete Employee
-          </Button>
+          </Button> */}
         </div>
 
         <Card>
@@ -145,6 +145,7 @@ const EditEmployee = () => {
                   <Select
                     value={formData.role}
                     onValueChange={(value) => handleInputChange("role", value)}
+                    required
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
@@ -156,25 +157,26 @@ const EditEmployee = () => {
                       <SelectItem value="hr-specialist">
                         HR Specialist
                       </SelectItem>
-                      <SelectItem value="sales-rep">
+                      {/* <SelectItem value="sales-rep">
                         Sales Representative
                       </SelectItem>
-                      <SelectItem value="analyst">Analyst</SelectItem>
+                      <SelectItem value="analyst">Analyst</SelectItem> */}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="Phone">Phone Number *</Label>
                   <Input
                     id="phone"
                     value={formData.phone}
                     onChange={(e) => handleInputChange("phone", e.target.value)}
+                    required
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="address">Address</Label>
                 <Input
                   id="address"
@@ -182,7 +184,7 @@ const EditEmployee = () => {
                   onChange={(e) => handleInputChange("address", e.target.value)}
                   placeholder="Street address, city, state, zip code"
                 />
-              </div>
+              </div> */}
 
               <div className="flex justify-end space-x-4">
                 <Button
@@ -192,7 +194,13 @@ const EditEmployee = () => {
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Update Employee</Button>
+                <Button
+                  type="submit"
+                  variant="outline"
+                  onClick={() => navigate("/employees")}
+                >
+                  Update Employee
+                </Button>
               </div>
             </form>
           </CardContent>

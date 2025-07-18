@@ -93,14 +93,20 @@ const Employees = () => {
   }, []);
 
   const filteredEmployees = employees.filter((employee) => {
+    const name = employee.name || "";
+    const email = employee.email || "";
+    const phone = employee.phone || "";
+    const department = employee.department || "";
+    const role = employee.role || "";
+
     const matchesSearch =
-      employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.department.toLowerCase().includes(searchTerm.toLowerCase());
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      department.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesRole =
       roleFilter === "all" ||
-      employee.role.toLowerCase().includes(roleFilter.toLowerCase());
+      role.toLowerCase().includes(roleFilter.toLowerCase());
 
     return matchesSearch && matchesRole;
   });
@@ -128,9 +134,11 @@ const Employees = () => {
             </h1>
             <p className="text-gray-600">Manage your team members</p>
           </div>
+
           <Button
             onClick={() => navigate("/employees/add")}
-            className="flex items-center gap-2"
+            variant="outline"
+            className="w-full sm:w-48 border border-black-300 bg-white text-gray-900 hover:bg-gray-100 flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Add Employee
@@ -167,7 +175,7 @@ const Employees = () => {
         </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {employees?.map((employee) => (
+          {filteredEmployees?.map((employee) => (
             <Card
               key={employee.id}
               className="hover:shadow-lg transition-shadow cursor-pointer"
@@ -182,6 +190,9 @@ const Employees = () => {
                     </h3>
                     <p className="text-sm text-gray-600 truncate">
                       {employee.email}
+                    </p>
+                    <p className="text-sm text-gray-500 truncate">
+                      {employee.phone}
                     </p>
                     <p className="text-sm text-gray-500">
                       {employee.role} • {employee.department}
@@ -203,9 +214,10 @@ const Employees = () => {
                       </Button>
                     </div>
 
-                    {/* <p className="text-xs text-gray-500 mt-2">
-                      Joined: {new Date(employee.joinDate).toLocaleDateString()}
-                    </p> */}
+                    <p className="text-xs text-gray-500 mt-2">
+                      Created At:{" "}
+                      {new Date(employee.created_at).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               </CardContent>

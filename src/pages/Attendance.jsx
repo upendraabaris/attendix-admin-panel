@@ -39,41 +39,32 @@ const Attendance = () => {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const employees = [
-    { id: 1, name: "Sarah Johnson" },
-    { id: 2, name: "Michael Chen" },
-    { id: 3, name: "Emily Davis" },
-    { id: 4, name: "James Wilson" },
-  ];
-
-  const locations = [
-    "Office - Floor 1",
-    "Office - Floor 2",
-    "Office - Floor 3",
-    "Remote - Home",
-  ];
+  const [employees, setEmployees] = useState([]);
 
   const fetchAttendance = async () => {
     try {
       setLoading(true);
+
       const params = {
         startDate: filters.startDate,
         endDate: filters.endDate,
       };
 
-      const res = await api.get(
-        `/attendance/admin/all-employee-attendance`,
-        { params }
-        //     {
-        //     headers:{
-        //         Authorization: `Bearer ${user.token}`
-        //     }
-        //   }
-      );
-      console.log(res);
+      if (filters.employee && filters.employee !== "all") {
+        params.employeeId = filters.employee;
+      }
+
+      const res = await api.get(`/attendance/admin/all-employee-attendance`, {
+        params,
+        // headers: {
+        //   Authorization: `Bearer ${user.token}`,
+        // },
+      });
+
+      console.log("Attendance API response:", res);
       setAttendance(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching client list", err);
+      console.error("Error fetching attendance:", err);
     } finally {
       setLoading(false);
     }
@@ -106,6 +97,23 @@ const Attendance = () => {
       .toFixed(1);
   };
 
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const res = await api.get(`/employee/getEmployees`); // 🔁 Replace endpoint if different
+
+        const list = res.data || []; // ✅ FIXED this line
+        setEmployees(list);
+      } catch (err) {
+        console.error("Failed to fetch employees:", err);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
+  console.log("Employees:", employees);
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -116,10 +124,10 @@ const Attendance = () => {
             </h1>
             <p className="text-gray-600">View and filter employee attendance</p>
           </div>
-          <Button onClick={handleExport}>
+          {/* <Button onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
             Export
-          </Button>
+          </Button> */}
         </div>
 
         <Card>
@@ -130,8 +138,8 @@ const Attendance = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-              {/* <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-2">
                 <Label>Employee</Label>
                 <Select
                   value={filters.employee}
@@ -149,12 +157,13 @@ const Attendance = () => {
                         key={employee.id}
                         value={employee.id.toString()}
                       >
-                        {employee.name}
+                        {employee.name ?? "No Name"}{" "}
+                        {/* 👈 fallback in case name is null */}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div> */}
+              </div>
 
               <div className="space-y-2">
                 <Label>Start Date</Label>
@@ -228,7 +237,7 @@ const Attendance = () => {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
           <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-2xl font-bold">{attendance.length}</p>
@@ -241,7 +250,7 @@ const Attendance = () => {
               <p className="text-sm text-gray-600">Total Hours</p>
             </CardContent>
           </Card> */}
-          <Card>
+          {/* <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-2xl font-bold">
                 {(parseFloat(getTotalHours()) / attendance.length || 0).toFixed(
@@ -250,7 +259,7 @@ const Attendance = () => {
               </p>
               <p className="text-sm text-gray-600">Average Hours/Day</p>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
 
         <div className="space-y-4">
