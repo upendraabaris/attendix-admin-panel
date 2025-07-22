@@ -93,7 +93,11 @@ const Attendance = () => {
 
   const getTotalHours = () => {
     return attendance
-      .reduce((total, record) => total + record.hours, 0)
+      .reduce((total, record) => {
+        if (!record.worked_time || record.worked_time === "N/A") return total;
+        const [h, m] = record.worked_time.split("h").map((s) => parseInt(s));
+        return total + (h || 0) + (m || 0) / 60;
+      }, 0)
       .toFixed(1);
   };
 
@@ -237,19 +241,19 @@ const Attendance = () => {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-2xl font-bold">{attendance.length}</p>
               <p className="text-sm text-gray-600">Total Records</p>
             </CardContent>
           </Card>
-          {/* <Card>
+          <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-2xl font-bold">{getTotalHours()}</p>
               <p className="text-sm text-gray-600">Total Hours</p>
             </CardContent>
-          </Card> */}
+          </Card>
           {/* <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-2xl font-bold">
@@ -263,14 +267,16 @@ const Attendance = () => {
         </div>
 
         <div className="space-y-4">
-          {attendance.map((record) => (
-            <Card key={record.id}>
+          {attendance.map((record, index) => (
+            <Card key={index}>
               <CardContent className="pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <div className="flex items-center space-x-3">
-                    <div className="text-2xl">{record.avatar}</div>
+                    <div className="text-2xl">{record.avatar ?? "👤"}</div>
                     <div>
-                      <p className="font-medium">{record.employee_name}</p>
+                      <p className="font-medium">
+                        {record.employee_name ?? "Unknown"}
+                      </p>
                       <p className="text-sm text-gray-500">Employee</p>
                     </div>
                   </div>
@@ -279,35 +285,53 @@ const Attendance = () => {
                     <Calendar className="w-4 h-4 text-gray-500" />
                     <div>
                       <p className="font-medium">
-                        {new Date(record.timestamp).toLocaleDateString()}
+                        {record.date
+                          ? new Date(record.date).toLocaleDateString()
+                          : "N/A"}
                       </p>
-                      <p className="text-sm text-gray-500">Date</p>
+                      <p className="text-sm text-gray-500">
+                        {record.worked_time ?? "N/A"} worked
+                      </p>
                     </div>
                   </div>
 
-                  {/* <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2">
                     <Clock className="w-4 h-4 text-gray-500" />
                     <div>
                       <p className="font-medium">
-                        {record.clockIn} - {record.clockOut}
+                        {record.clock_in} - {record.clock_out}
                       </p>
-                      <p className="text-sm text-gray-500">
-                        {record.hours} hours
-                      </p>
+                      {record.worked_time === "Missing Clock Out" ||
+                      record.worked_time === "Invalid time (Out before In)" ? (
+                        <p className="text-red-500 text-sm">
+                          ⚠️ {record.worked_time}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          {record.worked_time} worked
+                        </p>
+                      )}
                     </div>
-                  </div> */}
+                  </div>
 
-                  {/* <div className="flex items-center space-x-2">
-                    <MapPin className="w-4 h-4 text-gray-500" />
+                  <div className="lg:col-span-3 flex items-start space-x-2 pt-2">
+                    <MapPin className="w-4 h-4 text-gray-500 mt-1" />
                     <div>
-                      <p className="font-medium">{record.location}</p>
-                      <p className="text-sm text-gray-500">Location</p>
+                      <p className="font-medium">
+                        {record.clock_in_address || "N/A"}
+                      </p>
+                      <p className="text-sm text-gray-500">Clock In Address</p>
                     </div>
-                  </div> */}
+                  </div>
 
-                  <div>
-                    <p className="font-medium">{record.address}</p>
-                    <p className="text-sm text-gray-500">Address</p>
+                  <div className="lg:col-span-3 flex items-start space-x-2">
+                    <MapPin className="w-4 h-4 text-gray-500 mt-1" />
+                    <div>
+                      <p className="font-medium">
+                        {record.clock_out_address || "N/A"}
+                      </p>
+                      <p className="text-sm text-gray-500">Clock Out Address</p>
+                    </div>
                   </div>
                 </div>
               </CardContent>

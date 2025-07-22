@@ -10,49 +10,45 @@ import {
 import { Users, Clock, Calendar, CheckCircle } from "lucide-react";
 
 const Dashboard = () => {
-  const [leaveRequests, setLeaveRequests] = useState([]);
-
-  const [stats, setStats] = useState({
-    totalEmployees: 0,
-    todayClockIns: 0,
-    pendingLeaveRequests: 0,
-    onlineEmployees: 0,
-  });
-
   const [todayClockIns, setTodayClockIns] = useState([]);
+  const [stats, setStats] = useState({
+    todayClockIns: 0,
+    onlineEmployees: 0,
+    totalEmployees: 0,
+  });
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
 
     const fetchDashboardData = async () => {
       try {
-        // Clock-ins
+        // 🕒 Fetch today's attendance records
         const clockRes = await api.get(
           `/attendance/admin/all-employee-attendance?startDate=${today}&endDate=${today}`
         );
-        const clockData = await clockRes.data;
+        const clockData = clockRes.data;
 
         let todayClockIns = [];
         if (clockData.data) {
           todayClockIns = clockData.data
-            .filter((record) => record.type === "in")
-            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .filter((record) => record.clock_in) // ✅ Only records with clock_in
+            .sort(
+              (a, b) =>
+                new Date(`1970-01-01T${b.clock_in}`) -
+                new Date(`1970-01-01T${a.clock_in}`)
+            )
             .map((item) => ({
               name: item.employee_name,
-              location: item.address || "Office",
-              time: new Date(item.timestamp).toLocaleTimeString("en-IN", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-                // ❌ Removed timeZone
-              }),
+              location: item.clock_in_address || "Office",
+              time: item.clock_in, // Already formatted as '02:51 pm'
             }));
         }
 
-        // Total Employees
+        // 👥 Fetch total employees
         const empRes = await api.get("/employee/getEmployees");
-        const empData = await empRes.data;
+        const empData = empRes.data;
 
+        // ⏫ Update state
         setTodayClockIns(todayClockIns);
         setStats((prev) => ({
           ...prev,
@@ -69,6 +65,9 @@ const Dashboard = () => {
   }, []);
 
   // Pending Leave Requests
+
+  const [leaveRequests, setLeaveRequests] = useState([]);
+
   useEffect(() => {
     const fetchPendingLeaves = async () => {
       try {
