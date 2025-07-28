@@ -33,6 +33,7 @@ const Layout = ({ children }) => {
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("orgID");
     navigate("/login");
   };
 

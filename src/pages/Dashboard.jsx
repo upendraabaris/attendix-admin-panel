@@ -17,6 +17,8 @@ const Dashboard = () => {
     totalEmployees: 0,
   });
 
+  const orgID = localStorage.getItem("orgID");
+
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
 
@@ -24,7 +26,7 @@ const Dashboard = () => {
       try {
         // 🕒 Fetch today's attendance records
         const clockRes = await api.get(
-          `/attendance/admin/all-employee-attendance?startDate=${today}&endDate=${today}`
+          `/attendance/admin/all-employee-attendance?startDate=${today}&endDate=${today}&organizationId=${orgID}`
         );
         const clockData = clockRes.data;
 
@@ -47,14 +49,16 @@ const Dashboard = () => {
         // 👥 Fetch total employees
         const empRes = await api.get("/employee/getEmployees");
         const empData = empRes.data;
-
+        const orgFilteredEmployees = empData.filter(
+          (emp) => emp.organization_id == orgID
+        );
         // ⏫ Update state
         setTodayClockIns(todayClockIns);
         setStats((prev) => ({
           ...prev,
           todayClockIns: todayClockIns.length,
           onlineEmployees: todayClockIns.length,
-          totalEmployees: empData.length || 0,
+          totalEmployees: orgFilteredEmployees.length || 0,
         }));
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -62,7 +66,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [orgID]);
 
   // Pending Leave Requests
 
@@ -78,6 +82,7 @@ const Dashboard = () => {
 
         if (response.status === 200 && data.success) {
           const formatted = data.data.map((item) => {
+            console.log(item, "ITEM");
             const start = new Date(item.start_date);
             const end = new Date(item.end_date);
             const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
@@ -96,13 +101,17 @@ const Dashboard = () => {
               type: item.type,
               dates: dateString,
               days: days,
+              organizationID: item.organization_id,
             };
           });
+          const orgLeaveRequests = formatted.filter(
+            (leave) => leave.organizationID == orgID
+          );
+          setLeaveRequests(orgLeaveRequests);
 
-          setLeaveRequests(formatted);
           setStats((prev) => ({
             ...prev,
-            pendingLeaveRequests: formatted.length,
+            pendingLeaveRequests: orgLeaveRequests.length,
           }));
         } else {
           console.error("Failed to fetch pending leaves:", data.message);
@@ -113,7 +122,7 @@ const Dashboard = () => {
     };
 
     fetchPendingLeaves();
-  }, []);
+  }, [orgID]);
 
   return (
     <Layout>

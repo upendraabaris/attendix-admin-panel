@@ -1,16 +1,21 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { Label } from '../components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Shield, Lock, User } from 'lucide-react'
-import api from '../hooks/useApi'
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Shield, Lock, User } from "lucide-react";
+import api from "../hooks/useApi";
 
 const Login = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   // const handleSubmit = async (e) => {
@@ -25,31 +30,30 @@ const Login = () => {
   //   }, 1000)
   // }
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
+    try {
+      const res = await api.post("/auth/admin-login", {
+        email,
+        password,
+      });
 
-  try {
-    const res = await api.post('/auth/admin-login', {
-      email,
-      password,
-    });
+      const { token, user } = res.data;
+      const organizationID = user.organization_id;
 
-    const { token, user } = res.data;
-
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    // localStorage.setItem('isAuthenticated', 'true')
-    navigate('/dashboard');
-  } catch (err) {
-    const msg = err.response?.data?.error || 'Login failed';
-    alert(msg); // You can use a toast instead
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("orgID", organizationID);
+      navigate("/dashboard");
+    } catch (err) {
+      const msg = err.response?.data?.error || "Login failed";
+      alert(msg); // You can use a toast instead
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -103,13 +107,13 @@ const handleSubmit = async (e) => {
               className="w-full bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
         </CardContent>
       </Card>
     </div>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;

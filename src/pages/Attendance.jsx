@@ -38,6 +38,7 @@ const Attendance = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(false);
+  const orgID = localStorage.getItem("orgID");
 
   const [employees, setEmployees] = useState([]);
 
@@ -48,6 +49,7 @@ const Attendance = () => {
       const params = {
         startDate: filters.startDate,
         endDate: filters.endDate,
+        organizationId: orgID,
       };
 
       if (filters.employee && filters.employee !== "all") {
@@ -72,7 +74,7 @@ const Attendance = () => {
 
   useEffect(() => {
     fetchAttendance();
-  }, [filters]);
+  }, [filters, orgID]);
 
   //   const filteredRecords = attendanceRecords.filter(record => {
   //     const matchesEmployee = filters.employee === 'all' || record.employeeId.toString() === filters.employee;

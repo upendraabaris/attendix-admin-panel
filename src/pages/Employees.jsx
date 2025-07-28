@@ -91,8 +91,11 @@ const Employees = () => {
   useEffect(() => {
     fetchList();
   }, []);
-
-  const filteredEmployees = employees.filter((employee) => {
+  const orgID = localStorage.getItem("orgID");
+  const orgFilteredEmployees = employees.filter(
+    (emp) => emp.organization_id == orgID
+  );
+  const filteredEmployees = orgFilteredEmployees.filter((employee) => {
     const name = employee.name || "";
     const email = employee.email || "";
     const phone = employee.phone || "";

@@ -26,6 +26,7 @@ const Leaves = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(false);
+  const orgID = localStorage.getItem("orgID");
 
   const fetchLeaves = async () => {
     setLoading(true);
@@ -42,8 +43,10 @@ const Leaves = () => {
   useEffect(() => {
     fetchLeaves();
   }, []);
-
-  const filteredRequests = leaves.filter((request) => {
+  const orgFilteredRequests = leaves.filter(
+    (leave) => leave.organization_id == orgID
+  );
+  const filteredRequests = orgFilteredRequests.filter((request) => {
     const matchesStatus =
       statusFilter === "all" || request.status === statusFilter;
     const matchesSearch =
