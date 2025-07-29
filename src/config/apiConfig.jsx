@@ -2,6 +2,6 @@
 
 //const BASE_URL = "http://localhost:4000/api";
 
-const BASE_URL = "http://shcanary.platinum-infotech.com:4000/api";
+const BASE_URL = "http://shprod.platinum-infotech.com:4000/api";
 
 export default BASE_URL;
