@@ -72,13 +72,14 @@ const Employees = () => {
 
   const fetchList = async () => {
     try {
+      const token = localStorage.getItem("token");
       const res = await api.get(
         `/employee/getEmployees`
-        //     {
-        //     headers:{
-        //         Authorization: `Bearer ${user.token}`
-        //     }
+        //   {
+        //   headers:{
+        //       Authorization: `Bearer ${token}`
         //   }
+        // }
       );
       setEmployees(res.data);
     } catch (err) {
