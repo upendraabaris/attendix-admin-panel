@@ -50,7 +50,7 @@ const Dashboard = () => {
         const empRes = await api.get("/employee/getEmployees");
         const empData = empRes.data;
         const orgFilteredEmployees = empData.filter(
-          (emp) => emp.organization_id == orgID
+          (emp) => emp.organization_id == orgID && emp.status === "active"
         );
         // ⏫ Update state
         setTodayClockIns(todayClockIns);

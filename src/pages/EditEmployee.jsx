@@ -40,6 +40,7 @@ const EditEmployee = () => {
       try {
         const res = await api.get(`/employee/getEmployeeById/${id}`);
         const employee = res.data;
+        //console.log("Fetched employee:", employee); // 🔍 Check this
 
         setFormData({
           name: employee.name || "",
@@ -173,6 +174,24 @@ const EditEmployee = () => {
                     onChange={(e) => handleInputChange("phone", e.target.value)}
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status *</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) =>
+                      handleInputChange("status", value)
+                    }
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

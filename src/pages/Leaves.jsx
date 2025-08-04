@@ -201,7 +201,7 @@ const Leaves = () => {
 
                   {request.status === "pending" && (
                     <div className="space-y-3 pt-4 border-t">
-                      <div className="space-y-2">
+                      {/* <div className="space-y-2">
                         <Label htmlFor={`comment-${request.id}`}>
                           Admin Comment (Optional)
                         </Label>
@@ -210,7 +210,7 @@ const Leaves = () => {
                           placeholder="Add a comment..."
                           rows={3}
                         />
-                      </div>
+                      </div> */}
                       <div className="flex space-x-2">
                         <Button
                           onClick={() =>
