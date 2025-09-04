@@ -81,7 +81,7 @@ const Employees = () => {
         //   }
         // }
       );
-      setEmployees(res.data);
+      setEmployees(res.data.data);
     } catch (err) {
       console.error("Error fetching client list", err);
     } finally {

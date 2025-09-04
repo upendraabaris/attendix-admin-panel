@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import { Shield, Lock, User } from "lucide-react";
+import { Shield, Mail, Lock } from "lucide-react";
 import api from "../hooks/useApi";
 
 const Login = () => {
@@ -35,7 +35,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const res = await api.post("/auth/admin-login", {
+      const res = await api.post("/auth/admin-dashboard", {
         email,
         password,
       });
@@ -72,13 +72,13 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Email Address
+                <Mail className="w-4 h-4" />
+                Email
               </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@company.com"
+                placeholder="Enter email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -94,7 +94,7 @@ const Login = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

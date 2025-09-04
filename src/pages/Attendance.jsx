@@ -108,7 +108,7 @@ const Attendance = () => {
       try {
         const res = await api.get(`/employee/getEmployees`); // 🔁 Replace endpoint if different
 
-        const list = res.data || []; // ✅ FIXED this line
+        const list = res.data.data || []; // ✅ FIXED this line
         setEmployees(list);
       } catch (err) {
         console.error("Failed to fetch employees:", err);
