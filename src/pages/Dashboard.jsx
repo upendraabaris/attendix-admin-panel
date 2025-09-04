@@ -48,7 +48,7 @@ const Dashboard = () => {
 
         // 👥 Fetch total employees
         const empRes = await api.get("/employee/getEmployees");
-        const empData = empRes.data;
+        const empData = empRes.data.data || [];
         const orgFilteredEmployees = empData.filter(
           (emp) => emp.organization_id == orgID && emp.status === "active"
         );
