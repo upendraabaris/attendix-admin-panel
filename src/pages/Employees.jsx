@@ -1,0 +1,235 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import {
+  Card,
+  CardContent,
+} from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Plus, Search, Filter } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import api from "../hooks/useApi";
+
+const Employees = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const fetchList = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await api.get(`/employee/getEmployees`);
+      setEmployees(res.data.data);
+    } catch (err) {
+      console.error("Error fetching client list", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchList();
+  }, []);
+
+  const orgID = localStorage.getItem("orgID");
+  const orgFilteredEmployees = employees.filter(
+    (emp) => emp.organization_id == orgID
+  );
+
+  const filteredEmployees = orgFilteredEmployees.filter((employee) => {
+    const name = employee.name || "";
+    const email = employee.email || "";
+    const department = employee.department || "";
+    const role = employee.role || "";
+
+    const matchesSearch =
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      department.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesRole =
+      roleFilter === "all" ||
+      role.toLowerCase().includes(roleFilter.toLowerCase());
+
+    return matchesSearch && matchesRole;
+  });
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "on-leave":
+        return "bg-yellow-100 text-yellow-800";
+      case "inactive":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  return (
+    <Layout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Employee Management
+            </h1>
+            <p className="text-gray-600">Manage your team members</p>
+          </div>
+
+          <Button
+            onClick={() => navigate("/employees/add")}
+            variant="outline"
+            className="w-full sm:w-48 border border-black-300 bg-white text-gray-900 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Employee
+          </Button>
+        </div>
+
+        {/* Search + Filter */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search employees..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="developer">Developer</SelectItem>
+                  <SelectItem value="hr">HR</SelectItem>
+                  <SelectItem value="sales">Sales</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Employee Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredEmployees?.map((employee) => (
+            <Card
+              key={employee.id}
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start space-x-4">
+                  <div className="text-3xl">{employee.avatar}</div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 truncate">
+                      {employee.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 truncate">
+                      {employee.email}
+                    </p>
+                    <p className="text-sm text-gray-500 truncate">
+                      {employee.phone}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {employee.role} • {employee.department}
+                    </p>
+
+                    {/* Status + Edit */}
+                    <div className="flex items-center justify-between mt-4">
+                      <Badge className={getStatusColor(employee.status)}>
+                        {employee?.status?.replace("-", " ")}
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/employees/edit/${employee.id}`);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                    </div>
+
+                    {/* ✅ New Buttons */}
+                    <div className="flex gap-2 mt-3 flex-wrap">
+                      <Button
+  onClick={(e) => {
+    e.stopPropagation();
+    navigate(`/employees/empattendance/${employee.id}`, {
+      state: { name: employee.name },
+    });
+  }}
+  className="bg-blue-600 text-white hover:bg-blue-700"
+  size="sm"
+>
+  Attendance
+</Button>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/employees/empleave/${employee.id}`);
+                        }}
+                        className="bg-green-600 text-white hover:bg-green-700"
+                        size="sm"
+                      >
+                        Leave
+                      </Button>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/employees/emptasks/${employee.id}`);
+                        }}
+                        className="bg-purple-600 text-white hover:bg-purple-700"
+                        size="sm"
+                      >
+                        Task
+                      </Button>
+                    </div>
+
+                    {/* Created At */}
+                    <p className="text-xs text-gray-500 mt-2">
+                      Created At:{" "}
+                      {new Date(employee.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filteredEmployees.length === 0 && (
+          <Card>
+            <CardContent className="text-center py-12">
+              <p className="text-gray-500">
+                No employees found matching your criteria.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </Layout>
+  );
+};
+
+export default Employees;
