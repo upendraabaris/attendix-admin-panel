@@ -18,6 +18,7 @@ import Tasks from "./pages/Tasks";
 import Empleave from "./pages/Empleave";
 import EmpAttendance from "./pages/EmpAttendance";
 import EmpTasks from "./pages/EmpTasks";
+import ChangePassword from "./pages/ChangePassword";
 
 const queryClient = new QueryClient();
 
@@ -81,11 +82,11 @@ const App = () => (
             path="/employees/emptasks/:id"
             element={
               <ProtectedRoute>
-                <EmpTasks/>
+                <EmpTasks />
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/employees/:id"
             element={
@@ -114,7 +115,15 @@ const App = () => (
             path="/tasks"
             element={
               <ProtectedRoute>
-                <Tasks/>
+                <Tasks />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/change-password"
+            element={
+              <ProtectedRoute>
+                <ChangePassword />
               </ProtectedRoute>
             }
           />

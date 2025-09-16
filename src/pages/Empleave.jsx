@@ -9,12 +9,20 @@ import {
   CardContent,
 } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
 function Empleave() {
   const { id } = useParams(); // employee id from route
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(false);
   const [employeeName, setEmployeeName] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // ✅ status filter
 
   const fetchLeaves = async () => {
     setLoading(true);
@@ -39,6 +47,11 @@ function Empleave() {
     fetchLeaves();
   }, [id]);
 
+  // ✅ filter leaves by status
+  const filteredLeaves = leaves.filter((leave) => {
+    return statusFilter === "all" || leave.status === statusFilter;
+  });
+
   const getStatusColor = (status) => {
     switch (status) {
       case "approved":
@@ -55,21 +68,40 @@ function Empleave() {
   return (
     <Layout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {employeeName
-            ? `Showing leave history for ${employeeName}`
-            : `Showing leave history`}
-        </h1>
+        {/* Header with filter */}
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {employeeName
+              ? `Showing leave history for ${employeeName}`
+              : `Showing leave history`}
+          </h1>
+
+          {/* ✅ Status Filter Dropdown */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         {loading && <p>Loading...</p>}
 
-        {!loading && leaves.length === 0 && (
+        {!loading && filteredLeaves.length === 0 && (
           <p className="text-gray-500">No leave history found.</p>
         )}
 
         <div className="space-y-4">
-          {leaves.map((leave) => (
-            <Card key={leave.id} className="shadow-md hover:shadow-lg transition">
+          {filteredLeaves.map((leave) => (
+            <Card
+              key={leave.id}
+              className="shadow-md hover:shadow-lg transition"
+            >
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg font-semibold">
                   {leave.type.toUpperCase()} Leave
@@ -108,4 +140,3 @@ function Empleave() {
 }
 
 export default Empleave;
-

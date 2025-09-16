@@ -171,19 +171,21 @@ const Employees = () => {
                     </div>
 
                     {/* ✅ New Buttons */}
-                    <div className="flex gap-2 mt-3 flex-wrap">
+                    {/* ✅ New Buttons (Aligned) */}
+                    <div className="flex gap-2 mt-3">
                       <Button
-  onClick={(e) => {
-    e.stopPropagation();
-    navigate(`/employees/empattendance/${employee.id}`, {
-      state: { name: employee.name },
-    });
-  }}
-  className="bg-blue-600 text-white hover:bg-blue-700"
-  size="sm"
->
-  Attendance
-</Button>
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/employees/empattendance/${employee.id}`, {
+                            state: { name: employee.name },
+                          });
+                        }}
+                        className="bg-indigo-600 text-white hover:bg-indigo-700"
+                        size="sm"
+                      >
+                        Attendance
+                      </Button>
+
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -194,17 +196,19 @@ const Employees = () => {
                       >
                         Leave
                       </Button>
+
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`/employees/emptasks/${employee.id}`);
                         }}
-                        className="bg-purple-600 text-white hover:bg-purple-700"
+                        className="bg-yellow-500 text-white hover:bg-yellow-600"
                         size="sm"
                       >
                         Task
                       </Button>
                     </div>
+
 
                     {/* Created At */}
                     <p className="text-xs text-gray-500 mt-2">
