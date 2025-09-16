@@ -14,6 +14,11 @@ import Leaves from "./pages/Leaves";
 import Attendance from "./pages/Attendance";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./ProtectedRoute";
+import Tasks from "./pages/Tasks";
+import Empleave from "./pages/Empleave";
+import EmpAttendance from "./pages/EmpAttendance";
+import EmpTasks from "./pages/EmpTasks";
+import ChangePassword from "./pages/ChangePassword";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +63,31 @@ const App = () => (
             }
           />
           <Route
+            path="/employees/empleave/:id"
+            element={
+              <ProtectedRoute>
+                <Empleave />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employees/empattendance/:id"
+            element={
+              <ProtectedRoute>
+                <EmpAttendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employees/emptasks/:id"
+            element={
+              <ProtectedRoute>
+                <EmpTasks />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/employees/:id"
             element={
               <ProtectedRoute>
@@ -78,6 +108,22 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Attendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tasks"
+            element={
+              <ProtectedRoute>
+                <Tasks />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/change-password"
+            element={
+              <ProtectedRoute>
+                <ChangePassword />
               </ProtectedRoute>
             }
           />

@@ -3,12 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Plus, Search, Filter } from "lucide-react";
 import {
@@ -27,60 +22,10 @@ const Employees = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // const employees = [
-  //   {
-  //     id: 1,
-  //     name: "Sarah Johnson",
-  //     email: "sarah.johnson@company.com",
-  //     role: "Manager",
-  //     department: "Marketing",
-  //     status: "active",
-  //     avatar: "👩‍💼",
-  //     joinDate: "2023-01-15",
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "Michael Chen",
-  //     email: "michael.chen@company.com",
-  //     role: "Developer",
-  //     department: "Engineering",
-  //     status: "active",
-  //     avatar: "👨‍💻",
-  //     joinDate: "2023-02-20",
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "Emily Davis",
-  //     email: "emily.davis@company.com",
-  //     role: "HR Specialist",
-  //     department: "HR",
-  //     status: "on-leave",
-  //     avatar: "👩‍🏫",
-  //     joinDate: "2022-11-10",
-  //   },
-  //   {
-  //     id: 4,
-  //     name: "James Wilson",
-  //     email: "james.wilson@company.com",
-  //     role: "Sales Rep",
-  //     department: "Sales",
-  //     status: "active",
-  //     avatar: "👨‍💼",
-  //     joinDate: "2023-03-05",
-  //   },
-  // ];
-
   const fetchList = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await api.get(
-        `/employee/getEmployees`
-        //   {
-        //   headers:{
-        //       Authorization: `Bearer ${token}`
-        //   }
-        // }
-      );
+      const res = await api.get(`/employee/getEmployees`);
       setEmployees(res.data.data);
     } catch (err) {
       console.error("Error fetching client list", err);
@@ -92,14 +37,15 @@ const Employees = () => {
   useEffect(() => {
     fetchList();
   }, []);
+
   const orgID = localStorage.getItem("orgID");
   const orgFilteredEmployees = employees.filter(
     (emp) => emp.organization_id == orgID
   );
+
   const filteredEmployees = orgFilteredEmployees.filter((employee) => {
     const name = employee.name || "";
     const email = employee.email || "";
-    const phone = employee.phone || "";
     const department = employee.department || "";
     const role = employee.role || "";
 
@@ -131,6 +77,7 @@ const Employees = () => {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
@@ -149,6 +96,7 @@ const Employees = () => {
           </Button>
         </div>
 
+        {/* Search + Filter */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row gap-4">
@@ -178,12 +126,12 @@ const Employees = () => {
           </CardContent>
         </Card>
 
+        {/* Employee Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredEmployees?.map((employee) => (
             <Card
               key={employee.id}
               className="hover:shadow-lg transition-shadow cursor-pointer"
-              //onClick={() => navigate(`/employees/${employee.id}`)}
             >
               <CardContent className="p-6">
                 <div className="flex items-start space-x-4">
@@ -202,6 +150,7 @@ const Employees = () => {
                       {employee.role} • {employee.department}
                     </p>
 
+                    {/* Status + Edit */}
                     <div className="flex items-center justify-between mt-4">
                       <Badge className={getStatusColor(employee.status)}>
                         {employee?.status?.replace("-", " ")}
@@ -218,6 +167,46 @@ const Employees = () => {
                       </Button>
                     </div>
 
+                    {/* ✅ New Buttons */}
+                    {/* ✅ New Buttons (Aligned) */}
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/employees/empattendance/${employee.id}`, {
+                            state: { name: employee.name },
+                          });
+                        }}
+                        className="bg-indigo-400 text-white hover:bg-indigo-700"
+                        size="sm"
+                      >
+                        Attendance
+                      </Button>
+
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/employees/empleave/${employee.id}`);
+                        }}
+                        className="bg-green-600 text-white hover:bg-green-700"
+                        size="sm"
+                      >
+                        Leave
+                      </Button>
+
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/employees/emptasks/${employee.id}`);
+                        }}
+                        className="bg-yellow-500 text-white hover:bg-yellow-600"
+                        size="sm"
+                      >
+                        Task
+                      </Button>
+                    </div>
+
+                    {/* Created At */}
                     <p className="text-xs text-gray-500 mt-2">
                       Created At:{" "}
                       {new Date(employee.created_at).toLocaleDateString()}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import {
@@ -22,14 +22,8 @@ const Layout = ({ children }) => {
     { name: "Employees", href: "/employees", icon: Users },
     { name: "Leave Requests", href: "/leaves", icon: Calendar },
     { name: "Attendance", href: "/attendance", icon: Clock },
+    { name: "Employee Task", href: "/tasks", icon: Users },
   ];
-
-  // useEffect(() => {
-  //   const isAuthenticated = localStorage.getItem('isAuthenticated');
-  //   if (!isAuthenticated) {
-  //     navigate('/login');
-  //   }
-  // }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
@@ -48,10 +42,11 @@ const Layout = ({ children }) => {
       {/* Sidebar */}
       <div
         className={cn(
-          "bg-white shadow-lg transition-all duration-300 flex flex-col",
+          "bg-white shadow-lg transition-all duration-300 flex flex-col h-screen sticky top-0",
           sidebarOpen ? "w-64" : "w-16"
         )}
       >
+        {/* Admin Panel Fixed Section */}
         <div className="p-4 border-b">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -65,6 +60,7 @@ const Layout = ({ children }) => {
           </div>
         </div>
 
+        {/* Navigation (also fixed, not scrollable) */}
         <nav className="flex-1 p-4 space-y-2">
           {navigation.map((item) => {
             const Icon = item.icon;
@@ -86,6 +82,7 @@ const Layout = ({ children }) => {
           })}
         </nav>
 
+        {/* Logout Button Fixed at Bottom */}
         <div className="p-4 border-t">
           <Button
             onClick={handleLogout}
@@ -116,16 +113,19 @@ const Layout = ({ children }) => {
                 <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-gray-600" />
                 </div>
-                <span className="text-sm font-medium text-gray-700">
+                <button
+                  onClick={() => navigate("/change-password")}
+                  className="text-sm font-medium text-gray-700 hover:underline"
+                >
                   Admin User
-                </span>
+                </button>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 p-6">{children}</main>
+        {/* Page Content (scroll only here) */}
+        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
       </div>
     </div>
   );
