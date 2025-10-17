@@ -74,6 +74,11 @@ function Empleave() {
             {employeeName
               ? `Showing leave history for ${employeeName}`
               : `Showing leave history`}
+
+              {/* ✅ Total Leaves Count */}
+    <p className="text-sm text-gray-600 mt-1">
+      Total Leaves: <span className="font-semibold">{filteredLeaves.length}</span>
+    </p>
           </h1>
 
           {/* ✅ Status Filter Dropdown */}

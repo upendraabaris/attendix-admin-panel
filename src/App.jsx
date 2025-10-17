@@ -19,6 +19,8 @@ import Empleave from "./pages/Empleave";
 import EmpAttendance from "./pages/EmpAttendance";
 import EmpTasks from "./pages/EmpTasks";
 import ChangePassword from "./pages/ChangePassword";
+import Workspace from "./pages/Workspace";
+import WorkspaceBoard from "./pages/WorkspaceBoard";
 
 const queryClient = new QueryClient();
 
@@ -127,6 +129,15 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/workspace"
+            element={
+              <ProtectedRoute>
+                <Workspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/workspace/:id" element={<WorkspaceBoard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

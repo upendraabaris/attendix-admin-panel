@@ -86,7 +86,10 @@ function Tasks() {
         title: newTask.title,
         due_date: newTask.due_date,
         description: newTask.notes,
-      };
+        attachment: null ,
+        workspace_id: 1,
+        workspace_name: null,
+           };
 
       await api.post("/task/assignTask", payload);
       alert("✅ Task added successfully!");

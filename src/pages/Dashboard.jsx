@@ -82,7 +82,7 @@ const Dashboard = () => {
 
         if (response.status === 200 && data.success) {
           const formatted = data.data.map((item) => {
-            console.log(item, "ITEM");
+            // console.log(item, "ITEM");
             const start = new Date(item.start_date);
             const end = new Date(item.end_date);
             const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
