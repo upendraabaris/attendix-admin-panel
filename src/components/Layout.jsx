@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   User,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -23,6 +24,7 @@ const Layout = ({ children }) => {
     { name: "Leave Requests", href: "/leaves", icon: Calendar },
     { name: "Attendance", href: "/attendance", icon: Clock },
     { name: "Employee Task", href: "/tasks", icon: Users },
+    { name: "Workspace", href: "/workspace", icon: Briefcase },
   ];
 
   const handleLogout = () => {
