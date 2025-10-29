@@ -18,18 +18,30 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Employees", href: "/employees", icon: Users },
-    { name: "Leave Requests", href: "/leaves", icon: Calendar },
-    { name: "Attendance", href: "/attendance", icon: Clock },
-    { name: "Employee Task", href: "/tasks", icon: Users },
-    { name: "Workspace", href: "/workspace", icon: Briefcase },
-  ];
+  const employeeName = localStorage.getItem("employee_name");
+
+  const role = localStorage.getItem("role");
+  let navigation = [];
+  if (role === "admin") {
+    navigation = [
+      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Employees", href: "/employees", icon: Users },
+      { name: "Leave Requests", href: "/leaves", icon: Calendar },
+      { name: "Attendance", href: "/attendance", icon: Clock },
+      { name: "Employee Task", href: "/tasks", icon: Users },
+      { name: "Workspace", href: "/workspace", icon: Briefcase },
+    ];
+  } else {
+    navigation = [
+      { name: "Workspace", href: "/workspace", icon: Briefcase },
+    ]
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("orgID");
+    localStorage.removeItem("role");
+    localStorage.removeItem("employee_name");
     navigate("/login");
   };
 
@@ -116,10 +128,13 @@ const Layout = ({ children }) => {
                   <User className="w-4 h-4 text-gray-600" />
                 </div>
                 <button
-                  onClick={() => navigate("/change-password")}
-                  className="text-sm font-medium text-gray-700 hover:underline"
+                  onClick={role === "admin" ? () => navigate("/change-password") : undefined}
+                  className={`text-sm font-medium ${role === "admin"
+                      ? "text-gray-700 hover:underline"
+                      : "text-gray-400"
+                    }`}
                 >
-                  Admin User
+                  {employeeName ? employeeName : "Admin User"}
                 </button>
               </div>
             </div>

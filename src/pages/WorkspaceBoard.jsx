@@ -55,7 +55,7 @@ const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdd
         description: formData.description,
         workspace_id,
         workspace_name,
-        attachment: formData.attachment ? formData.attachment.name : "himank.pdf",
+        attachment: formData.attachment ? formData.attachment.name : "demo.pdf",
       };
 
       const res = await api.post("/task/assignTask", payload, {
@@ -150,7 +150,7 @@ const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdd
           </div>
 
           {/* Attachment */}
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Attachment (optional)</label>
             <input
               type="file"
@@ -158,7 +158,7 @@ const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdd
               onChange={handleChange}
               className="w-full border px-3 py-2 rounded-md text-sm"
             />
-          </div>
+          </div> */}
 
           <div className="flex justify-end gap-2 mt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
@@ -187,7 +187,8 @@ const WorkspaceBoard = () => {
   // ✅ Fetch tasks from backend
 const fetchTasks = async () => {
   try {
-    const res = await api.get("/task/all");
+     const res = await api.get("/task/all");
+   // const res = await api.get("/tasks");
     console.log("📦 API Response:", res.data);
 
     // Step 1: Flatten all tasks with employee info
