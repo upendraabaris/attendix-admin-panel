@@ -21,6 +21,7 @@ import EmpTasks from "./pages/EmpTasks";
 import ChangePassword from "./pages/ChangePassword";
 import Workspace from "./pages/Workspace";
 import WorkspaceBoard from "./pages/WorkspaceBoard";
+import EmployeeLogin from "./pages/EmployeeLogin";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/employee-login" element={<EmployeeLogin />} />
           <Route
             path="/dashboard"
             element={

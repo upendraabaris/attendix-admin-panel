@@ -11,6 +11,7 @@ import {
 } from "../components/ui/card";
 import { Shield, Mail, Lock } from "lucide-react";
 import api from "../hooks/useApi";
+import { Link } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -42,10 +43,14 @@ const Login = () => {
 
       const { token, user } = res.data;
       const organizationID = user.organization_id;
+      const employeeRole = user.employee_role; // ✅ naya field
+
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("orgID", organizationID);
+      localStorage.setItem("role", employeeRole); // ✅ add this line
+
       navigate("/dashboard");
     } catch (err) {
       const msg = err.response?.data?.error || "Login failed";
@@ -109,6 +114,16 @@ const Login = () => {
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
+            {/* ✅ Employee login link */}
+            <p className="text-center text-sm text-gray-600 mt-4">
+              Are you an employee?{" "}
+              <Link
+                to="/employee-login"
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Employee Login
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>

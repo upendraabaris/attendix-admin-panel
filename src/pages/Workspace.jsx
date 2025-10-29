@@ -14,10 +14,62 @@ const Workspace = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  // Fetch all workspaces
-  useEffect(() => {
-    api.get("/workspaces").then((res) => setWorkspaces(res.data));
-  }, []);
+// useEffect(() => {
+//   const fetchWorkspaces = async () => {
+//     try {
+//       const role = localStorage.getItem("role");
+
+//       if (role === "admin") {
+//         // ✅ Admin: show all workspaces
+//         const res = await api.get("/workspaces");
+//         setWorkspaces(res.data);
+//       } else {
+//         // ✅ Employee: show only assigned workspaces
+//         const [allRes, empRes] = await Promise.all([
+//           api.get("/workspaces"),
+//           api.get("/workspaces/emp/workspace"),
+//         ]);
+
+//         const allWorkspaces = allRes.data;
+//         const empWorkspaces = empRes.data;
+//         const empWorkspaceIds = empWorkspaces.map((ws) => ws.id);
+
+//         const filtered = allWorkspaces.filter((ws) =>
+//           empWorkspaceIds.includes(ws.id)
+//         );
+
+//         setWorkspaces(filtered);
+//       }
+//     } catch (error) {
+//       console.error("Error fetching workspaces:", error);
+//     }
+//   };
+
+//   fetchWorkspaces();
+// }, []);
+
+useEffect(() => {
+  const fetchWorkspaces = async () => {
+    try {
+      const role = localStorage.getItem("role");
+
+      let res;
+      if (role === "admin") {
+        // ✅ Admin: show all workspaces
+        res = await api.get("/workspaces");
+      } else {
+        // ✅ Employee: show only assigned workspaces directly
+        res = await api.get("/workspaces/emp/workspace");
+      }
+
+      setWorkspaces(res.data);
+    } catch (error) {
+      console.error("Error fetching workspaces:", error);
+    }
+  };
+
+  fetchWorkspaces();
+}, []);
 
   const handleCreateWorkspace = () => {
     if (!newWorkspaceName.trim()) return;
