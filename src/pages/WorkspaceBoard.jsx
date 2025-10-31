@@ -6,8 +6,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import api from "../hooks/useApi";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"; // ✅ New
+import { io } from "socket.io-client";
+import { toast } from "sonner"; // ✅ Toast import
+import BASE_URL from "../config/apiConfig";
 
 
+
+// const socket = io("http://localhost:4000"); // ✅ Adjust for your backend URL
+const socket = io(BASE_URL); // ✅ Adjust for your backend URL
 // ✅ Modal Component (unchanged)
 const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdded }) => {
   const [employees, setEmployees] = useState([]);
@@ -35,13 +41,39 @@ const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdd
     fetchEmployees();
   }, []);
 
+  // const handleChange = (e) => {
+  //   const { name, value, files } = e.target;
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     [name]: files ? files[0] : value,
+  //   }));
+  // };
+
+  // --- replace your handleChange with this ---
   const handleChange = (e) => {
     const { name, value, files } = e.target;
+
+    if (name === "due_date") {
+      const date = new Date(value);
+      if (!isNaN(date)) {
+        const formattedDate = date.toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        });
+        setFormData((prev) => ({
+          ...prev,
+          due_date: formattedDate,
+        }));
+        return;
+      }
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: files ? files[0] : value,
     }));
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -63,7 +95,7 @@ const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdd
       });
 
       console.log("🟢 RESPONSE:", res.data);
-      alert("✅ Task added successfully!");
+      toast.success("Task added successfully!");
       setFormData({
         employee_id: "",
         title: "",
@@ -76,7 +108,7 @@ const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdd
       onClose();
     } catch (error) {
       console.error("❌ Error adding task:", error);
-      alert("Failed to add task");
+      toast.error("Failed to add task!");
     } finally {
       setLoading(false);
     }
@@ -126,13 +158,43 @@ const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdd
           {/* Due Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-            <input
+            {/* <input
               type="date"
               name="due_date"
               value={formData.due_date}
               onChange={handleChange}
               required
               className="w-full border px-3 py-2 rounded-md text-sm"
+            /> */}
+            <input
+              type="text"
+              readOnly
+              value={formData.due_date}
+              onClick={() => document.getElementById("dueDatePicker").showPicker()} // 👈 open date picker
+              placeholder="dd-mm-yyyy"
+              className={`w-full border px-3 py-2 rounded-md text-sm ${!formData.due_date ? "text-gray-400" : "text-gray-800"
+                }`}
+            />
+
+            {/* Hidden actual date picker */}
+            <input
+              id="dueDatePicker"
+              type="date"
+              style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
+              onChange={(e) => {
+                const date = new Date(e.target.value);
+                if (!isNaN(date)) {
+                  const formattedDate = date.toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  });
+                  setFormData((prev) => ({
+                    ...prev,
+                    due_date: formattedDate,
+                  }));
+                }
+              }}
             />
           </div>
 
@@ -185,169 +247,141 @@ const WorkspaceBoard = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   // ✅ Fetch tasks from backend
-const fetchTasks = async () => {
-  try {
-     const res = await api.get("/task/all");
-   // const res = await api.get("/tasks");
-    console.log("📦 API Response:", res.data);
+  const fetchTasks = async () => {
+    try {
+      const res = await api.get("/task/all");
+      // const res = await api.get("/tasks");
+      console.log("📦 API Response:", res.data);
 
-    // Step 1: Flatten all tasks with employee info
-    const allTasks = res.data.data.flatMap((emp) =>
-      emp.tasks.map((task) => ({
-        ...task,
-        employee_name: emp.name,
-      }))
-    );
+      // Step 1: Flatten all tasks with employee info
+      const allTasks = res.data.data.flatMap((emp) =>
+        emp.tasks.map((task) => ({
+          ...task,
+          employee_name: emp.name,
+        }))
+      );
 
-    // Step 2: Filter by workspace_id from URL
-    const workspaceTasks = allTasks.filter(
-      (task) => String(task.workspace_id) === String(id)
-    );
+      // Step 2: Filter by workspace_id from URL
+      const workspaceTasks = allTasks.filter(
+        (task) => String(task.workspace_id) === String(id)
+      );
 
-    console.log("🎯 Filtered Tasks for Workspace:", workspaceTasks);
+      console.log("🎯 Filtered Tasks for Workspace:", workspaceTasks);
 
-    // Step 3: Set filtered tasks in Backlog column
-//     setColumns([
-//     {
-//         id: "backlog",
-//         title: "Backlog",
-//         color: "bg-gray-100",
-//         tasks: workspaceTasks,
-//       },
-//       { id: "todo", title: "To Do", color: "bg-blue-50", tasks: [] },
-//       { id: "inprogress", title: "In Progress", color: "bg-yellow-50", tasks: [] },
-//       { id: "review", title: "Review", color: "bg-purple-50", tasks: [] },
-//       { id: "completed", title: "Completed", color: "bg-green-50", tasks: [] },
-//     ]);
-//   } catch (error) {
-//     console.error("❌ Error fetching tasks:", error);
-//   }
-// };
- const grouped = {
-      backlog: [],
-      todo: [],
-      inprogress: [],
-      review: [],
-      completed: [],
-    };
+      const grouped = {
+        backlog: [],
+        todo: [],
+        inprogress: [],
+        review: [],
+        completed: [],
+      };
 
-    workspaceTasks.forEach((task) => {
-      const status = task.status?.toLowerCase() || "backlog";
+      workspaceTasks.forEach((task) => {
+        const status = task.status?.toLowerCase() || "backlog";
 
-      if (status.includes("backlog")) grouped.backlog.push(task);
-      else if (status.includes("to do")) grouped.todo.push(task);
-      else if (status.includes("in progress")) grouped.inprogress.push(task);
-      else if (status.includes("review")) grouped.review.push(task);
-      else if (status.includes("completed")) grouped.completed.push(task);
-      else grouped.backlog.push(task); // fallback
-    });
+        if (status.includes("backlog")) grouped.backlog.push(task);
+        else if (status.includes("to do")) grouped.todo.push(task);
+        else if (status.includes("in progress")) grouped.inprogress.push(task);
+        else if (status.includes("review")) grouped.review.push(task);
+        else if (status.includes("completed")) grouped.completed.push(task);
+        else grouped.backlog.push(task); // fallback
+      });
 
-    // Step 4️⃣: Set categorized columns
-    setColumns([
-      { id: "backlog", title: "Backlog", color: "bg-gray-100", tasks: grouped.backlog },
-      { id: "todo", title: "To Do", color: "bg-blue-50", tasks: grouped.todo },
-      { id: "inprogress", title: "In Progress", color: "bg-yellow-50", tasks: grouped.inprogress },
-      { id: "review", title: "Review", color: "bg-purple-50", tasks: grouped.review },
-      { id: "completed", title: "Completed", color: "bg-green-50", tasks: grouped.completed },
-    ]);
-  } catch (error) {
-    console.error("❌ Error fetching tasks:", error);
-  }
-};
+      // Step 4️⃣: Set categorized columns
+      setColumns([
+        { id: "backlog", title: "Backlog", color: "bg-gray-100", tasks: grouped.backlog },
+        { id: "todo", title: "To Do", color: "bg-blue-50", tasks: grouped.todo },
+        { id: "inprogress", title: "In Progress", color: "bg-yellow-50", tasks: grouped.inprogress },
+        { id: "review", title: "Review", color: "bg-purple-50", tasks: grouped.review },
+        { id: "completed", title: "Completed", color: "bg-green-50", tasks: grouped.completed },
+      ]);
+    } catch (error) {
+      console.error("❌ Error fetching tasks:", error);
+      toast.error("Failed to fetch tasks!");
+    }
+  };
 
   useEffect(() => {
     fetchTasks();
-  }, []);
-
-
-  // // drag and drop handler (optional, for future use)
-  //  const onDragEnd = (result) => {
-  //   const { source, destination } = result;
-  //   if (!destination) return; // dropped outside
-
-  //   if (source.droppableId === destination.droppableId && source.index === destination.index)
-  //     return;
-
-  //   const newColumns = [...columns];
-  //   const sourceCol = newColumns.find((col) => col.id === source.droppableId);
-  //   const destCol = newColumns.find((col) => col.id === destination.droppableId);
-
-  //   const [movedTask] = sourceCol.tasks.splice(source.index, 1);
-  //   destCol.tasks.splice(destination.index, 0, movedTask);
-
-  //   setColumns(newColumns);
-
-  //   // ✅ (Optional) Call API to update task status in DB here
-  //   console.log(`Moved task ${movedTask.title} from ${sourceCol.id} → ${destCol.id}`);
-  // };
-
-  // 253 to 316
-const onDragEnd = async (result) => {
-  const { source, destination } = result;
-  if (!destination) return; // dropped outside board
-  if (source.droppableId === destination.droppableId && source.index === destination.index) return;
-
-  const newColumns = [...columns];
-  const sourceCol = newColumns.find((col) => col.id === source.droppableId);
-  const destCol = newColumns.find((col) => col.id === destination.droppableId);
-
-  // Remove the task from source and add to destination
-  const [movedTask] = sourceCol.tasks.splice(source.index, 1);
-  destCol.tasks.splice(destination.index, 0, movedTask);
-
-  // Update UI immediately
-  setColumns(newColumns);
-
-  // ✅ Define readable status values based on column IDs
-  const statusMap = {
-    backlog: "backlog",
-    todo: "to do",
-    inprogress: "in progress",
-    review: "review",
-    completed: "completed",
-  };
-
-  const newStatus = statusMap[destination.droppableId] || "backlog";
-  const isCompleted = destination.droppableId === "completed";
-
-  // ✅ Prepare payload for backend
-  const payload = {
-    taskId: movedTask.task_id,
-    is_completed: isCompleted,
-    status: newStatus,
-  };
-
-  console.log("📤 Sending update payload:", payload);
-
-  try {
-    const token = localStorage.getItem("token");
-
-    // ✅ Call backend API
-    const res = await api.post("/task/update-status", payload, {
-      headers: { Authorization: `Bearer ${token}` },
+    //  ✅ Listen for real-time updates
+    socket.on("taskUpdated", (updatedTask) => {
+      console.log("🟡 Real-time update received:", updatedTask);
+      fetchTasks(); // refresh the board automatically
     });
 
-    console.log("✅ Task updated successfully:", res.data);
+    return () => {
+      socket.off("taskUpdated");
+    };
+  }, []);
 
-  } catch (error) {
-    console.error("❌ Error updating task:", error);
+  // 253 to 316
+  const onDragEnd = async (result) => {
+    const { source, destination } = result;
+    if (!destination) return; // dropped outside board
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    // Optional: Revert UI change if API fails
-    const revertedColumns = [...columns];
-    const revertSourceCol = revertedColumns.find((col) => col.id === source.droppableId);
-    const revertDestCol = revertedColumns.find((col) => col.id === destination.droppableId);
+    const newColumns = [...columns];
+    const sourceCol = newColumns.find((col) => col.id === source.droppableId);
+    const destCol = newColumns.find((col) => col.id === destination.droppableId);
 
-    // remove from destination, put back to source
-    const [revertedTask] = revertDestCol.tasks.splice(destination.index, 1);
-    revertSourceCol.tasks.splice(source.index, 0, revertedTask);
+    // Remove the task from source and add to destination
+    const [movedTask] = sourceCol.tasks.splice(source.index, 1);
+    destCol.tasks.splice(destination.index, 0, movedTask);
 
-    setColumns(revertedColumns);
-    alert("Failed to update task on server!");
-  }
-};
+    // Update UI immediately
+    setColumns(newColumns);
+
+    // ✅ Define readable status values based on column IDs
+    const statusMap = {
+      backlog: "backlog",
+      todo: "to do",
+      inprogress: "in progress",
+      review: "review",
+      completed: "completed",
+    };
+
+    const newStatus = statusMap[destination.droppableId] || "backlog";
+    const isCompleted = destination.droppableId === "completed";
+
+    // ✅ Prepare payload for backend
+    const payload = {
+      taskId: movedTask.task_id,
+      is_completed: isCompleted,
+      status: newStatus,
+    };
+
+    console.log("📤 Sending update payload:", payload);
+
+    try {
+      const token = localStorage.getItem("token");
+
+      // ✅ Call backend API
+      const res = await api.post("/task/update-status", payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log("✅ Task updated successfully:", res.data);
+
+    } catch (error) {
+      console.error("❌ Error updating task:", error);
+
+      // Optional: Revert UI change if API fails
+      const revertedColumns = [...columns];
+      const revertSourceCol = revertedColumns.find((col) => col.id === source.droppableId);
+      const revertDestCol = revertedColumns.find((col) => col.id === destination.droppableId);
+
+      // remove from destination, put back to source
+      const [revertedTask] = revertDestCol.tasks.splice(destination.index, 1);
+      revertSourceCol.tasks.splice(source.index, 0, revertedTask);
+
+      setColumns(revertedColumns);
+      // alert("Failed to update task on server!");
+      toast.error("Failed to update task on server!");
+    }
+  };
 
 
-// Filter tasks based on search term
+  // Filter tasks based on search term
   const filtered = columns.map((col) => ({
     ...col,
     tasks: col.tasks.filter((t) =>
