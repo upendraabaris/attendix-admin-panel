@@ -6,6 +6,8 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { PlusCircle, Users, ArrowRight, Search, FolderOpen, Sparkles } from "lucide-react";
 import api from "../hooks/useApi";
+import { toast } from "sonner"; // ✅ Toast import
+
 
 const Workspace = () => {
   const navigate = useNavigate();
