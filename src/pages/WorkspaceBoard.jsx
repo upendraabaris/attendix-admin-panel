@@ -13,7 +13,7 @@ import BASE_URL from "../config/apiConfig";
 
 
 // const socket = io("http://localhost:4000"); // ✅ Adjust for your backend URL
-const socket = io(BASE_URL); // ✅ Adjust for your backend URL
+  const socket = io(BASE_URL); // ✅ Adjust for your backend URL
 // ✅ Modal Component (unchanged)
 const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdded }) => {
   const [employees, setEmployees] = useState([]);
