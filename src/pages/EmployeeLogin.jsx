@@ -116,6 +116,7 @@ const EmployeeLogin = () => {
       localStorage.setItem("user", JSON.stringify(res.data.user));
       localStorage.setItem("employee_name", res.data.user.employee_name);
       localStorage.setItem("role", res.data.user.role);
+      localStorage.setItem("orgID", String(selectedOrg.organization_id));
 
       setMessage("✅ Login successful!");
       setTimeout(() => navigate("/workspace"), 1000);
