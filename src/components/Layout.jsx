@@ -33,7 +33,9 @@ const Layout = ({ children }) => {
     ];
   } else {
     navigation = [
-      { name: "Workspace", href: "/workspace", icon: Briefcase },
+      { name: "Attendance", href: "/employee-attendance", icon: Clock },
+      { name: "Leave Request", href: "/employee-leaves", icon: Calendar },
+      { name: "Workspace", href: "/workspace", icon: Briefcase }
     ]
   }
 
@@ -68,7 +70,7 @@ const Layout = ({ children }) => {
             </div>
             {sidebarOpen && (
               <h1 className="text-lg font-semibold text-gray-900">
-                Admin Panel
+                {role === "admin" ? "Admin Panel" : "Employee Portal"}
               </h1>
             )}
           </div>
@@ -130,8 +132,8 @@ const Layout = ({ children }) => {
                 <button
                   onClick={role === "admin" ? () => navigate("/change-password") : undefined}
                   className={`text-sm font-medium ${role === "admin"
-                      ? "text-gray-700 hover:underline"
-                      : "text-gray-400"
+                    ? "text-gray-700 hover:underline"
+                    : "text-gray-400"
                     }`}
                 >
                   {employeeName ? employeeName : "Admin User"}
