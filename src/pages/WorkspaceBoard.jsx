@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { PlusCircle, Search } from "lucide-react";
 import Layout from "../components/Layout";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
@@ -23,8 +23,20 @@ const WEEKDAY_OPTIONS = [
 // const socket = io("http://localhost:4000"); // ✅ Adjust for your backend URL
 const socket = io(BASE_URL); // ✅ Adjust for your backend URL
 // ✅ Modal Component (unchanged)
-const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdded }) => {
+const AddTaskModal = ({
+  isOpen,
+  onClose,
+  workspace_id,
+  workspace_name,
+  onTaskAdded,
+  onAuthFailure,
+}) => {
   const [employees, setEmployees] = useState([]);
+  const storedOrgID = localStorage.getItem("orgID");
+  const orgID =
+    storedOrgID && storedOrgID !== "undefined" && storedOrgID !== "null"
+      ? storedOrgID
+      : null;
   const [formData, setFormData] = useState({
     employee_id: "",
     title: "",
@@ -37,6 +49,13 @@ const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdd
     monthly_day: "",
   });
   const [loading, setLoading] = useState(false);
+  const getOrgIdFromItem = (item) =>
+    item?.organization_id ??
+    item?.organizationId ??
+    item?.organizationID ??
+    item?.org_id ??
+    item?.organization?.id ??
+    null;
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -45,8 +64,21 @@ const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdd
         const res = await api.get("/employee/getEmployees", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setEmployees(res.data.data || []);
+        const allEmployees = res.data?.data || [];
+        const hasOrgOnPayload = allEmployees.some((emp) => getOrgIdFromItem(emp) != null);
+        const orgEmployees =
+          orgID && hasOrgOnPayload
+            ? allEmployees.filter(
+                (emp) => String(getOrgIdFromItem(emp)) === String(orgID)
+              )
+            : allEmployees;
+
+        setEmployees(orgEmployees);
       } catch (err) {
+        if ([401, 403].includes(err.response?.status)) {
+          onAuthFailure?.();
+          return;
+        }
         console.error("Error fetching employees:", err);
       }
     };
@@ -156,6 +188,10 @@ const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdd
       onTaskAdded();
       onClose();
     } catch (error) {
+      if ([401, 403].includes(error.response?.status)) {
+        onAuthFailure?.();
+        return;
+      }
       console.error("❌ Error adding task:", error);
       toast.error("Failed to add task!");
     } finally {
@@ -334,11 +370,33 @@ const AddTaskModal = ({ isOpen, onClose, workspace_id, workspace_name, onTaskAdd
 const WorkspaceBoard = () => {
   const { id } = useParams();
   const { state } = useLocation();
+  const navigate = useNavigate();
   const workspaceName = state?.workspaceName || `Workspace #${id}`;
+  const storedOrgID = localStorage.getItem("orgID");
+  const orgID =
+    storedOrgID && storedOrgID !== "undefined" && storedOrgID !== "null"
+      ? storedOrgID
+      : null;
+  const getOrgIdFromItem = (item) =>
+    item?.organization_id ??
+    item?.organizationId ??
+    item?.organizationID ??
+    item?.org_id ??
+    item?.organization?.id ??
+    null;
 
   const [columns, setColumns] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const handleAuthFailure = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("orgID");
+    localStorage.removeItem("role");
+    localStorage.removeItem("employee_name");
+    navigate("/login");
+  };
 
   // ✅ Fetch tasks from backend
   const fetchTasks = async () => {
@@ -348,8 +406,17 @@ const WorkspaceBoard = () => {
       console.log("📦 API Response:", res.data);
 
       // Step 1: Flatten all tasks with employee info
-      const allTasks = res.data.data.flatMap((emp) =>
-        emp.tasks.map((task) => ({
+      const allEmployees = res.data?.data || [];
+      const hasOrgOnPayload = allEmployees.some((emp) => getOrgIdFromItem(emp) != null);
+      const orgEmployees =
+        orgID && hasOrgOnPayload
+          ? allEmployees.filter(
+              (emp) => String(getOrgIdFromItem(emp)) === String(orgID)
+            )
+          : allEmployees;
+
+      const allTasks = orgEmployees.flatMap((emp) =>
+        (emp.tasks || []).map((task) => ({
           ...task,
           employee_name: emp.name,
         }))
@@ -390,6 +457,10 @@ const WorkspaceBoard = () => {
         { id: "completed", title: "Completed", color: "bg-green-50", tasks: grouped.completed },
       ]);
     } catch (error) {
+      if ([401, 403].includes(error.response?.status)) {
+        handleAuthFailure();
+        return;
+      }
       console.error("❌ Error fetching tasks:", error);
       toast.error("Failed to fetch tasks!");
     }
@@ -462,6 +533,10 @@ const WorkspaceBoard = () => {
       console.log("✅ Task updated successfully:", res.data);
 
     } catch (error) {
+      if ([401, 403].includes(error.response?.status)) {
+        handleAuthFailure();
+        return;
+      }
       console.error("❌ Error updating task:", error);
 
       // Optional: Revert UI change if API fails
@@ -652,6 +727,7 @@ const WorkspaceBoard = () => {
         workspace_id={id}
         workspace_name={workspaceName}
         onTaskAdded={fetchTasks}
+        onAuthFailure={handleAuthFailure}
       />
     </Layout>
   );

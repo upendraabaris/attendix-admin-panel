@@ -42,13 +42,23 @@ const Login = () => {
       });
 
       const { token, user } = res.data;
-      const organizationID = user.organization_id;
-      const employeeRole = user.employee_role; // ✅ naya field
+      const organizationID =
+        user.organization_id ??
+        user.organizationId ??
+        user.organizationID ??
+        user.org_id ??
+        user.organization?.id ??
+        null;
+      const employeeRole = user.employee_role || user.role; // ✅ naya field
 
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("orgID", organizationID);
+      if (organizationID != null) {
+        localStorage.setItem("orgID", String(organizationID));
+      } else {
+        localStorage.removeItem("orgID");
+      }
       localStorage.setItem("role", employeeRole); // ✅ add this line
 
       navigate("/dashboard");

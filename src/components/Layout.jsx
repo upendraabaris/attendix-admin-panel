@@ -21,8 +21,10 @@ const Layout = ({ children }) => {
   const employeeName = localStorage.getItem("employee_name");
 
   const role = localStorage.getItem("role");
+  const normalizedRole = (role || "").toLowerCase();
+  const isAdminRole = normalizedRole.includes("admin");
   let navigation = [];
-  if (role === "admin") {
+  if (isAdminRole) {
     navigation = [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Employees", href: "/employees", icon: Users },
@@ -59,7 +61,7 @@ const Layout = ({ children }) => {
       <div
         className={cn(
           "bg-white shadow-lg transition-all duration-300 flex flex-col h-screen sticky top-0",
-          sidebarOpen ? "w-64" : "w-16"
+          sidebarOpen ? "w-64" : "w-16",
         )}
       >
         {/* Admin Panel Fixed Section */}
@@ -88,7 +90,7 @@ const Layout = ({ children }) => {
                   "w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors",
                   isActive(item.href)
                     ? "bg-blue-100 text-blue-700 font-medium"
-                    : "text-gray-600 hover:bg-gray-100"
+                    : "text-gray-600 hover:bg-gray-100",
                 )}
               >
                 <Icon className="w-5 h-5" />

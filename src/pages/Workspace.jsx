@@ -6,7 +6,6 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { PlusCircle, Users, ArrowRight, Search, FolderOpen, Sparkles } from "lucide-react";
 import api from "../hooks/useApi";
-import { toast } from "sonner"; // ✅ Toast import
 
 
 const Workspace = () => {
@@ -15,6 +14,17 @@ const Workspace = () => {
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const role = (localStorage.getItem("role") || "").toLowerCase();
+  const isAdminRole = role.includes("admin");
+
+  const handleAuthFailure = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("orgID");
+    localStorage.removeItem("role");
+    localStorage.removeItem("employee_name");
+    navigate("/login");
+  };
 
 // useEffect(() => {
 //   const fetchWorkspaces = async () => {
@@ -53,10 +63,8 @@ const Workspace = () => {
 useEffect(() => {
   const fetchWorkspaces = async () => {
     try {
-      const role = localStorage.getItem("role");
-
       let res;
-      if (role === "admin") {
+      if (isAdminRole) {
         // ✅ Admin: show all workspaces
         res = await api.get("/workspaces");
       } else {
@@ -64,14 +72,23 @@ useEffect(() => {
         res = await api.get("/workspaces/emp/workspace");
       }
 
-      setWorkspaces(res.data);
+      const allWorkspaces = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.data)
+          ? res.data.data
+          : [];
+      setWorkspaces(allWorkspaces);
     } catch (error) {
+      if ([401, 403].includes(error.response?.status)) {
+        handleAuthFailure();
+        return;
+      }
       console.error("Error fetching workspaces:", error);
     }
   };
 
   fetchWorkspaces();
-}, []);
+}, [isAdminRole]);
 
   const handleCreateWorkspace = () => {
     if (!newWorkspaceName.trim()) return;
@@ -80,11 +97,16 @@ useEffect(() => {
     api
       .post("/workspaces", { name: newWorkspaceName })
       .then((res) => {
-        setWorkspaces((prev) => [...prev, res.data]);
+        const createdWorkspace = res.data?.data ?? res.data;
+        setWorkspaces((prev) => [...prev, createdWorkspace]);
         setNewWorkspaceName("");
         setIsCreating(false);
       })
-      .catch(() => {
+      .catch((error) => {
+        if ([401, 403].includes(error.response?.status)) {
+          handleAuthFailure();
+          return;
+        }
         setIsCreating(false);
       });
   };
