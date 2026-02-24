@@ -22,6 +22,8 @@ import ChangePassword from "./pages/ChangePassword";
 import Workspace from "./pages/Workspace";
 import WorkspaceBoard from "./pages/WorkspaceBoard";
 import EmployeeLogin from "./pages/EmployeeLogin";
+import EmployeeAttendanceTab from "./components/EmployeeAttendanceTab";
+import EmployeeLeaves from "./pages/EmployeeLeaves";
 
 const queryClient = new QueryClient();
 
@@ -112,6 +114,22 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Attendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee-attendance"
+            element={
+              <ProtectedRoute>
+                <EmployeeAttendanceTab/>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee-leaves"
+            element={
+              <ProtectedRoute>
+                <EmployeeLeaves />
               </ProtectedRoute>
             }
           />

@@ -10,10 +10,18 @@ import { io } from "socket.io-client";
 import { toast } from "sonner"; // ✅ Toast import
 import BASE_URL from "../config/apiConfig";
 
-
+const WEEKDAY_OPTIONS = [
+  { key: "sun", label: "Sun" },
+  { key: "mon", label: "Mon" },
+  { key: "tue", label: "Tue" },
+  { key: "wed", label: "Wed" },
+  { key: "thu", label: "Thu" },
+  { key: "fri", label: "Fri" },
+  { key: "sat", label: "Sat" },
+];
 
 // const socket = io("http://localhost:4000"); // ✅ Adjust for your backend URL
-  const socket = io(BASE_URL); // ✅ Adjust for your backend URL
+const socket = io(BASE_URL); // ✅ Adjust for your backend URL
 // ✅ Modal Component (unchanged)
 const AddTaskModal = ({
   isOpen,
@@ -35,6 +43,10 @@ const AddTaskModal = ({
     due_date: "",
     description: "",
     attachment: null,
+    recurrence_type: "none",
+    recurrence_days: [],
+    recurrence_end_date: "",
+    monthly_day: "",
   });
   const [loading, setLoading] = useState(false);
   const getOrgIdFromItem = (item) =>
@@ -81,34 +93,61 @@ const AddTaskModal = ({
   //   }));
   // };
 
-  // --- replace your handleChange with this ---
   const handleChange = (e) => {
     const { name, value, files } = e.target;
-
-    if (name === "due_date") {
-      const date = new Date(value);
-      if (!isNaN(date)) {
-        const formattedDate = date.toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-        });
-        setFormData((prev) => ({
-          ...prev,
-          due_date: formattedDate,
-        }));
-        return;
-      }
-    }
     setFormData((prev) => ({
       ...prev,
       [name]: files ? files[0] : value,
     }));
   };
 
+  const toggleWeekday = (day) => {
+    setFormData((prev) => ({
+      ...prev,
+      recurrence_days: prev.recurrence_days.includes(day)
+        ? prev.recurrence_days.filter((d) => d !== day)
+        : [...prev.recurrence_days, day],
+    }));
+  };
+
+  const handleRecurrenceTypeChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      recurrence_type: value,
+      recurrence_days: value === "weekly" ? prev.recurrence_days : [],
+      recurrence_end_date: value === "none" ? "" : prev.recurrence_end_date,
+      monthly_day:
+        value === "monthly"
+          ? prev.monthly_day || (prev.due_date ? String(new Date(prev.due_date).getDate()) : "")
+          : "",
+    }));
+  };
+
+  const validateForm = () => {
+    if (formData.recurrence_type === "weekly" && formData.recurrence_days.length === 0) {
+      toast.error("Select at least one weekday for weekly recurrence");
+      return false;
+    }
+
+    if (formData.recurrence_type !== "none" && !formData.recurrence_end_date) {
+      toast.error("End date is required for recurring task");
+      return false;
+    }
+
+    if (formData.recurrence_type === "monthly") {
+      const day = Number(formData.monthly_day);
+      if (!Number.isInteger(day) || day < 1 || day > 31) {
+        toast.error("Monthly date must be between 1 and 31");
+        return false;
+      }
+    }
+
+    return true;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
     setLoading(true);
 
     try {
@@ -120,6 +159,12 @@ const AddTaskModal = ({
         workspace_id,
         workspace_name,
         attachment: formData.attachment ? formData.attachment.name : "demo.pdf",
+        recurrence_type: formData.recurrence_type,
+        recurrence_days:
+          formData.recurrence_type === "weekly" ? formData.recurrence_days.join(",") : null,
+        recurrence_end_date:
+          formData.recurrence_type === "none" ? null : formData.recurrence_end_date,
+        monthly_day: formData.recurrence_type === "monthly" ? Number(formData.monthly_day) : null,
       };
 
       const res = await api.post("/task/assignTask", payload, {
@@ -127,13 +172,17 @@ const AddTaskModal = ({
       });
 
       console.log("🟢 RESPONSE:", res.data);
-      toast.success("Task added successfully!");
+      toast.success(`${res?.data?.count || 1} task(s) added successfully!`);
       setFormData({
         employee_id: "",
         title: "",
         due_date: "",
         description: "",
         attachment: null,
+        recurrence_type: "none",
+        recurrence_days: [],
+        recurrence_end_date: "",
+        monthly_day: "",
       });
 
       onTaskAdded();
@@ -194,45 +243,90 @@ const AddTaskModal = ({
           {/* Due Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-            {/* <input
+            <input
               type="date"
               name="due_date"
               value={formData.due_date}
-              onChange={handleChange}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFormData((prev) => ({
+                  ...prev,
+                  due_date: value,
+                  monthly_day:
+                    prev.recurrence_type === "monthly" && value
+                      ? String(new Date(value).getDate())
+                      : prev.monthly_day,
+                }));
+              }}
               required
               className="w-full border px-3 py-2 rounded-md text-sm"
-            /> */}
-            <input
-              type="text"
-              readOnly
-              value={formData.due_date}
-              onClick={() => document.getElementById("dueDatePicker").showPicker()} // 👈 open date picker
-              placeholder="dd-mm-yyyy"
-              className={`w-full border px-3 py-2 rounded-md text-sm ${!formData.due_date ? "text-gray-400" : "text-gray-800"
-                }`}
-            />
-
-            {/* Hidden actual date picker */}
-            <input
-              id="dueDatePicker"
-              type="date"
-              style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
-              onChange={(e) => {
-                const date = new Date(e.target.value);
-                if (!isNaN(date)) {
-                  const formattedDate = date.toLocaleDateString("en-GB", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric",
-                  });
-                  setFormData((prev) => ({
-                    ...prev,
-                    due_date: formattedDate,
-                  }));
-                }
-              }}
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Recurrence</label>
+            <select
+              name="recurrence_type"
+              value={formData.recurrence_type}
+              onChange={(e) => handleRecurrenceTypeChange(e.target.value)}
+              className="w-full border px-3 py-2 rounded-md text-sm"
+            >
+              <option value="none">None</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+
+          {formData.recurrence_type === "weekly" && (
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Repeat on</p>
+              <div className="flex flex-wrap gap-3">
+                {WEEKDAY_OPTIONS.map((day) => (
+                  <label key={day.key} className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={formData.recurrence_days.includes(day.key)}
+                      onChange={() => toggleWeekday(day.key)}
+                    />
+                    {day.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {formData.recurrence_type === "monthly" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Monthly Date (1-31)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                name="monthly_day"
+                value={formData.monthly_day}
+                onChange={handleChange}
+                className="w-full border px-3 py-2 rounded-md text-sm"
+                required
+              />
+            </div>
+          )}
+
+          {formData.recurrence_type !== "none" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input
+                type="date"
+                name="recurrence_end_date"
+                value={formData.recurrence_end_date}
+                onChange={handleChange}
+                className="w-full border px-3 py-2 rounded-md text-sm"
+                required
+              />
+            </div>
+          )}
 
           {/* Description */}
           <div>
@@ -380,8 +474,13 @@ const WorkspaceBoard = () => {
       fetchTasks(); // refresh the board automatically
     });
 
+    socket.on("taskDeleted", () => {
+      fetchTasks();
+    });
+
     return () => {
       socket.off("taskUpdated");
+      socket.off("taskDeleted");
     };
   }, []);
 
@@ -455,6 +554,38 @@ const WorkspaceBoard = () => {
     }
   };
 
+  const normalizeDate = (value) => {
+    if (!value) return null;
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const isCurrentOrFutureTask = (task) => {
+    const taskDate = normalizeDate(task.due_date_iso || task.due_date);
+    if (!taskDate) return false;
+    const today = normalizeDate(new Date());
+    return taskDate >= today;
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await api.delete(`/task/${taskId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      toast.success("Task deleted successfully");
+      fetchTasks();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast.error(error?.response?.data?.message || "Failed to delete task");
+    }
+  };
+
 
   // Filter tasks based on search term
   const filtered = columns.map((col) => ({
@@ -519,18 +650,62 @@ const WorkspaceBoard = () => {
                         col.tasks.map((t, index) => (
                           <Draggable key={t.task_id} draggableId={String(t.task_id)} index={index}>
                             {(provided) => (
+                              // <div
+                              //   ref={provided.innerRef}
+                              //   {...provided.draggableProps}
+                              //   {...provided.dragHandleProps}
+                              //   className="p-2 bg-white rounded-md border text-xs hover:shadow transition"
+                              // >
+                              //   <h3 className="font-medium text-gray-800">{t.title}</h3>
+                              //   <p className="text-gray-500">{t.description}</p>
+                              //   <p className="text-[10px] text-gray-400 mt-1">
+                              //     👤 {t.employee_name} | 📅 {t.due_date || "N/A"}
+                              //   </p>
+                              //   {isCurrentOrFutureTask(t) && (
+                              //     <button
+                              //       type="button"
+                              //       onMouseDown={(e) => e.stopPropagation()}
+                              //       onClick={(e) => {
+                              //         e.stopPropagation();
+                              //         handleDeleteTask(t.task_id);
+                              //       }}
+                              //       className="mt-2 rounded bg-red-600 px-2 py-1 text-[10px] text-white hover:bg-red-700"
+                              //     >
+                              //       Delete
+                              //     </button>
+                              //   )}
+                              // </div>
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className="p-2 bg-white rounded-md border text-xs hover:shadow transition"
-                              >
+                                 className="relative p-2 bg-white rounded-md border text-xs hover:shadow transition"
+                                
+                  >
+                                {/* Delete Red Cross Icon */}
+                                {isCurrentOrFutureTask(t) && (
+                                  <button
+                                    type="button"
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteTask(t.task_id);
+                                    }}
+                                    className="absolute top-1 right-1 z-50 text-red-500 hover:text-red-700 bg-white rounded-full px-[2px]"
+                                  >
+                                    ❌
+                                  </button>
+                                )}
+
                                 <h3 className="font-medium text-gray-800">{t.title}</h3>
                                 <p className="text-gray-500">{t.description}</p>
+
                                 <p className="text-[10px] text-gray-400 mt-1">
                                   👤 {t.employee_name} | 📅 {t.due_date || "N/A"}
                                 </p>
                               </div>
+
+
                             )}
                           </Draggable>
                         ))
@@ -558,3 +733,4 @@ const WorkspaceBoard = () => {
   );
 };
 export default WorkspaceBoard;
+
