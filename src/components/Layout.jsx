@@ -10,6 +10,7 @@ import {
   Menu,
   User,
   Briefcase,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -32,21 +33,26 @@ const Layout = ({ children }) => {
       { name: "Attendance", href: "/attendance", icon: Clock },
       { name: "Employee Task", href: "/tasks", icon: Users },
       { name: "Workspace", href: "/workspace", icon: Briefcase },
+      // { name: "Change Password", href: "/change-password", icon: KeyRound },
     ];
   } else {
     navigation = [
       { name: "Attendance", href: "/employee-attendance", icon: Clock },
       { name: "Leave Request", href: "/employee-leaves", icon: Calendar },
-      { name: "Workspace", href: "/workspace", icon: Briefcase }
+      { name: "Workspace", href: "/workspace", icon: Briefcase },
+      // { name: "Change Password", href: "/change-password", icon: KeyRound },
     ]
   }
 
   const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("orgID");
     localStorage.removeItem("role");
+    localStorage.removeItem("employee_id");
     localStorage.removeItem("employee_name");
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
   const isActive = (href) => {
@@ -132,13 +138,10 @@ const Layout = ({ children }) => {
                   <User className="w-4 h-4 text-gray-600" />
                 </div>
                 <button
-                  onClick={role === "admin" ? () => navigate("/change-password") : undefined}
-                  className={`text-sm font-medium ${role === "admin"
-                    ? "text-gray-700 hover:underline"
-                    : "text-gray-400"
-                    }`}
+                  onClick={() => navigate("/change-password")}
+                  className="text-sm font-medium text-gray-700 hover:underline"
                 >
-                  {employeeName ? employeeName : "Admin User"}
+                  {employeeName ? employeeName : role === "admin" ? "Admin User" : "Employee User"}
                 </button>
               </div>
             </div>

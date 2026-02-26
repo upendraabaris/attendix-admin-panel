@@ -232,6 +232,16 @@ const EmployeeLogin = () => {
 
         {/* Admin Link */}
         <p className="text-center text-sm text-gray-600 mt-4">
+          Prefer email/password?{" "}
+          <Link
+            to="/employee-login/web"
+            className="text-blue-600 hover:text-blue-800 font-medium"
+          >
+            Employee Web Login
+          </Link>
+        </p>
+
+        <p className="text-center text-sm text-gray-600 mt-2">
           Are you an admin?{" "}
           <Link
             to="/login"

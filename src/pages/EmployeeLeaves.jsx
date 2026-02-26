@@ -82,6 +82,8 @@ function EmployeeLeaves() {
     return "bg-yellow-100 text-yellow-800";
   };
 
+  const today = new Date().toISOString().split("T")[0];
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -119,6 +121,7 @@ function EmployeeLeaves() {
                 <label className="block text-sm text-gray-700 mb-1">Start Date</label>
                 <Input
                   type="date"
+                  min={today}
                   value={formData.startDate}
                   onChange={(e) => setFormData((prev) => ({ ...prev, startDate: e.target.value }))}
                   required
@@ -129,6 +132,7 @@ function EmployeeLeaves() {
                 <label className="block text-sm text-gray-700 mb-1">End Date</label>
                 <Input
                   type="date"
+                  min={formData.startDate || today}
                   value={formData.endDate}
                   onChange={(e) => setFormData((prev) => ({ ...prev, endDate: e.target.value }))}
                   required
