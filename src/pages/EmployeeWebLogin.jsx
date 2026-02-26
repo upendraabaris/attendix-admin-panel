@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -9,60 +9,36 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import { Shield, Mail, Lock } from "lucide-react";
+import { User, Mail, Lock } from "lucide-react";
 import api from "../hooks/useApi";
-import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
-const Login = () => {
+const EmployeeWebLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault()
-  //   setIsLoading(true)
-
-  //   // Simulate authentication
-  //   setTimeout(() => {
-  //     setIsLoading(false)
-  //     localStorage.setItem('isAuthenticated', 'true')
-  //     navigate('/dashboard')
-  //   }, 1000)
-  // }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const res = await api.post("/auth/admin-dashboard", {
+      const res = await api.post("/auth/employee/login/web", {
         email,
         password,
       });
 
       const { token, user } = res.data;
-      const organizationID =
-        user.organization_id ??
-        user.organizationId ??
-        user.organizationID ??
-        user.org_id ??
-        user.organization?.id ??
-        null;
-      const employeeRole = user.employee_role || user.role; // ✅ naya field
-
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      if (organizationID != null) {
-        localStorage.setItem("orgID", String(organizationID));
-      } else {
-        localStorage.removeItem("orgID");
-      }
-      localStorage.setItem("role", employeeRole); // ✅ add this line
+      localStorage.setItem("orgID", user.organization_id);
+      localStorage.setItem("employee_id", user.employee_id);
+      localStorage.setItem("employee_name", user.employee_name || "");
+      localStorage.setItem("role", "employee");
 
-      navigate("/dashboard");
+      navigate("/workspace");
     } catch (err) {
       const msg = err.response?.data?.error || "Login failed";
       toast.error(msg);
@@ -72,16 +48,16 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-cyan-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
-            <Shield className="w-8 h-8 text-white" />
+          <div className="mx-auto w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center">
+            <User className="w-8 h-8 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
-            Admin Portal
+            Employee Portal
           </CardTitle>
-          <p className="text-gray-600">Employee Management System</p>
+          {/* <p className="text-gray-600">Web Login</p> */}
         </CardHeader>
 
         <CardContent>
@@ -98,7 +74,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                className="transition-all duration-200 focus:ring-2 focus:ring-emerald-500"
               />
             </div>
 
@@ -114,36 +90,37 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                className="transition-all duration-200 focus:ring-2 focus:ring-emerald-500"
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 transition-colors duration-200"
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
-            {/* ✅ Employee login link */}
-            <p className="text-center text-sm text-gray-600 mt-4">
-              Are you an employee?{" "}
-              <Link
-                to="/employee-login/web"
-                className="text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Employee Web Login
-              </Link>
-            </p>
-            {/* <p className="text-center text-sm text-gray-600">
-              Login with OTP?{" "}
+
+            {/* <p className="text-center text-sm text-gray-600 mt-4">
+              Want OTP login?{" "}
               <Link
                 to="/employee-login"
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="text-emerald-700 hover:text-emerald-800 font-medium"
               >
                 Employee OTP Login
               </Link>
             </p> */}
+
+            <p className="text-center text-sm text-gray-600">
+              Are you an admin?{" "}
+              <Link
+                to="/login"
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Admin Login
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>
@@ -151,4 +128,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default EmployeeWebLogin;

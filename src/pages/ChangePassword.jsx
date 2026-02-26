@@ -3,6 +3,7 @@ import Layout from "../components/Layout";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import api from "../hooks/useApi"; // ✅ axios wrapper
+import { toast } from "sonner";
 
 const ChangePassword = () => {
   const [oldPassword, setOldPassword] = useState("");
@@ -13,7 +14,7 @@ const ChangePassword = () => {
     e.preventDefault();
 
     if (newPassword !== confirmPassword) {
-      alert("New password and confirm password do not match!");
+      toast.error("New password and confirm password do not match!");
       return;
     }
 
@@ -29,13 +30,13 @@ const ChangePassword = () => {
         }
       );
 
-      alert(res.data.message || "Password changed successfully!");
+      toast.success(res.data.message || "Password changed successfully!");
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error) {
       console.error("Error changing password:", error);
-      alert(
+      toast.error(
         error.response?.data?.error || "Something went wrong. Please try again."
       );
     }
