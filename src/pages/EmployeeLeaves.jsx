@@ -109,7 +109,14 @@ function EmployeeLeaves() {
                   </SelectTrigger>
                   <SelectContent>
                     {LEAVE_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
+                      // <SelectItem key={type} value={type}>
+                      //   {type.charAt(0).toUpperCase() + type.slice(1)}
+                      // </SelectItem>
+                      <SelectItem
+                        key={type}
+                        value={type}
+                        className="hover:bg-gray-100 cursor-pointer"
+                      >
                         {type.charAt(0).toUpperCase() + type.slice(1)}
                       </SelectItem>
                     ))}
@@ -150,7 +157,21 @@ function EmployeeLeaves() {
               </div>
 
               <div className="md:col-span-2">
-                <Button type="submit" disabled={submitting}>
+                {/* <Button type="submit" disabled={submitting}>
+                  {submitting ? "Submitting..." : "Submit Request"}
+                </Button> */}
+                {/* <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="bg-blue-600 hover:bg-blue-700 transition-colors cursor-pointer"
+                >
+                  {submitting ? "Submitting..." : "Submit Request"}
+                </Button> */}
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer"
+                >
                   {submitting ? "Submitting..." : "Submit Request"}
                 </Button>
               </div>

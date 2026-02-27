@@ -65,7 +65,21 @@ const ChangePassword = () => {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
           />
-          <Button type="submit" className="w-full">
+          {/* <Button type="submit" className="w-full">
+            Update Password
+          </Button> */}
+          {/* <Button
+            type="submit"
+            className="w-full cursor-pointer transition-all duration-200 
+                       bg-blue-600 hover:bg-blue-700 active:scale-[0.98]"
+          >
+            Update Password
+          </Button> */}
+          <Button
+            type="submit"
+            className="w-full cursor-pointer transition-all duration-200 
+             bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white"
+          >
             Update Password
           </Button>
         </form>
