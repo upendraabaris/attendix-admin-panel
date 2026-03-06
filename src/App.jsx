@@ -25,6 +25,7 @@ import EmployeeLogin from "./pages/EmployeeLogin";
 import EmployeeWebLogin from "./pages/EmployeeWebLogin";
 import EmployeeAttendanceTab from "./components/EmployeeAttendanceTab";
 import EmployeeLeaves from "./pages/EmployeeLeaves";
+import LeavePolicyPage from "./pages/LeavePolicyPage";
 
 const queryClient = new QueryClient();
 
@@ -108,6 +109,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Leaves />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leave-policy"
+            element={
+              <ProtectedRoute>
+                <LeavePolicyPage />
               </ProtectedRoute>
             }
           />
