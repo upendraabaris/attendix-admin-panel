@@ -20,7 +20,8 @@ export default defineConfig(() => {
     server: {
       port: 5175,
       allowedHosts: [
-        'shprod.platinum-infotech.com'
+        'shprod.platinum-infotech.com',
+        'admin.attendixapp.com'
       ],
       proxy: {
         // https://vitejs.dev/config/server-options.html
