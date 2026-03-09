@@ -30,6 +30,7 @@ const Layout = ({ children }) => {
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Employees", href: "/employees", icon: Users },
       { name: "Leave Requests", href: "/leaves", icon: Calendar },
+      { name: "Leave Policy", href: "/leave-policy", icon: KeyRound },
       { name: "Attendance", href: "/attendance", icon: Clock },
       { name: "Employee Task", href: "/tasks", icon: Users },
       { name: "Workspace", href: "/workspace", icon: Briefcase },

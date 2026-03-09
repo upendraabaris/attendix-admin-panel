@@ -15,7 +15,7 @@ import {
 import { Badge } from "../components/ui/badge";
 import { toast } from "sonner";
 
-const LEAVE_TYPES = ["sick", "vacation", "personal", "other"];
+const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned"];
 
 function EmployeeLeaves() {
   const [loading, setLoading] = useState(false);
