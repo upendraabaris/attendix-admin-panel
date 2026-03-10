@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import {
@@ -24,6 +24,8 @@ const Layout = ({ children }) => {
   const role = localStorage.getItem("role");
   const normalizedRole = (role || "").toLowerCase();
   const isAdminRole = normalizedRole.includes("admin");
+  const orgID = localStorage.getItem("orgID");
+
   let navigation = [];
   if (isAdminRole) {
     navigation = [
@@ -38,10 +40,15 @@ const Layout = ({ children }) => {
     ];
   } else {
     navigation = [
+      // { name: "Attendance", href: "/employee-attendance", icon: Clock },
+      // { name: "Leave Request", href: "/employee-leaves", icon: Calendar },
+      // { name: "Workspace", href: "/workspace", icon: Briefcase },
+      // { name: "Change Password", href: "/change-password", icon: KeyRound },
       { name: "Attendance", href: "/employee-attendance", icon: Clock },
       { name: "Leave Request", href: "/employee-leaves", icon: Calendar },
-      { name: "Workspace", href: "/workspace", icon: Briefcase },
-      // { name: "Change Password", href: "/change-password", icon: KeyRound },
+      ...(orgID !== "13"
+        ? [{ name: "Workspace", href: "/workspace", icon: Briefcase }]
+        : []),
     ]
   }
 
