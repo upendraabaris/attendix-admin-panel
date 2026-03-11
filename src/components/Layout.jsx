@@ -24,6 +24,7 @@ const Layout = ({ children }) => {
   const role = localStorage.getItem("role");
   const normalizedRole = (role || "").toLowerCase();
   const isAdminRole = normalizedRole.includes("admin");
+  const orgID = localStorage.getItem("orgID");
   let navigation = [];
   if (isAdminRole) {
     navigation = [
@@ -40,7 +41,9 @@ const Layout = ({ children }) => {
     navigation = [
       { name: "Attendance", href: "/employee-attendance", icon: Clock },
       { name: "Leave Request", href: "/employee-leaves", icon: Calendar },
-      { name: "Workspace", href: "/workspace", icon: Briefcase },
+      ...(orgID !== "13"
+        ? [{ name: "Workspace", href: "/workspace", icon: Briefcase }]
+        : []),
       // { name: "Change Password", href: "/change-password", icon: KeyRound },
     ]
   }
