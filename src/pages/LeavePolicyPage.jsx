@@ -916,7 +916,7 @@ const LeavePolicyPage = () => {
               )}
 
               <div className="md:col-span-2">
-                <Button type="submit" disabled={submitting}>
+                <Button type="submit" disabled={submitting} className="bg-blue-600 hover:bg-blue-700 text-white">
                   {submitting ? "Saving..." : "Save Policy"}
                 </Button>
               </div>
