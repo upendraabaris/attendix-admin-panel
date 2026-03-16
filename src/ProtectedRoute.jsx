@@ -1,8 +1,11 @@
 // src/components/ProtectedRoute.jsx
-import { Navigate } from 'react-router-dom';
+import { Navigate } from "react-router-dom";
+import useIdleTimeout from "./hooks/useIdleTimeout";
 
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
+  useIdleTimeout();
+
+  const token = localStorage.getItem("token");
 
   if (!token) {
     return <Navigate to="/login" replace />;
