@@ -1,358 +1,389 @@
-  import { useEffect, useState } from "react";
-  import Layout from "../components/Layout";
-  import { Button } from "../components/ui/button";
-  import { Input } from "../components/ui/input";
-  import { Label } from "../components/ui/label";
-  import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-  } from "../components/ui/card";
-  import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-  } from "../components/ui/select";
-  import {
-    Calendar,
-    Clock,
-    MapPin,
-    Filter,
-    Search,
-    Download,
-  } from "lucide-react";
-  import api from "../hooks/useApi";
+import { useEffect, useState, useMemo } from "react";
+import Layout from "../components/Layout";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Badge } from "../components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table";
+import {
+  Filter,
+  Search,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+} from "lucide-react";
+import api from "../hooks/useApi";
 
-  const Attendance = () => {
-    const today = new Date().toISOString().split("T")[0];
-    const [filters, setFilters] = useState({
-      employee: "all",
-      startDate: today,
-      endDate: today,
-      location: "all",
-    });
+const parseWorkedHours = (workedTime) => {
+  if (!workedTime || workedTime === "N/A") return -1;
+  if (workedTime === "Missing Clock Out" || workedTime.includes("Invalid time"))
+    return -2;
+  const hMatch = workedTime.match(/(\d+)h/);
+  const mMatch = workedTime.match(/(\d+)m/);
+  const h = hMatch ? parseInt(hMatch[1]) : 0;
+  const m = mMatch ? parseInt(mMatch[1]) : 0;
+  return h + m / 60;
+};
 
-    const [searchTerm, setSearchTerm] = useState("");
-    const [attendance, setAttendance] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const orgID = localStorage.getItem("orgID");
+const getStatusCell = (workedTime) => {
+  if (workedTime === "Missing Clock Out")
+    return (
+      <span className="text-red-500 font-medium text-sm">
+        ⚠ Missing Clock Out
+      </span>
+    );
+  if (workedTime && workedTime.includes("Invalid time"))
+    return (
+      <span className="text-red-500 font-medium text-sm">⚠ Invalid Time</span>
+    );
+  if (!workedTime || workedTime === "N/A")
+    return <span className="text-gray-400 text-sm">—</span>;
+  return (
+    <Badge className="bg-green-100 text-green-800 border-green-200 whitespace-nowrap">
+      {workedTime}
+    </Badge>
+  );
+};
 
-    const [employees, setEmployees] = useState([]);
+const SortIcon = ({ column, sortConfig }) => {
+  if (sortConfig.key !== column)
+    return <ChevronsUpDown className="w-4 h-4 ml-1 inline text-gray-400" />;
+  return sortConfig.direction === "asc" ? (
+    <ChevronUp className="w-4 h-4 ml-1 inline text-blue-600" />
+  ) : (
+    <ChevronDown className="w-4 h-4 ml-1 inline text-blue-600" />
+  );
+};
 
-    const fetchAttendance = async () => {
+const Attendance = () => {
+  const today = new Date().toISOString().split("T")[0];
+  const [filters, setFilters] = useState({
+    employee: "all",
+    startDate: today,
+    endDate: today,
+  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [attendance, setAttendance] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [sortConfig, setSortConfig] = useState({
+    key: "employee_name",
+    direction: "asc",
+  });
+
+  const orgID = localStorage.getItem("orgID");
+
+  const fetchAttendance = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        organizationId: orgID,
+      };
+      if (filters.employee && filters.employee !== "all") {
+        params.employeeId = filters.employee;
+      }
+      const res = await api.get(`/attendance/admin/all-employee-attendance`, {
+        params,
+      });
+      setAttendance(res.data.data || []);
+    } catch (err) {
+      console.error("Error fetching attendance:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAttendance();
+  }, [filters, orgID]);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
       try {
-        setLoading(true);
-
-        const params = {
-          startDate: filters.startDate,
-          endDate: filters.endDate,
-          organizationId: orgID,
-        };
-
-        if (filters.employee && filters.employee !== "all") {
-          params.employeeId = filters.employee;
-        }
-
-        const res = await api.get(`/attendance/admin/all-employee-attendance`, {
-          params,
-          // headers: {
-          //   Authorization: `Bearer ${user.token}`,
-          // },
-        });
-
-        console.log("Attendance API response:", res);
-        setAttendance(res.data.data || []);
+        const res = await api.get(`/employee/getEmployees`);
+        setEmployees(res.data.data || []);
       } catch (err) {
-        console.error("Error fetching attendance:", err);
-      } finally {
-        setLoading(false);
+        console.error("Failed to fetch employees:", err);
       }
     };
+    fetchEmployees();
+  }, []);
 
-    useEffect(() => {
-      fetchAttendance();
-    }, [filters, orgID]);
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  };
 
-    //   const filteredRecords = attendanceRecords.filter(record => {
-    //     const matchesEmployee = filters.employee === 'all' || record.employeeId.toString() === filters.employee;
-    //     const matchesSearch = record.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    //       record.location.toLowerCase().includes(searchTerm.toLowerCase());
-    //     const matchesLocation = filters.location === 'all' || record.location === filters.location;
-    //     const matchesDateRange = true; // Placeholder
-    //     return matchesEmployee && matchesSearch && matchesLocation && matchesDateRange;
-    //   });
-
-    const handleFilterChange = (field, value) => {
-      setFilters((prev) => ({ ...prev, [field]: value }));
-    };
-
-    const handleExport = () => {
-      console.log("Exporting attendance records...");
-    };
-
-    const getTotalHours = () => {
-      return attendance
-        .reduce((total, record) => {
-          if (!record.worked_time || record.worked_time === "N/A") return total;
-          const [h, m] = record.worked_time.split("h").map((s) => parseInt(s));
-          return total + (h || 0) + (m || 0) / 60;
-        }, 0)
-        .toFixed(1);
-    };
-
-    useEffect(() => {
-      const fetchEmployees = async () => {
-        try {
-          const res = await api.get(`/employee/getEmployees`); // 🔁 Replace endpoint if different
-
-          const list = res.data.data || []; // ✅ FIXED this line
-          setEmployees(list);
-        } catch (err) {
-          console.error("Failed to fetch employees:", err);
-        }
-      };
-
-      fetchEmployees();
-    }, []);
-
-    console.log("Employees:", employees);
-
-    return (
-      <Layout>
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Attendance Records
-              </h1>
-              <p className="text-gray-600">View and filter employee attendance</p>
-            </div>
-            {/* <Button onClick={handleExport}>
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button> */}
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="w-5 h-5" />
-                Filters
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Employee</Label>
-                  <Select
-                    value={filters.employee}
-                    onValueChange={(value) =>
-                      handleFilterChange("employee", value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All employees" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Employees</SelectItem>
-                      {employees.map((employee) => (
-                        <SelectItem
-                          key={employee.id}
-                          value={employee.id.toString()}
-                        >
-                          {employee.name ?? "No Name"}{" "}
-                          {/* 👈 fallback in case name is null */}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Start Date</Label>
-                  <Input
-                    type="date"
-                    value={filters.startDate}
-                    onChange={(e) =>
-                      handleFilterChange("startDate", e.target.value)
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>End Date</Label>
-                  <Input
-                    type="date"
-                    value={filters.endDate}
-                    onChange={(e) =>
-                      handleFilterChange("endDate", e.target.value)
-                    }
-                  />
-                </div>
-
-                {/* <div className="space-y-2">
-                  <Label>Location</Label>
-                  <Select
-                    value={filters.location}
-                    onValueChange={(value) =>
-                      handleFilterChange("location", value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All locations" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Locations</SelectItem>
-                      {locations.map((location) => (
-                        <SelectItem key={location} value={location}>
-                          {location}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div> */}
-              </div>
-
-              {/* <div className="flex gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search by employee name or location..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Button
-                  onClick={() => {
-                    setFilters({
-                      employee: "all",
-                      startDate: "",
-                      endDate: "",
-                      location: "all",
-                    });
-                    setSearchTerm("");
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </div> */}
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <p className="text-2xl font-bold">{attendance.length}</p>
-                <p className="text-sm text-gray-600">Total Records</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <p className="text-2xl font-bold">{getTotalHours()}</p>
-                <p className="text-sm text-gray-600">Total Hours</p>
-              </CardContent>
-            </Card>
-            {/* <Card>
-              <CardContent className="pt-6 text-center">
-                <p className="text-2xl font-bold">
-                  {(parseFloat(getTotalHours()) / attendance.length || 0).toFixed(
-                    1
-                  )}
-                </p>
-                <p className="text-sm text-gray-600">Average Hours/Day</p>
-              </CardContent>
-            </Card> */}
-          </div>
-
-          <div className="space-y-4">
-            {attendance.map((record, index) => (
-              <Card key={index}>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="text-2xl">{record.avatar ?? "👤"}</div>
-                      <div>
-                        <p className="font-medium">
-                          {record.employee_name ?? "Unknown"}
-                        </p>
-                        <p className="text-sm text-gray-500">Employee</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <p className="font-medium">
-                          {record.date
-                            ? new Date(record.date).toLocaleDateString()
-                            : "N/A"}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {record.worked_time ?? "N/A"} worked
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <p className="font-medium">
-                          {record.clock_in} - {record.clock_out}
-                        </p>
-                        {record.worked_time === "Missing Clock Out" ||
-                        record.worked_time === "Invalid time (Out before In)" ? (
-                          <p className="text-red-500 text-sm">
-                            ⚠️ {record.worked_time}
-                          </p>
-                        ) : (
-                          <p className="text-sm text-gray-500">
-                            {record.worked_time} worked
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="lg:col-span-3 flex items-start space-x-2 pt-2">
-                      <MapPin className="w-4 h-4 text-gray-500 mt-1" />
-                      <div>
-                        <p className="font-medium">
-                          {record.clock_in_address || "N/A"}
-                        </p>
-                        <p className="text-sm text-gray-500">Clock In Address</p>
-                      </div>
-                    </div>
-
-                    <div className="lg:col-span-3 flex items-start space-x-2">
-                      <MapPin className="w-4 h-4 text-gray-500 mt-1" />
-                      <div>
-                        <p className="font-medium">
-                          {record.clock_out_address || "N/A"}
-                        </p>
-                        <p className="text-sm text-gray-500">Clock Out Address</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {attendance.length === 0 && !loading && (
-            <Card>
-              <CardContent className="text-center py-12">
-                <p className="text-gray-500">
-                  No attendance records found matching your criteria.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </Layout>
+  const handleSort = (key) => {
+    setSortConfig((prev) =>
+      prev.key === key
+        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: "asc" },
     );
   };
 
-  export default Attendance;
+  const filteredAndSorted = useMemo(() => {
+    const lower = searchTerm.toLowerCase();
+    const filtered = attendance.filter(
+      (r) =>
+        !searchTerm ||
+        (r.employee_name || "").toLowerCase().includes(lower) ||
+        (r.clock_in_address || "").toLowerCase().includes(lower) ||
+        (r.clock_out_address || "").toLowerCase().includes(lower),
+    );
+
+    return [...filtered].sort((a, b) => {
+      const dir = sortConfig.direction === "asc" ? 1 : -1;
+      const byDate = new Date(a.date) - new Date(b.date);
+      const byName = (a.employee_name || "").localeCompare(
+        b.employee_name || "",
+      );
+
+      switch (sortConfig.key) {
+        case "employee_name":
+          // Primary: employee name (asc/desc), secondary: date always ascending
+          return byName !== 0 ? dir * byName : byDate;
+        case "date":
+          // Primary: date (asc/desc), secondary: employee name ascending
+          return byDate !== 0 ? dir * byDate : byName;
+        case "clock_in":
+          return dir * (a.clock_in || "").localeCompare(b.clock_in || "");
+        case "clock_out":
+          return dir * (a.clock_out || "").localeCompare(b.clock_out || "");
+        case "worked_time":
+          return (
+            dir *
+            (parseWorkedHours(a.worked_time) - parseWorkedHours(b.worked_time))
+          );
+        default:
+          return 0;
+      }
+    });
+  }, [attendance, searchTerm, sortConfig]);
+
+  const totalHours = useMemo(
+    () =>
+      attendance
+        .reduce((total, r) => {
+          const h = parseWorkedHours(r.worked_time);
+          return total + (h > 0 ? h : 0);
+        }, 0)
+        .toFixed(1),
+    [attendance],
+  );
+
+  const SortableHead = ({ column, label }) => (
+    <TableHead
+      className="cursor-pointer select-none whitespace-nowrap hover:bg-gray-50"
+      onClick={() => handleSort(column)}
+    >
+      {label}
+      <SortIcon column={column} sortConfig={sortConfig} />
+    </TableHead>
+  );
+
+  return (
+    <Layout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Attendance Records
+            </h1>
+            <p className="text-gray-600">View and filter employee attendance</p>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="w-5 h-5" />
+              Filters
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Employee</Label>
+                <Select
+                  value={filters.employee}
+                  onValueChange={(value) =>
+                    handleFilterChange("employee", value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All employees" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Employees</SelectItem>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id.toString()}>
+                        {emp.name ?? "No Name"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) =>
+                    handleFilterChange("startDate", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>End Date</Label>
+                <Input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) =>
+                    handleFilterChange("endDate", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Search</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Name or address..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Summary */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <p className="text-2xl font-bold">{filteredAndSorted.length}</p>
+              <p className="text-sm text-gray-600">Showing Records</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <p className="text-2xl font-bold">{totalHours}</p>
+              <p className="text-sm text-gray-600">Total Hours</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <p className="text-2xl font-bold">
+                {
+                  attendance.filter(
+                    (r) => r.worked_time === "Missing Clock Out",
+                  ).length
+                }
+              </p>
+              <p className="text-sm text-gray-600">Missing Clock Outs</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Table */}
+        <Card>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="text-center py-12 text-gray-500">
+                Loading attendance records...
+              </div>
+            ) : filteredAndSorted.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                No attendance records found matching your criteria.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="w-10 text-center">#</TableHead>
+                    <SortableHead column="employee_name" label="Employee" />
+                    <SortableHead column="date" label="Date" />
+                    <SortableHead column="clock_in" label="Clock In" />
+                    <SortableHead column="clock_out" label="Clock Out" />
+                    <SortableHead column="worked_time" label="Hours Worked" />
+                    <TableHead>Status</TableHead>
+                    <TableHead>Clock In Address</TableHead>
+                    <TableHead>Clock Out Address</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSorted.map((record, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="text-center text-gray-400 text-xs">
+                        {index + 1}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {record.employee_name ?? "Unknown"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {record.date
+                          ? new Date(record.date).toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "N/A"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap font-mono text-sm">
+                        {record.clock_in || "—"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap font-mono text-sm">
+                        {record.clock_out || "—"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap font-medium">
+                        {parseWorkedHours(record.worked_time) > 0
+                          ? record.worked_time
+                          : "—"}
+                      </TableCell>
+                      <TableCell>{getStatusCell(record.worked_time)}</TableCell>
+                      <TableCell className="text-sm text-gray-600 min-w-[200px] whitespace-normal break-words">
+                        {record.clock_in_address || "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600 min-w-[200px] whitespace-normal break-words">
+                        {record.clock_out_address || "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
+  );
+};
+
+export default Attendance;
