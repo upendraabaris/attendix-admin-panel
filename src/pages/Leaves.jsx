@@ -31,6 +31,12 @@ const getInitials = (name) =>
     .join("")
     .toUpperCase();
 
+const countDays = (start, end) => {
+  if (!start || !end) return 0;
+  const diff = Math.round((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)) + 1;
+  return diff > 0 ? diff : 1;
+};
+
 const formatDate = (dateStr) =>
   dateStr
     ? new Date(dateStr).toLocaleDateString("en-GB", {
@@ -275,7 +281,7 @@ const Leaves = () => {
                         </span>
                       </div>
                       <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                        {request.days} day{request.days !== 1 ? "s" : ""}
+                        {countDays(request.start_date, request.end_date)} day{countDays(request.start_date, request.end_date) !== 1 ? "s" : ""}
                       </span>
                     </div>
 

@@ -164,7 +164,9 @@ const Attendance = () => {
     return [...filtered].sort((a, b) => {
       const dir = sortConfig.direction === "asc" ? 1 : -1;
       const byDate = new Date(a.date) - new Date(b.date);
-      const byName = (a.employee_name || "").localeCompare(b.employee_name || "");
+      const byName = (a.employee_name || "").localeCompare(
+        b.employee_name || "",
+      );
       switch (sortConfig.key) {
         case "employee_name":
           return byName !== 0 ? dir * byName : byDate;
@@ -208,7 +210,6 @@ const Attendance = () => {
   return (
     <Layout>
       <div className="space-y-6">
-
         {/* Page Header */}
         <div className="flex items-start justify-between">
           <div>
@@ -229,7 +230,9 @@ const Attendance = () => {
               <ClipboardList className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{filteredAndSorted.length}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {filteredAndSorted.length}
+              </p>
               <p className="text-xs text-gray-500 mt-0.5">Showing Records</p>
             </div>
           </div>
@@ -258,10 +261,14 @@ const Attendance = () => {
           <CardContent className="p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-gray-500 font-medium">Employee</Label>
+                <Label className="text-xs text-gray-500 font-medium">
+                  Employee
+                </Label>
                 <Select
                   value={filters.employee}
-                  onValueChange={(value) => handleFilterChange("employee", value)}
+                  onValueChange={(value) =>
+                    handleFilterChange("employee", value)
+                  }
                 >
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="All employees" />
@@ -277,25 +284,35 @@ const Attendance = () => {
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-gray-500 font-medium">Start Date</Label>
+                <Label className="text-xs text-gray-500 font-medium">
+                  Start Date
+                </Label>
                 <Input
                   type="date"
                   value={filters.startDate}
-                  onChange={(e) => handleFilterChange("startDate", e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("startDate", e.target.value)
+                  }
                   className="h-9 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-gray-500 font-medium">End Date</Label>
+                <Label className="text-xs text-gray-500 font-medium">
+                  End Date
+                </Label>
                 <Input
                   type="date"
                   value={filters.endDate}
-                  onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("endDate", e.target.value)
+                  }
                   className="h-9 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-gray-500 font-medium">Search</Label>
+                <Label className="text-xs text-gray-500 font-medium">
+                  Search
+                </Label>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                   <Input
@@ -321,7 +338,9 @@ const Attendance = () => {
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
               <ClipboardList className="w-10 h-10 mb-3 opacity-30" />
               <p className="text-sm font-medium">No records found</p>
-              <p className="text-xs mt-1">Try adjusting your filters or date range.</p>
+              <p className="text-xs mt-1">
+                Try adjusting your filters or date range.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -336,7 +355,7 @@ const Attendance = () => {
                     <SortableHead column="clock_in" label="Clock In" />
                     <SortableHead column="clock_out" label="Clock Out" />
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Status
+                      Duration
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Clock In Address
@@ -348,7 +367,8 @@ const Attendance = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredAndSorted.map((record, index) => {
-                    const isMissing = record.worked_time === "Missing Clock Out";
+                    const isMissing =
+                      record.worked_time === "Missing Clock Out";
                     return (
                       <TableRow
                         key={index}
@@ -373,11 +393,14 @@ const Attendance = () => {
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-sm text-gray-700">
                           {record.date
-                            ? new Date(record.date).toLocaleDateString("en-GB", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })
+                            ? new Date(record.date).toLocaleDateString(
+                                "en-GB",
+                                {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                },
+                              )
                             : "—"}
                         </TableCell>
                         <TableCell className="whitespace-nowrap font-mono text-sm text-gray-700">
@@ -386,7 +409,9 @@ const Attendance = () => {
                         <TableCell className="whitespace-nowrap font-mono text-sm text-gray-700">
                           {record.clock_out || "—"}
                         </TableCell>
-                        <TableCell>{getStatusCell(record.worked_time)}</TableCell>
+                        <TableCell>
+                          {getStatusCell(record.worked_time)}
+                        </TableCell>
                         <TableCell className="text-sm text-gray-500 min-w-[200px] whitespace-normal break-words">
                           {record.clock_in_address || "—"}
                         </TableCell>
@@ -401,7 +426,6 @@ const Attendance = () => {
             </div>
           )}
         </div>
-
       </div>
     </Layout>
   );
