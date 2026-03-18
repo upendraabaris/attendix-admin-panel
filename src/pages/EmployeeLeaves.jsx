@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import api from "../hooks/useApi";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import {
   Select,
@@ -14,8 +20,47 @@ import {
 } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import { toast } from "sonner";
+import {
+  CalendarRange,
+  CheckCircle,
+  XCircle,
+  Hourglass,
+  ClipboardList,
+  ArrowRight,
+  SendHorizonal,
+} from "lucide-react";
 
 const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned"];
+
+const formatDate = (dateStr) =>
+  dateStr
+    ? new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
+
+const STATUS_CONFIG = {
+  approved: {
+    border: "border-l-green-500",
+    badge: "bg-green-100 text-green-800 border-green-200",
+    icon: <CheckCircle className="w-3.5 h-3.5" />,
+    label: "Approved",
+  },
+  rejected: {
+    border: "border-l-red-400",
+    badge: "bg-red-100 text-red-800 border-red-200",
+    icon: <XCircle className="w-3.5 h-3.5" />,
+    label: "Rejected",
+  },
+  pending: {
+    border: "border-l-yellow-400",
+    badge: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    icon: <Hourglass className="w-3.5 h-3.5" />,
+    label: "Pending",
+  },
+};
 
 function EmployeeLeaves() {
   const [loading, setLoading] = useState(false);
@@ -51,35 +96,24 @@ function EmployeeLeaves() {
       toast.error("Type, start date and end date are required");
       return;
     }
-
     if (new Date(formData.endDate) < new Date(formData.startDate)) {
       toast.error("End date cannot be before start date");
       return;
     }
-
     try {
       setSubmitting(true);
       await api.post("/leave", formData);
       toast.success("Leave request submitted");
-      setFormData({
-        type: "",
-        startDate: "",
-        endDate: "",
-        reason: "",
-      });
+      setFormData({ type: "", startDate: "", endDate: "", reason: "" });
       fetchMyLeaves();
     } catch (error) {
       console.error("Error submitting leave:", error);
-      toast.error(error?.response?.data?.message || "Failed to submit leave request");
+      toast.error(
+        error?.response?.data?.message || "Failed to submit leave request",
+      );
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const getStatusClass = (status) => {
-    if (status === "approved") return "bg-green-100 text-green-800";
-    if (status === "rejected") return "bg-red-100 text-red-800";
-    return "bg-yellow-100 text-yellow-800";
   };
 
   const today = new Date().toISOString().split("T")[0];
@@ -87,35 +121,48 @@ function EmployeeLeaves() {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Leave Request</h1>
-          <p className="text-gray-600">Apply for leave and track your requests</p>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <CalendarRange className="w-7 h-7 text-indigo-600" />
+            Leave Request
+          </h1>
+          <p className="text-gray-500 mt-1 text-sm">
+            Apply for leave and track your past requests.
+          </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Apply Leave</CardTitle>
+        {/* Apply Leave Form */}
+        <Card className="border-gray-200 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-gray-800">
+              Apply for Leave
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm text-gray-700 mb-1">Leave Type</label>
+            <form
+              onSubmit={handleSubmit}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
+              <div className="md:col-span-2 space-y-1">
+                <Label className="text-xs text-gray-500 font-medium">
+                  Leave Type
+                </Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, type: value }))}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, type: value }))
+                  }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="Select leave type" />
                   </SelectTrigger>
                   <SelectContent>
                     {LEAVE_TYPES.map((type) => (
-                      // <SelectItem key={type} value={type}>
-                      //   {type.charAt(0).toUpperCase() + type.slice(1)}
-                      // </SelectItem>
                       <SelectItem
                         key={type}
                         value={type}
-                        className="hover:bg-gray-100 cursor-pointer"
+                        className="cursor-pointer"
                       >
                         {type.charAt(0).toUpperCase() + type.slice(1)}
                       </SelectItem>
@@ -124,54 +171,66 @@ function EmployeeLeaves() {
                 </Select>
               </div>
 
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Start Date</label>
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-500 font-medium">
+                  Start Date
+                </Label>
                 <Input
                   type="date"
                   min={today}
                   value={formData.startDate}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, startDate: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      startDate: e.target.value,
+                    }))
+                  }
+                  className="h-9 text-sm"
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">End Date</label>
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-500 font-medium">
+                  End Date
+                </Label>
                 <Input
                   type="date"
                   min={formData.startDate || today}
                   value={formData.endDate}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, endDate: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      endDate: e.target.value,
+                    }))
+                  }
+                  className="h-9 text-sm"
                   required
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm text-gray-700 mb-1">Reason (optional)</label>
+              <div className="md:col-span-2 space-y-1">
+                <Label className="text-xs text-gray-500 font-medium">
+                  Reason <span className="text-gray-400">(optional)</span>
+                </Label>
                 <Textarea
                   rows={3}
                   value={formData.reason}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, reason: e.target.value }))}
-                  placeholder="Write reason for leave"
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, reason: e.target.value }))
+                  }
+                  placeholder="Briefly describe your reason for leave..."
+                  className="text-sm resize-none"
                 />
               </div>
 
               <div className="md:col-span-2">
-                {/* <Button type="submit" disabled={submitting}>
-                  {submitting ? "Submitting..." : "Submit Request"}
-                </Button> */}
-                {/* <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-blue-600 hover:bg-blue-700 transition-colors cursor-pointer"
-                >
-                  {submitting ? "Submitting..." : "Submit Request"}
-                </Button> */}
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-5 text-sm font-medium"
                 >
+                  <SendHorizonal className="w-3.5 h-3.5 mr-2" />
                   {submitting ? "Submitting..." : "Submit Request"}
                 </Button>
               </div>
@@ -179,34 +238,71 @@ function EmployeeLeaves() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>My Leave Requests</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {loading ? (
-              <p className="text-gray-500">Loading leave requests...</p>
-            ) : leaveList.length === 0 ? (
-              <p className="text-gray-500">No leave requests found.</p>
-            ) : (
-              leaveList.map((leave) => (
-                <div
-                  key={leave.leave_id || leave.id}
-                  className="border rounded-lg p-3 bg-gray-50 flex items-center justify-between gap-3"
-                >
-                  <div>
-                    <p className="font-medium">{String(leave.type || "").toUpperCase()} Leave</p>
-                    <p className="text-sm text-gray-600">
-                      {leave.start_date} to {leave.end_date}
-                    </p>
-                    <p className="text-sm text-gray-500">{leave.reason || "No reason"}</p>
+        {/* My Leave Requests */}
+        <div>
+          <h2 className="text-base font-semibold text-gray-800 mb-3">
+            My Leave Requests
+          </h2>
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="w-7 h-7 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mb-3" />
+              <p className="text-sm">Loading your requests...</p>
+            </div>
+          ) : leaveList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
+              <ClipboardList className="w-9 h-9 mb-2 opacity-30" />
+              <p className="text-sm font-medium">No leave requests yet</p>
+              <p className="text-xs mt-1">
+                Submit a request using the form above.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {leaveList.map((leave) => {
+                const cfg =
+                  STATUS_CONFIG[leave.status] || STATUS_CONFIG.pending;
+                return (
+                  <div
+                    key={leave.leave_id || leave.id}
+                    className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm p-4`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-gray-900 text-sm">
+                            {String(leave.type || "")
+                              .charAt(0)
+                              .toUpperCase() +
+                              String(leave.type || "").slice(1)}{" "}
+                            Leave
+                          </p>
+                          <Badge
+                            className={`inline-flex items-center gap-1 border text-xs font-medium ${cfg.badge}`}
+                          >
+                            {cfg.icon}
+                            {cfg.label}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1.5 text-sm text-gray-600">
+                          <CalendarRange className="w-3.5 h-3.5 text-gray-400" />
+                          <span>{formatDate(leave.start_date)}</span>
+                          <ArrowRight className="w-3 h-3 text-gray-400" />
+                          <span>{formatDate(leave.end_date)}</span>
+                        </div>
+                        {leave.reason && (
+                          <p className="text-xs text-gray-500 mt-1.5">
+                            {leave.reason}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <Badge className={getStatusClass(leave.status)}>{leave.status}</Badge>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </Layout>
   );
