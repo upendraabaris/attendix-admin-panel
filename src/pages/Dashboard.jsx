@@ -2,19 +2,39 @@ import api from "../hooks/useApi";
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Users, Clock, Calendar, CheckCircle } from "lucide-react";
+  Users,
+  Clock,
+  CalendarRange,
+  CheckCircle,
+  MapPin,
+  Hourglass,
+  LayoutDashboard,
+} from "lucide-react";
+
+const getInitials = (name) =>
+  (name || "?")
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
+const formatToday = () =>
+  new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
 const Dashboard = () => {
   const [todayClockIns, setTodayClockIns] = useState([]);
+  const [leaveRequests, setLeaveRequests] = useState([]);
   const [stats, setStats] = useState({
-    todayClockIns: 0,
-    onlineEmployees: 0,
     totalEmployees: 0,
+    todayClockIns: 0,
+    pendingLeaveRequests: 0,
+    onlineEmployees: 0,
   });
 
   const orgID = localStorage.getItem("orgID");
@@ -24,16 +44,15 @@ const Dashboard = () => {
 
     const fetchDashboardData = async () => {
       try {
-        // 🕒 Fetch today's attendance records
         const clockRes = await api.get(
           `/attendance/admin/all-employee-attendance?startDate=${today}&endDate=${today}&organizationId=${orgID}`
         );
         const clockData = clockRes.data;
 
-        let todayClockIns = [];
+        let clockIns = [];
         if (clockData.data) {
-          todayClockIns = clockData.data
-            .filter((record) => record.clock_in) // ✅ Only records with clock_in
+          clockIns = clockData.data
+            .filter((r) => r.clock_in)
             .sort(
               (a, b) =>
                 new Date(`1970-01-01T${b.clock_in}`) -
@@ -42,23 +61,22 @@ const Dashboard = () => {
             .map((item) => ({
               name: item.employee_name,
               location: item.clock_in_address || "Office",
-              time: item.clock_in, // Already formatted as '02:51 pm'
+              time: item.clock_in,
             }));
         }
 
-        // 👥 Fetch total employees
         const empRes = await api.get("/employee/getEmployees");
         const empData = empRes.data.data || [];
-        const orgFilteredEmployees = empData.filter(
+        const activeInOrg = empData.filter(
           (emp) => emp.organization_id == orgID && emp.status === "active"
         );
-        // ⏫ Update state
-        setTodayClockIns(todayClockIns);
+
+        setTodayClockIns(clockIns);
         setStats((prev) => ({
           ...prev,
-          todayClockIns: todayClockIns.length,
-          onlineEmployees: todayClockIns.length,
-          totalEmployees: orgFilteredEmployees.length || 0,
+          todayClockIns: clockIns.length,
+          onlineEmployees: clockIns.length,
+          totalEmployees: activeInOrg.length,
         }));
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -68,186 +86,200 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [orgID]);
 
-  // Pending Leave Requests
-
-  const [leaveRequests, setLeaveRequests] = useState([]);
-
   useEffect(() => {
     const fetchPendingLeaves = async () => {
       try {
         const response = await api.get("/leave/admin/leave-requests/pending");
-
-        // Directly extract data
         const data = response.data;
-
         if (response.status === 200 && data.success) {
           const formatted = data.data.map((item) => {
-            // console.log(item, "ITEM");
             const start = new Date(item.start_date);
             const end = new Date(item.end_date);
             const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-
-            const options = { month: "short", day: "numeric" };
-            const dateString =
+            const opts = { month: "short", day: "numeric" };
+            const dates =
               start.toDateString() === end.toDateString()
-                ? start.toLocaleDateString("en-US", options)
-                : `${start.toLocaleDateString(
-                    "en-US",
-                    options
-                  )} - ${end.toLocaleDateString("en-US", options)}`;
-
+                ? start.toLocaleDateString("en-US", opts)
+                : `${start.toLocaleDateString("en-US", opts)} – ${end.toLocaleDateString("en-US", opts)}`;
             return {
               name: item.employee_name,
               type: item.type,
-              dates: dateString,
-              days: days,
+              dates,
+              days,
               organizationID: item.organization_id,
             };
           });
-          const orgLeaveRequests = formatted.filter(
-            (leave) => leave.organizationID == orgID
-          );
-          setLeaveRequests(orgLeaveRequests);
-
-          setStats((prev) => ({
-            ...prev,
-            pendingLeaveRequests: orgLeaveRequests.length,
-          }));
-        } else {
-          console.error("Failed to fetch pending leaves:", data.message);
+          const filtered = formatted.filter((l) => l.organizationID == orgID);
+          setLeaveRequests(filtered);
+          setStats((prev) => ({ ...prev, pendingLeaveRequests: filtered.length }));
         }
       } catch (err) {
         console.error("Error fetching leave requests:", err.message || err);
       }
     };
-
     fetchPendingLeaves();
   }, [orgID]);
+
+  const STAT_CARDS = [
+    {
+      label: "Total Employees",
+      value: stats.totalEmployees,
+      icon: <Users className="w-5 h-5 text-indigo-600" />,
+      bg: "bg-indigo-50",
+      sub: "Active members",
+    },
+    {
+      label: "Today's Clock-ins",
+      value: stats.todayClockIns,
+      icon: <Clock className="w-5 h-5 text-blue-600" />,
+      bg: "bg-blue-50",
+      sub: `of ${stats.totalEmployees} employees`,
+    },
+    {
+      label: "Pending Leaves",
+      value: stats.pendingLeaveRequests ?? 0,
+      icon: <Hourglass className="w-5 h-5 text-yellow-600" />,
+      bg: "bg-yellow-50",
+      sub: "Awaiting approval",
+    },
+    {
+      label: "Online Now",
+      value: stats.onlineEmployees,
+      icon: <CheckCircle className="w-5 h-5 text-green-600" />,
+      bg: "bg-green-50",
+      sub: "Clocked in today",
+    },
+  ];
 
   return (
     <Layout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">
-            Welcome back! Here's your employee overview.
-          </p>
+
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <LayoutDashboard className="w-7 h-7 text-indigo-600" />
+              Dashboard
+            </h1>
+            <p className="text-gray-500 mt-1 text-sm">{formatToday()}</p>
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Employees
-              </CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalEmployees}</div>
-              <p className="text-xs text-muted-foreground"></p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Today's Clock-ins
-              </CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.todayClockIns}</div>
-              <p className="text-xs text-muted-foreground"></p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Pending Leave Requests
-              </CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.pendingLeaveRequests}
+        {/* Stat Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {STAT_CARDS.map(({ label, value, icon, bg, sub }) => (
+            <div
+              key={label}
+              className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center gap-4"
+            >
+              <div className={`p-2.5 rounded-lg ${bg} shrink-0`}>{icon}</div>
+              <div className="min-w-0">
+                <p className="text-2xl font-bold text-gray-900">{value}</p>
+                <p className="text-xs font-medium text-gray-700 truncate">{label}</p>
+                {sub && <p className="text-xs text-gray-400 mt-0.5 truncate">{sub}</p>}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Requires your attention
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Online Now</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.onlineEmployees}</div>
-              <p className="text-xs text-muted-foreground"></p>
-            </CardContent>
-          </Card>
+            </div>
+          ))}
         </div>
 
-        {/* Recent Activity */}
+        {/* Two-panel activity section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Clock-ins</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {todayClockIns.length === 0 ? (
-                  <p className="text-gray-500 text-sm">
-                    No clock-ins yet for today.
-                  </p>
-                ) : (
-                  todayClockIns.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-2 rounded bg-gray-50"
-                    >
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-gray-600">{item.location}</p>
-                      </div>
-                      <span className="text-sm font-medium text-green-600">
-                        {item.time}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Leave Requests</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {leaveRequests.map((item, index) => (
+          {/* Recent Clock-ins */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-blue-500" />
+                <h2 className="text-sm font-semibold text-gray-800">Today's Clock-ins</h2>
+              </div>
+              <span className="text-xs font-medium text-gray-400">
+                {todayClockIns.length} record{todayClockIns.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            <div className="divide-y divide-gray-50 max-h-96 overflow-y-auto">
+              {todayClockIns.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <Clock className="w-8 h-8 mb-2 opacity-25" />
+                  <p className="text-sm font-medium">No clock-ins yet</p>
+                  <p className="text-xs mt-1">Check back later today.</p>
+                </div>
+              ) : (
+                todayClockIns.map((item, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-2 rounded bg-yellow-50"
+                    className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 transition-colors"
                   >
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-sm text-gray-600">
-                        {item.type} - {item.dates}
-                      </p>
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shrink-0">
+                      {getInitials(item.name)}
                     </div>
-                    <span className="text-sm font-medium text-orange-600">
-                      {item.days} days
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {item.name}
+                      </p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                        <p className="text-xs text-gray-400 truncate">{item.location}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold text-green-700 bg-green-100 border border-green-200 rounded-full px-2.5 py-0.5 whitespace-nowrap shrink-0">
+                      {item.time}
                     </span>
                   </div>
-                ))}
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Pending Leave Requests */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <CalendarRange className="w-4 h-4 text-yellow-500" />
+                <h2 className="text-sm font-semibold text-gray-800">Pending Leave Requests</h2>
               </div>
-            </CardContent>
-          </Card>
+              <span className="text-xs font-medium text-gray-400">
+                {leaveRequests.length} pending
+              </span>
+            </div>
+
+            <div className="divide-y divide-gray-50 max-h-96 overflow-y-auto">
+              {leaveRequests.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <CalendarRange className="w-8 h-8 mb-2 opacity-25" />
+                  <p className="text-sm font-medium">No pending requests</p>
+                  <p className="text-xs mt-1">All leave requests are handled.</p>
+                </div>
+              ) : (
+                leaveRequests.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 px-5 py-3.5 hover:bg-yellow-50/40 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-yellow-100 text-yellow-700 flex items-center justify-center text-xs font-bold shrink-0">
+                      {getInitials(item.name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {item.name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-xs font-medium text-yellow-700 bg-yellow-100 border border-yellow-200 rounded-full px-2 py-0.5 capitalize">
+                          {item.type}
+                        </span>
+                        <p className="text-xs text-gray-400">{item.dates}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold text-orange-700 bg-orange-100 border border-orange-200 rounded-full px-2.5 py-0.5 whitespace-nowrap shrink-0">
+                      {item.days}d
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
     </Layout>
