@@ -38,8 +38,10 @@ api.interceptors.response.use(
         "employee_name",
         "lastActiveTime",
       ].forEach((key) => localStorage.removeItem(key));
-      toast.warning("Your session has expired. Please log in again.");
-      window.location.replace("/login");
+      toast.warning("Session expired. Please log in again.", {
+        duration: 3000,
+      });
+      setTimeout(() => window.location.replace("/login"), 1500);
     }
     return Promise.reject(error);
   },
