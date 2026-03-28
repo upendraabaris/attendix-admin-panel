@@ -915,20 +915,22 @@ const LeavePolicyPage = () => {
                 </>
               )}
 
-              {/* <div className="md:col-span-2">
-                <Button type="submit" disabled={submitting}>
+
+              {/* <div className="md:col-span-2"> 
+                <Button type="submit" disabled={submitting} className="bg-blue-600 hover:bg-blue-700 text-white">
+
                   {submitting ? "Saving..." : "Save Policy"}
                 </Button>
               </div> */}
               <div className="md:col-span-2">
-  <Button
-    type="submit"
-    disabled={submitting}
-    className="bg-blue-600 hover:bg-blue-700 text-white"
-  >
-    {submitting ? "Saving..." : "Save Policy"}
-  </Button>
-</div>
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {submitting ? "Saving..." : "Save Policy"}
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -936,56 +938,56 @@ const LeavePolicyPage = () => {
         {/* TABLE */}
         <div className="border rounded-lg overflow-hidden bg-white">
           {/* TABLE */}
-{policies.length > 0 && (
-  <div className="border rounded-lg overflow-hidden bg-white">
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Leave Type</TableHead>
-          <TableHead>Yearly Limit</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Earned Rule</TableHead>
-          <TableHead className="text-right">Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {policies.map((policy) => (
-          <TableRow key={policy.id}>
-            <TableCell className="capitalize">{policy.leave_type}</TableCell>
-            <TableCell>
-              {policy.leave_type === "earned" ? "-" : policy.yearly_limit}
-            </TableCell>
-            <TableCell>
-              <Badge
-                className={
-                  policy.is_enabled
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-700"
-                }
-              >
-                {policy.is_enabled ? "Enabled" : "Disabled"}
-              </Badge>
-            </TableCell>
-            <TableCell>
-              {policy.leave_type === "earned"
-                ? `${policy.earned_days_required} days → ${policy.earned_leave_award} leave`
-                : "-"}
-            </TableCell>
-            <TableCell className="text-right">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setEditingPolicy(policy)}
-              >
-                Edit
-              </Button>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  </div>
-)}
+          {policies.length > 0 && (
+            <div className="border rounded-lg overflow-hidden bg-white">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Leave Type</TableHead>
+                    <TableHead>Yearly Limit</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Earned Rule</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {policies.map((policy) => (
+                    <TableRow key={policy.id}>
+                      <TableCell className="capitalize">{policy.leave_type}</TableCell>
+                      <TableCell>
+                        {policy.leave_type === "earned" ? "-" : policy.yearly_limit}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            policy.is_enabled
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-700"
+                          }
+                        >
+                          {policy.is_enabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {policy.leave_type === "earned"
+                          ? `${policy.earned_days_required} days → ${policy.earned_leave_award} leave`
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingPolicy(policy)}
+                        >
+                          Edit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       </div>
 

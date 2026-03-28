@@ -38,7 +38,7 @@ const EmployeeWebLogin = () => {
       localStorage.setItem("employee_name", user.employee_name || "");
       localStorage.setItem("role", "employee");
 
-      navigate("/workspace");
+      navigate("/employee-attendance");
     } catch (err) {
       const msg = err.response?.data?.error || "Login failed";
       toast.error(msg);

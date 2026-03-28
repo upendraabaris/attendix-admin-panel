@@ -5,7 +5,16 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
-import { Plus, Search, Filter } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Filter,
+  Users,
+  UserCheck,
+  UserMinus,
+  Calendar,
+  Pencil,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,16 +24,42 @@ import {
 } from "../components/ui/select";
 import api from "../hooks/useApi";
 
+const getInitials = (name) =>
+  (name || "?")
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
+const STATUS_CONFIG = {
+  active: {
+    border: "border-l-green-500",
+    badge: "bg-green-100 text-green-800 border-green-200",
+    label: "Active",
+  },
+  "on-leave": {
+    border: "border-l-yellow-400",
+    badge: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    label: "On Leave",
+  },
+  inactive: {
+    border: "border-l-gray-400",
+    badge: "bg-gray-100 text-gray-700 border-gray-200",
+    label: "Inactive",
+  },
+};
+
 const Employees = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const fetchList = async () => {
     try {
-      const token = localStorage.getItem("token");
       const res = await api.get(`/employee/getEmployees`);
       setEmployees(res.data.data);
     } catch (err) {
@@ -40,8 +75,17 @@ const Employees = () => {
 
   const orgID = localStorage.getItem("orgID");
   const orgFilteredEmployees = employees.filter(
-    (emp) => emp.organization_id == orgID
+    (emp) => emp.organization_id == orgID,
   );
+
+  const counts = {
+    all: orgFilteredEmployees.length,
+    active: orgFilteredEmployees.filter((e) => e.status === "active").length,
+    "on-leave": orgFilteredEmployees.filter((e) => e.status === "on-leave")
+      .length,
+    inactive: orgFilteredEmployees.filter((e) => e.status === "inactive")
+      .length,
+  };
 
   const filteredEmployees = orgFilteredEmployees.filter((employee) => {
     const name = employee.name || "";
@@ -58,60 +102,105 @@ const Employees = () => {
       roleFilter === "all" ||
       role.toLowerCase().includes(roleFilter.toLowerCase());
 
-    return matchesSearch && matchesRole;
-  });
+    const matchesStatus =
+      statusFilter === "all" || employee.status === statusFilter;
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-800";
-      case "on-leave":
-        return "bg-yellow-100 text-yellow-800";
-      case "inactive":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+    return matchesSearch && matchesRole && matchesStatus;
+  });
 
   return (
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Users className="w-7 h-7 text-indigo-600" />
               Employee Management
             </h1>
-            <p className="text-gray-600">Manage your team members</p>
+            <p className="text-gray-500 mt-1 text-sm">
+              Manage and monitor your team members.
+            </p>
           </div>
-
           <Button
             onClick={() => navigate("/employees/add")}
-            variant="outline"
-            className="w-full sm:w-48 border border-black-300 bg-white text-gray-900 hover:bg-gray-100 flex items-center gap-2"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Add Employee
           </Button>
         </div>
 
-        {/* Search + Filter */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            {
+              key: "all",
+              label: "Total Employees",
+              icon: Users,
+              color: "bg-indigo-50",
+              iconColor: "text-indigo-600",
+            },
+            {
+              key: "active",
+              label: "Active",
+              icon: UserCheck,
+              color: "bg-green-50",
+              iconColor: "text-green-600",
+            },
+            {
+              key: "on-leave",
+              label: "On Leave",
+              icon: Calendar,
+              color: "bg-yellow-50",
+              iconColor: "text-yellow-600",
+            },
+            {
+              key: "inactive",
+              label: "Inactive",
+              icon: UserMinus,
+              color: "bg-gray-50",
+              iconColor: "text-gray-500",
+            },
+          ].map(({ key, label, icon: Icon, color, iconColor }) => (
+            <button
+              key={key}
+              onClick={() => setStatusFilter(key)}
+              className={`bg-white rounded-xl border shadow-sm p-5 flex items-center gap-4 text-left transition-all ${
+                statusFilter === key
+                  ? "border-indigo-300 ring-2 ring-indigo-100"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className={`p-2.5 rounded-lg ${color}`}>
+                <Icon className={`w-5 h-5 ${iconColor}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {counts[key] ?? 0}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Filter Bar */}
+        <Card className="border-gray-200 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                 <Input
-                  placeholder="Search employees..."
+                  placeholder="Search by name, email, or department..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-8 h-9 text-sm"
                 />
               </div>
               <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <Filter className="w-4 h-4 mr-2" />
+                <SelectTrigger className="w-full sm:w-44 h-9 text-sm">
+                  <Filter className="w-3.5 h-3.5 mr-2 text-gray-400" />
                   <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -127,49 +216,67 @@ const Employees = () => {
         </Card>
 
         {/* Employee Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredEmployees?.map((employee) => (
-            <Card
-              key={employee.id}
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-            >
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-4">
-                  <div className="text-3xl">{employee.avatar}</div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 truncate">
-                      {employee.name}
-                    </h3>
-                    <p className="text-sm text-gray-600 truncate">
-                      {employee.email}
-                    </p>
-                    <p className="text-sm text-gray-500 truncate">
-                      {employee.phone}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {employee.role} • {employee.department}
-                    </p>
-
-                    {/* Status + Edit */}
-                    <div className="flex items-center justify-between mt-4">
-                      <Badge className={getStatusColor(employee.status)}>
-                        {employee?.status?.replace("-", " ")}
-                      </Badge>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/employees/edit/${employee.id}`);
-                        }}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+            <div className="w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mb-3" />
+            <p className="text-sm">Loading employees...</p>
+          </div>
+        ) : filteredEmployees.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <Users className="w-10 h-10 mb-3 opacity-30" />
+            <p className="text-sm font-medium">No employees found</p>
+            <p className="text-xs mt-1">
+              Try adjusting your search or filters.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredEmployees.map((employee) => {
+              const cfg =
+                STATUS_CONFIG[employee.status] || STATUS_CONFIG.inactive;
+              return (
+                <div
+                  key={employee.id}
+                  className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm overflow-hidden hover:shadow-md transition-shadow`}
+                >
+                  <div className="p-5">
+                    {/* Top: Avatar + Name + Status Badge */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold shrink-0">
+                          {getInitials(employee.name)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm truncate">
+                            {employee.name}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {employee.email}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge
+                        className={`inline-flex items-center border text-xs font-medium shrink-0 ${cfg.badge}`}
                       >
-                        Edit
-                      </Button>
+                        {cfg.label}
+                      </Badge>
                     </div>
 
-                    {/* ✅ New Buttons */}
-                    {/* ✅ New Buttons (Aligned) */}
-                    <div className="flex gap-2 mt-3">
+                    {/* Info Row */}
+                    <div className="mt-3 space-y-1">
+                      {employee.phone && (
+                        <p className="text-xs text-gray-500">
+                          {employee.phone}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-600">
+                        <span className="font-medium">{employee.role}</span>
+                        {employee.department && ` · ${employee.department}`}
+                      </p>
+                    </div>
+
+                    {/* Quick Action Buttons */}
+                    <div className="mt-4 flex gap-2">
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -177,55 +284,63 @@ const Employees = () => {
                             state: { name: employee.name },
                           });
                         }}
-                        className="bg-indigo-400 text-white hover:bg-indigo-700"
                         size="sm"
+                        className="flex-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 h-8 text-xs font-medium"
+                        variant="ghost"
                       >
                         Attendance
                       </Button>
-
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`/employees/empleave/${employee.id}`);
                         }}
-                        className="bg-green-600 text-white hover:bg-green-700"
                         size="sm"
+                        className="flex-1 bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 h-8 text-xs font-medium"
+                        variant="ghost"
                       >
                         Leave
                       </Button>
-
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`/employees/emptasks/${employee.id}`);
                         }}
-                        className="bg-yellow-500 text-white hover:bg-yellow-600"
                         size="sm"
+                        className="flex-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 h-8 text-xs font-medium"
+                        variant="ghost"
                       >
-                        Task
+                        Tasks
                       </Button>
                     </div>
 
-                    {/* Created At */}
-                    <p className="text-xs text-gray-500 mt-2">
-                      Created At:{" "}
-                      {new Date(employee.created_at).toLocaleDateString()}
-                    </p>
+                    {/* Footer: Joined date + Edit */}
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                      <p className="text-xs text-gray-400">
+                        Joined{" "}
+                        {new Date(employee.created_at).toLocaleDateString(
+                          "en-GB",
+                          { day: "2-digit", month: "short", year: "numeric" },
+                        )}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/employees/edit/${employee.id}`);
+                        }}
+                        className="h-7 px-3 text-xs gap-1.5 border-gray-200"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        Edit
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredEmployees.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <p className="text-gray-500">
-                No employees found matching your criteria.
-              </p>
-            </CardContent>
-          </Card>
+              );
+            })}
+          </div>
         )}
       </div>
     </Layout>
