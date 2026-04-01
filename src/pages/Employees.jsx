@@ -166,11 +166,10 @@ const Employees = () => {
             <button
               key={key}
               onClick={() => setStatusFilter(key)}
-              className={`bg-white rounded-xl border shadow-sm p-5 flex items-center gap-4 text-left transition-all ${
-                statusFilter === key
+              className={`bg-white rounded-xl border shadow-sm p-5 flex items-center gap-4 text-left transition-all ${statusFilter === key
                   ? "border-indigo-300 ring-2 ring-indigo-100"
                   : "border-gray-200 hover:border-gray-300"
-              }`}
+                }`}
             >
               <div className={`p-2.5 rounded-lg ${color}`}>
                 <Icon className={`w-5 h-5 ${iconColor}`} />
@@ -312,6 +311,7 @@ const Employees = () => {
                       >
                         Tasks
                       </Button>
+
                     </div>
 
                     {/* Footer: Joined date + Edit */}

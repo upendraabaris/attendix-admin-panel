@@ -6,9 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import api from "../hooks/useApi";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"; // ✅ New
-import { io } from "socket.io-client";
 import { toast } from "sonner"; // ✅ Toast import
-import BASE_URL from "../config/apiConfig";
 
 const WEEKDAY_OPTIONS = [
   { key: "sun", label: "Sun" },
@@ -22,8 +20,6 @@ const WEEKDAY_OPTIONS = [
 
 const currentUser = localStorage.getItem("employee_name");
 
-// const socket = io("http://localhost:4000"); // ✅ Adjust for your backend URL
-const socket = io(BASE_URL); // ✅ Adjust for your backend URL
 // ✅ Modal Component (unchanged)
 const AddTaskModal = ({
   isOpen,
@@ -451,20 +447,6 @@ const WorkspaceBoard = () => {
 
   useEffect(() => {
     fetchTasks();
-    //  ✅ Listen for real-time updates
-    socket.on("taskUpdated", (updatedTask) => {
-      console.log("🟡 Real-time update received:", updatedTask);
-      fetchTasks(); // refresh the board automatically
-    });
-
-    socket.on("taskDeleted", () => {
-      fetchTasks();
-    });
-
-    return () => {
-      socket.off("taskUpdated");
-      socket.off("taskDeleted");
-    };
   }, []);
 
   // 253 to 316
