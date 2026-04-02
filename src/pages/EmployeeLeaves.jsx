@@ -30,7 +30,7 @@ import {
   SendHorizonal,
 } from "lucide-react";
 
-const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned"];
+const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned","compensation","casual"];
 
 const formatDate = (dateStr) =>
   dateStr
