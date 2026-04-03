@@ -200,6 +200,7 @@ const Layout = ({ children }) => {
       { name: "Employees", href: "/employees", icon: Users },
       { name: "Leave Requests", href: "/leaves", icon: Calendar },
       { name: "Leave Policy", href: "/leave-policy", icon: KeyRound },
+      { name: "Work Week Policy", href: "/work-week-policy", icon: KeyRound },
       { name: "Attendance", href: "/attendance", icon: Clock },
       { name: "Employee Task", href: "/tasks", icon: Users },
       { name: "Workspace", href: "/workspace", icon: Briefcase },

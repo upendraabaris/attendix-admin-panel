@@ -66,6 +66,7 @@ function EmployeeLeaves() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [leaveList, setLeaveList] = useState([]);
+  const [leaveBalances, setLeaveBalances] = useState([]);
   const [formData, setFormData] = useState({
     type: "",
     startDate: "",
@@ -76,11 +77,36 @@ function EmployeeLeaves() {
   const fetchMyLeaves = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/leave/my");
-      setLeaveList(res?.data?.data || []);
+      const employeeId = localStorage.getItem("employee_id");
+      const requests = [
+        api.get("/leave/my"),
+        api.get("/leave/my-balances"),
+      ];
+
+      if (employeeId) {
+        requests.push(api.get(`/comp-off/balance/${employeeId}`));
+      }
+
+      const [leaveRes, balanceRes, compOffRes] = await Promise.all(requests);
+      setLeaveList(leaveRes?.data?.data || []);
+      const baseBalances = balanceRes?.data?.data || [];
+      const compOffBalance = compOffRes?.data?.data;
+
+      const mergedBalances = [...baseBalances];
+
+      if (compOffBalance) {
+        mergedBalances.push({
+          id: `comp-${compOffBalance.employee_id || employeeId || "self"}`,
+          leave_type: "compensation",
+          balance: Number(compOffBalance.available_balance || 0),
+          used_days: Number(compOffBalance.used_count || 0),
+        });
+      }
+
+      setLeaveBalances(mergedBalances);
     } catch (error) {
       console.error("Error fetching leaves:", error);
-      toast.error("Unable to fetch leave requests");
+      toast.error("Unable to fetch leave requests and balances");
     } finally {
       setLoading(false);
     }
@@ -130,6 +156,35 @@ function EmployeeLeaves() {
           <p className="text-gray-500 mt-1 text-sm">
             Apply for leave and track your past requests.
           </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {leaveBalances.length === 0 ? (
+            <Card className="border-gray-200 shadow-sm sm:col-span-2 xl:col-span-4">
+              <CardContent className="p-5 text-sm text-gray-500">
+                No leave balances available yet.
+              </CardContent>
+            </Card>
+          ) : (
+            leaveBalances.map((item) => (
+              <Card key={`${item.leave_type}-${item.id || "balance"}`} className="border-gray-200 shadow-sm">
+                <CardContent className="p-5">
+                  <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                    {String(item.leave_type || "other")}
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 mt-2">
+                    {Number(item.balance || 0)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Available balance
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Used: {Number(item.used_days || 0)}
+                  </p>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
 
         {/* Apply Leave Form */}
