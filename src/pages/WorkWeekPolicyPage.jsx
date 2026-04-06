@@ -43,9 +43,22 @@ const EMPTY_HOLIDAY_FORM = {
   description: "",
 };
 
+// const formatHolidayDate = (value) => {
+//   if (!value) return "—";
+//   const normalized = String(value).slice(0, 10);
+//   const [year, month, day] = normalized.split("-").map(Number);
+//   return new Date(year, month - 1, day).toLocaleDateString("en-GB", {
+//     day: "2-digit",
+//     month: "short",
+//     year: "numeric",
+//   });
+// };
 const formatHolidayDate = (value) => {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString("en-GB", {
+
+  const date = new Date(value);
+
+  return date.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -65,6 +78,7 @@ const WorkWeekPolicyPage = () => {
   const [pageLoading, setPageLoading] = useState(true);
   const [policyId, setPolicyId] = useState(null);
   const [selectedPolicy, setSelectedPolicy] = useState(POLICY_OPTIONS[0].value);
+  const [policyStartDate, setPolicyStartDate] = useState("");
   const [policySaving, setPolicySaving] = useState(false);
 
   const [holidays, setHolidays] = useState([]);
@@ -86,6 +100,7 @@ const WorkWeekPolicyPage = () => {
 
       setPolicyId(policy?.id ?? null);
       setSelectedPolicy(policy?.policy_name || POLICY_OPTIONS[0].value);
+      setPolicyStartDate(policy?.policy_start_date ? String(policy.policy_start_date).slice(0, 10) : "");
       setHolidays(holidayRows);
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to load work week policy and holidays");
@@ -111,7 +126,13 @@ const WorkWeekPolicyPage = () => {
   const handlePolicySave = async () => {
     try {
       setPolicySaving(true);
-      const payload = { policy_name: selectedPolicy };
+      const payload = {
+        policy_name: selectedPolicy,
+        policy_start_date:
+          selectedPolicy === "alternate_saturday_and_every_sunday_off"
+            ? policyStartDate || null
+            : null,
+      };
 
       if (policyId) {
         const res = await api.put(`/work-week-policy/${policyId}`, payload);
@@ -242,12 +263,33 @@ const WorkWeekPolicyPage = () => {
                   ))}
                 </RadioGroup>
 
+                {selectedPolicy === "alternate_saturday_and_every_sunday_off" ? (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-gray-500 font-medium">
+                      Alternate Saturday Start Date
+                    </Label>
+                    <Input
+                      type="date"
+                      value={policyStartDate}
+                      onChange={(e) => setPolicyStartDate(e.target.value)}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Select the first Saturday that should be treated as off. Every 14 days after that will also be off.
+                    </p>
+                  </div>
+                ) : null}
+
                 <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
                   <p className="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-1">
                     Selected Policy
                   </p>
                   <p className="text-sm font-semibold text-slate-800">{selectedPolicyMeta.label}</p>
                   <p className="text-xs text-slate-500 mt-1">{selectedPolicyMeta.description}</p>
+                  {selectedPolicy === "alternate_saturday_and_every_sunday_off" && policyStartDate ? (
+                    <p className="text-xs text-slate-500 mt-2">
+                      Start date: {formatHolidayDate(policyStartDate)}
+                    </p>
+                  ) : null}
                 </div>
 
                 <Button
