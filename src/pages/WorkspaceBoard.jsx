@@ -6,9 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import api from "../hooks/useApi";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"; // ✅ New
-import { io } from "socket.io-client";
 import { toast } from "sonner"; // ✅ Toast import
-import BASE_URL from "../config/apiConfig";
 
 const WEEKDAY_OPTIONS = [
   { key: "sun", label: "Sun" },
@@ -20,8 +18,8 @@ const WEEKDAY_OPTIONS = [
   { key: "sat", label: "Sat" },
 ];
 
-// const socket = io("http://localhost:4000"); // ✅ Adjust for your backend URL
-const socket = io(BASE_URL); // ✅ Adjust for your backend URL
+const currentUser = localStorage.getItem("employee_name");
+
 // ✅ Modal Component (unchanged)
 const AddTaskModal = ({
   isOpen,
@@ -69,8 +67,8 @@ const AddTaskModal = ({
         const orgEmployees =
           orgID && hasOrgOnPayload
             ? allEmployees.filter(
-                (emp) => String(getOrgIdFromItem(emp)) === String(orgID)
-              )
+              (emp) => String(getOrgIdFromItem(emp)) === String(orgID)
+            )
             : allEmployees;
 
         setEmployees(orgEmployees);
@@ -85,13 +83,6 @@ const AddTaskModal = ({
     fetchEmployees();
   }, []);
 
-  // const handleChange = (e) => {
-  //   const { name, value, files } = e.target;
-  //   setFormData((prev) => ({
-  //     ...prev,
-  //     [name]: files ? files[0] : value,
-  //   }));
-  // };
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -340,18 +331,6 @@ const AddTaskModal = ({
               placeholder="Enter task description..."
             />
           </div>
-
-          {/* Attachment */}
-          {/* <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Attachment (optional)</label>
-            <input
-              type="file"
-              name="attachment"
-              onChange={handleChange}
-              className="w-full border px-3 py-2 rounded-md text-sm"
-            />
-          </div> */}
-
           <div className="flex justify-end gap-2 mt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancel
@@ -411,8 +390,8 @@ const WorkspaceBoard = () => {
       const orgEmployees =
         orgID && hasOrgOnPayload
           ? allEmployees.filter(
-              (emp) => String(getOrgIdFromItem(emp)) === String(orgID)
-            )
+            (emp) => String(getOrgIdFromItem(emp)) === String(orgID)
+          )
           : allEmployees;
 
       const allTasks = orgEmployees.flatMap((emp) =>
@@ -468,20 +447,6 @@ const WorkspaceBoard = () => {
 
   useEffect(() => {
     fetchTasks();
-    //  ✅ Listen for real-time updates
-    socket.on("taskUpdated", (updatedTask) => {
-      console.log("🟡 Real-time update received:", updatedTask);
-      fetchTasks(); // refresh the board automatically
-    });
-
-    socket.on("taskDeleted", () => {
-      fetchTasks();
-    });
-
-    return () => {
-      socket.off("taskUpdated");
-      socket.off("taskDeleted");
-    };
   }, []);
 
   // 253 to 316
@@ -533,8 +498,19 @@ const WorkspaceBoard = () => {
       console.log("✅ Task updated successfully:", res.data);
 
     } catch (error) {
-      if ([401, 403].includes(error.response?.status)) {
-        handleAuthFailure();
+      // if ([401, 403].includes(error.response?.status)) {
+      //   handleAuthFailure();
+      //   return;
+      // }
+      if (error.response?.status === 401) {
+        handleAuthFailure(); // logout only if token expired
+        return;
+      }
+
+      if (error.response?.status === 403) {
+        toast.error(error.response?.data?.message || "You are not authorized to update this task");
+
+        // UI revert already ho raha hai neeche, so just return
         return;
       }
       console.error("❌ Error updating task:", error);
@@ -647,68 +623,60 @@ const WorkspaceBoard = () => {
                       {col.tasks.length === 0 ? (
                         <p className="text-gray-500 text-xs text-center">No tasks yet</p>
                       ) : (
-                        col.tasks.map((t, index) => (
-                          <Draggable key={t.task_id} draggableId={String(t.task_id)} index={index}>
-                            {(provided) => (
-                              // <div
-                              //   ref={provided.innerRef}
-                              //   {...provided.draggableProps}
-                              //   {...provided.dragHandleProps}
-                              //   className="p-2 bg-white rounded-md border text-xs hover:shadow transition"
-                              // >
-                              //   <h3 className="font-medium text-gray-800">{t.title}</h3>
-                              //   <p className="text-gray-500">{t.description}</p>
-                              //   <p className="text-[10px] text-gray-400 mt-1">
-                              //     👤 {t.employee_name} | 📅 {t.due_date || "N/A"}
-                              //   </p>
-                              //   {isCurrentOrFutureTask(t) && (
-                              //     <button
-                              //       type="button"
-                              //       onMouseDown={(e) => e.stopPropagation()}
-                              //       onClick={(e) => {
-                              //         e.stopPropagation();
-                              //         handleDeleteTask(t.task_id);
-                              //       }}
-                              //       className="mt-2 rounded bg-red-600 px-2 py-1 text-[10px] text-white hover:bg-red-700"
-                              //     >
-                              //       Delete
-                              //     </button>
-                              //   )}
-                              // </div>
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                 className="relative p-2 bg-white rounded-md border text-xs hover:shadow transition"
-                                
-                  >
-                                {/* Delete Red Cross Icon */}
-                                {isCurrentOrFutureTask(t) && (
-                                  <button
-                                    type="button"
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteTask(t.task_id);
-                                    }}
-                                    className="absolute top-1 right-1 z-50 text-red-500 hover:text-red-700 bg-white rounded-full px-[2px]"
-                                  >
-                                    ❌
-                                  </button>
-                                )}
+                        col.tasks.map((t, index) => {
+                          const currentUser = localStorage.getItem("employee_name");
+                          const role = localStorage.getItem("role");
+                          const isAdmin = role?.toLowerCase().includes("admin");
 
-                                <h3 className="font-medium text-gray-800">{t.title}</h3>
-                                <p className="text-gray-500">{t.description}</p>
+                          const isMyTask = t.employee_name === currentUser;
+                          const canDrag = isAdmin || isMyTask;
 
-                                <p className="text-[10px] text-gray-400 mt-1">
-                                  👤 {t.employee_name} | 📅 {t.due_date || "N/A"}
-                                </p>
-                              </div>
+                          return (
+                            <Draggable
+                              key={t.task_id}
+                              draggableId={String(t.task_id)}
+                              index={index}
+                              isDragDisabled={!canDrag}
+                            >
+                              {(provided) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={`relative p-2 bg-white rounded-md border text-xs transition
+            ${!canDrag ? "opacity-50 cursor-not-allowed" : "hover:shadow cursor-pointer"}
+          `}
+                                  title={!canDrag ? "You cannot update this task" : ""}
+                                >
+                                  {/* Delete Red Cross Icon */}
+                                  {isCurrentOrFutureTask(t) && (
+                                    <button
+                                      type="button"
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteTask(t.task_id);
+                                      }}
+                                      className="absolute top-1 right-1 z-50 text-red-500 hover:text-red-700 bg-white rounded-full px-[2px]"
+                                    >
+                                      ❌
+                                    </button>
+                                  )}
+
+                                  <h3 className="font-medium text-gray-800">{t.title}</h3>
+                                  <p className="text-gray-500">{t.description}</p>
+
+                                  <p className="text-[10px] text-gray-400 mt-1">
+                                    👤 {t.employee_name} | 📅 {t.due_date || "N/A"}
+                                  </p>
+                                </div>
 
 
-                            )}
-                          </Draggable>
-                        ))
+                              )}
+                            </Draggable>
+                          );
+                        })
+
                       )}
                       {provided.placeholder}
                     </CardContent>

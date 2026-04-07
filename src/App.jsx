@@ -26,6 +26,7 @@ import EmployeeWebLogin from "./pages/EmployeeWebLogin";
 import EmployeeAttendanceTab from "./components/EmployeeAttendanceTab";
 import EmployeeLeaves from "./pages/EmployeeLeaves";
 import LeavePolicyPage from "./pages/LeavePolicyPage";
+import WorkWeekPolicyPage from "./pages/WorkWeekPolicyPage";
 
 const queryClient = new QueryClient();
 
@@ -117,6 +118,22 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <LeavePolicyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/work-week-policy"
+            element={
+              <ProtectedRoute>
+                <WorkWeekPolicyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/holidays"
+            element={
+              <ProtectedRoute>
+                <WorkWeekPolicyPage />
               </ProtectedRoute>
             }
           />

@@ -95,10 +95,14 @@ const Attendance = () => {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState([]);
+  // const [sortConfig, setSortConfig] = useState({
+  //   key: "employee_name",
+  //   direction: "asc",
+  // });
   const [sortConfig, setSortConfig] = useState({
-    key: "employee_name",
-    direction: "asc",
-  });
+  key: "date",
+  direction: "desc", // latest date first
+});
 
   const orgID = localStorage.getItem("orgID");
 
