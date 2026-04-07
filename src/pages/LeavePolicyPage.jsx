@@ -15,7 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
 
-const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned", "casual"];
+const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned", "casual","compensation"];
 const RULE_BASED_TYPES = ["earned", "casual"]; // ← both use days-required + award config
 
 /* ─── Custom Toggle ─────────────────────────────────────────────────── */
