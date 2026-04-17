@@ -173,6 +173,7 @@ import {
   LayoutDashboard,
   Users,
   Calendar,
+  CalendarDays,
   Clock,
   LogOut,
   Menu,
@@ -209,6 +210,9 @@ const Layout = ({ children }) => {
     navigation = [
       { name: "Attendance", href: "/employee-attendance", icon: Clock },
       { name: "Leave Request", href: "/employee-leaves", icon: Calendar },
+      { name: "Work Week Policy", href: "/employee-work-week-policy", icon: KeyRound },
+      { name: "Leave Policy", href: "/employee-leave-policy", icon: KeyRound },
+      { name: "Holiday", href: "/employee-holidays", icon: CalendarDays },
       ...(orgID !== "13"
         ? [{ name: "Workspace", href: "/workspace", icon: Briefcase }]
         : []),

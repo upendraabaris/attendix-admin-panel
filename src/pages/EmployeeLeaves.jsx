@@ -30,15 +30,15 @@ import {
   SendHorizonal,
 } from "lucide-react";
 
-const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned","compensation","casual"];
+const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned", "compensation", "casual"];
 
 const formatDate = (dateStr) =>
   dateStr
     ? new Date(dateStr).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 
 const STATUS_CONFIG = {
@@ -230,9 +230,21 @@ function EmployeeLeaves() {
                 <Label className="text-xs text-gray-500 font-medium">
                   Start Date
                 </Label>
-                <Input
+                {/* <Input
                   type="date"
                   min={today}
+                  value={formData.startDate}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      startDate: e.target.value,
+                    }))
+                  }
+                  className="h-9 text-sm"
+                  required
+                /> */}
+                <Input
+                  type="date"
                   value={formData.startDate}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -249,9 +261,22 @@ function EmployeeLeaves() {
                 <Label className="text-xs text-gray-500 font-medium">
                   End Date
                 </Label>
-                <Input
+                {/* <Input
                   type="date"
                   min={formData.startDate || today}
+                  value={formData.endDate}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      endDate: e.target.value,
+                    }))
+                  }
+                  className="h-9 text-sm"
+                  required
+                /> */}
+                <Input
+                  type="date"
+                  min={formData.startDate || undefined}
                   value={formData.endDate}
                   onChange={(e) =>
                     setFormData((prev) => ({
