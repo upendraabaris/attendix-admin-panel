@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
+import { Switch } from "../components/ui/switch";
 import {
   Table,
   TableBody,
@@ -80,6 +81,9 @@ const WorkWeekPolicyPage = () => {
   const [selectedPolicy, setSelectedPolicy] = useState(POLICY_OPTIONS[0].value);
   const [policyStartDate, setPolicyStartDate] = useState("");
   const [policySaving, setPolicySaving] = useState(false);
+  const [autoAbsentEnabled, setAutoAbsentEnabled] = useState(false);
+  const [autoAbsentSaving, setAutoAbsentSaving] = useState(false);
+  const [autoAbsentLastProcessedDate, setAutoAbsentLastProcessedDate] = useState(null);
 
   const [holidays, setHolidays] = useState([]);
   const [holidayForm, setHolidayForm] = useState(EMPTY_HOLIDAY_FORM);
@@ -90,18 +94,22 @@ const WorkWeekPolicyPage = () => {
   const loadData = async () => {
     try {
       setPageLoading(true);
-      const [policyRes, holidaysRes] = await Promise.all([
+      const [policyRes, holidaysRes, autoAbsentRes] = await Promise.all([
         api.get("/work-week-policy"),
         api.get("/holidays"),
+        api.get("/auto-absent/settings"),
       ]);
 
       const policy = policyRes?.data?.data || null;
       const holidayRows = holidaysRes?.data?.data || [];
+      const autoAbsent = autoAbsentRes?.data?.data || null;
 
       setPolicyId(policy?.id ?? null);
       setSelectedPolicy(policy?.policy_name || POLICY_OPTIONS[0].value);
       setPolicyStartDate(policy?.policy_start_date ? String(policy.policy_start_date).slice(0, 10) : "");
       setHolidays(holidayRows);
+      setAutoAbsentEnabled(Boolean(autoAbsent?.is_enabled));
+      setAutoAbsentLastProcessedDate(autoAbsent?.last_processed_date || null);
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to load work week policy and holidays");
     } finally {
@@ -147,6 +155,24 @@ const WorkWeekPolicyPage = () => {
       toast.error(error?.response?.data?.message || "Failed to save work week policy");
     } finally {
       setPolicySaving(false);
+    }
+  };
+
+  const handleAutoAbsentToggle = async (checked) => {
+    const previousValue = autoAbsentEnabled;
+    try {
+      setAutoAbsentEnabled(checked);
+      setAutoAbsentSaving(true);
+      const res = await api.put("/auto-absent/settings", { is_enabled: checked });
+      const setting = res?.data?.data || null;
+      setAutoAbsentEnabled(Boolean(setting?.is_enabled));
+      setAutoAbsentLastProcessedDate(setting?.last_processed_date || null);
+      toast.success(checked ? "Auto absent enabled" : "Auto absent disabled");
+    } catch (error) {
+      setAutoAbsentEnabled(previousValue);
+      toast.error(error?.response?.data?.message || "Failed to update auto absent setting");
+    } finally {
+      setAutoAbsentSaving(false);
     }
   };
 
@@ -236,72 +262,123 @@ const WorkWeekPolicyPage = () => {
           </div>
         ) : (
           <div className="grid gap-6 xl:grid-cols-[1.05fr,1.35fr]">
-            <Card className="border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-gray-900">
-                  <KeyRound className="w-5 h-5 text-indigo-600" />
-                  Work Week Policy
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <RadioGroup value={selectedPolicy} onValueChange={setSelectedPolicy} className="space-y-3">
-                  {POLICY_OPTIONS.map((option) => (
-                    <label
-                      key={option.value}
-                      className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
-                        selectedPolicy === option.value
+            <div className="space-y-6">
+              <Card className="border-gray-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-gray-900">
+                    <KeyRound className="w-5 h-5 text-indigo-600" />
+                    Work Week Policy
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <RadioGroup value={selectedPolicy} onValueChange={setSelectedPolicy} className="space-y-3">
+                    {POLICY_OPTIONS.map((option) => (
+                      <label
+                        key={option.value}
+                        className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${selectedPolicy === option.value
                           ? "border-indigo-300 bg-indigo-50/60"
                           : "border-gray-200 hover:border-gray-300 bg-white"
-                      }`}
-                    >
-                      <RadioGroupItem value={option.value} className="mt-1" />
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{option.label}</p>
-                        <p className="text-xs text-gray-500 mt-1">{option.description}</p>
-                      </div>
-                    </label>
-                  ))}
-                </RadioGroup>
+                          }`}
+                      >
+                        <RadioGroupItem value={option.value} className="mt-1" />
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{option.label}</p>
+                          <p className="text-xs text-gray-500 mt-1">{option.description}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </RadioGroup>
 
-                {selectedPolicy === "alternate_saturday_and_every_sunday_off" ? (
-                  <div className="space-y-1">
-                    <Label className="text-xs text-gray-500 font-medium">
-                      Alternate Saturday Start Date
-                    </Label>
-                    <Input
-                      type="date"
-                      value={policyStartDate}
-                      onChange={(e) => setPolicyStartDate(e.target.value)}
-                    />
-                    <p className="text-xs text-gray-500">
-                      Select the first Saturday that should be treated as off. Every 14 days after that will also be off.
+                  {selectedPolicy === "alternate_saturday_and_every_sunday_off" ? (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-500 font-medium">
+                        Alternate Saturday Start Date
+                      </Label>
+                      <Input
+                        type="date"
+                        value={policyStartDate}
+                        onChange={(e) => setPolicyStartDate(e.target.value)}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Select the first Saturday that should be treated as off. Every 14 days after that will also be off.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                    <p className="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-1">
+                      Selected Policy
+                    </p>
+                    <p className="text-sm font-semibold text-slate-800">{selectedPolicyMeta.label}</p>
+                    <p className="text-xs text-slate-500 mt-1">{selectedPolicyMeta.description}</p>
+                    {selectedPolicy === "alternate_saturday_and_every_sunday_off" && policyStartDate ? (
+                      <p className="text-xs text-slate-500 mt-2">
+                        Start date: {formatHolidayDate(policyStartDate)}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <Button
+                    onClick={handlePolicySave}
+                    disabled={policySaving}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  >
+                    <Save className="w-4 h-4" />
+                    {policySaving ? "Saving..." : "Save Policy"}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-gray-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-gray-900">
+                    <CalendarDays className="w-5 h-5 text-indigo-600" />
+                    Auto Absent Leave
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        Mark missed clock-ins as absent
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        At midnight, employees with no clock-in for the completed day get an Other leave request with Absent as the reason. Weekly offs and holidays are skipped.
+                      </p>
+                    </div>
+                
+                      <Switch
+                        checked={autoAbsentEnabled}
+                        onCheckedChange={handleAutoAbsentToggle}
+                        disabled={autoAbsentSaving}
+                      />
+                    
+                    {/* <div className="flex-shrink-0 flex items-center mt-1">
+                      <input
+                        type="checkbox"
+                        checked={autoAbsentEnabled}
+                        onChange={(e) => handleAutoAbsentToggle(e.target.checked)}
+                        disabled={autoAbsentSaving}
+                        className="w-6 h-6 cursor-pointer accent-indigo-600"
+                      />
+                    </div> */}
+
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                    <p className="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-1">
+                      Current Status
+                    </p>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {autoAbsentEnabled ? "Enabled" : "Disabled"}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Last processed: {autoAbsentLastProcessedDate ? formatHolidayDate(autoAbsentLastProcessedDate) : "Not processed yet"}
                     </p>
                   </div>
-                ) : null}
-
-                <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
-                  <p className="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-1">
-                    Selected Policy
-                  </p>
-                  <p className="text-sm font-semibold text-slate-800">{selectedPolicyMeta.label}</p>
-                  <p className="text-xs text-slate-500 mt-1">{selectedPolicyMeta.description}</p>
-                  {selectedPolicy === "alternate_saturday_and_every_sunday_off" && policyStartDate ? (
-                    <p className="text-xs text-slate-500 mt-2">
-                      Start date: {formatHolidayDate(policyStartDate)}
-                    </p>
-                  ) : null}
-                </div>
-
-                <Button
-                  onClick={handlePolicySave}
-                  disabled={policySaving}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
-                  <Save className="w-4 h-4" />
-                  {policySaving ? "Saving..." : "Save Policy"}
-                </Button>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
 
             <div className="space-y-6">
               <Card className="border-gray-200 shadow-sm">
