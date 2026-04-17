@@ -27,6 +27,8 @@ import EmployeeAttendanceTab from "./components/EmployeeAttendanceTab";
 import EmployeeLeaves from "./pages/EmployeeLeaves";
 import LeavePolicyPage from "./pages/LeavePolicyPage";
 import WorkWeekPolicyPage from "./pages/WorkWeekPolicyPage";
+import HolidayManagementPage from "./pages/HolidayManagementPage";
+import Reports from "./pages/Reports";
 
 const queryClient = new QueryClient();
 
@@ -133,7 +135,15 @@ const App = () => (
             path="/holidays"
             element={
               <ProtectedRoute>
-                <WorkWeekPolicyPage />
+                <HolidayManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <Reports />
               </ProtectedRoute>
             }
           />

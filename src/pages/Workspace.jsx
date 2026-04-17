@@ -26,40 +26,40 @@ const Workspace = () => {
     navigate("/login");
   };
 
-useEffect(() => {
-  const fetchWorkspaces = async () => {
-    try {
-      let res;
-      if (isAdminRole) {
-        // ✅ Admin: show all workspaces
-        res = await api.get("/workspaces");
-      } else {
-        // ✅ Employee: show only assigned workspaces directly
-        res = await api.get("/workspaces/emp/workspace");
-      }
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      try {
+        let res;
+        if (isAdminRole) {
+          // ✅ Admin: show all workspaces
+          res = await api.get("/workspaces");
+        } else {
+          // ✅ Employee: show only assigned workspaces directly
+          res = await api.get("/workspaces/emp/workspace");
+        }
 
-      const allWorkspaces = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data?.data)
-          ? res.data.data
-          : [];
-      setWorkspaces(allWorkspaces);
-    } catch (error) {
-      if ([401, 403].includes(error.response?.status)) {
-        handleAuthFailure();
-        return;
+        const allWorkspaces = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+            ? res.data.data
+            : [];
+        setWorkspaces(allWorkspaces);
+      } catch (error) {
+        if ([401, 403].includes(error.response?.status)) {
+          handleAuthFailure();
+          return;
+        }
+        console.error("Error fetching workspaces:", error);
       }
-      console.error("Error fetching workspaces:", error);
-    }
-  };
+    };
 
-  fetchWorkspaces();
-}, [isAdminRole]);
+    fetchWorkspaces();
+  }, [isAdminRole]);
 
   const handleCreateWorkspace = () => {
     if (!newWorkspaceName.trim()) return;
     setIsCreating(true);
-    
+
     api
       .post("/workspaces", { name: newWorkspaceName })
       .then((res) => {
@@ -119,7 +119,7 @@ useEffect(() => {
                 className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm w-full lg:w-64"
               />
             </div>
-            
+
             <div className="flex gap-2">
               <Input
                 type="text"
@@ -175,12 +175,12 @@ useEffect(() => {
                   </CardTitle>
                   <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transform group-hover:translate-x-1 transition-all" />
                 </div>
-                
+
                 {/* <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
                   <Users className="w-4 h-4" />
                   <span>{ws.memberCount || 1} member{ws.memberCount !== 1 ? 's' : ''}</span>
                 </div> */}
-                
+
                 <div className="flex items-center justify-between">
                   {/* <span className="text-xs text-gray-400">
                     Updated {ws.lastUpdated || 'recently'}
