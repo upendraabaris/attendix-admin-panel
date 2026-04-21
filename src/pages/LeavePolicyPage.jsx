@@ -152,6 +152,13 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
                   <p>Encashment: As per company policy</p>
                 </div>
               </div>
+            ) : formData.leave_type === "sick" ? (
+              <div className="rounded-lg border border-rose-100 bg-rose-50 p-4 space-y-2">
+                <p className="text-sm font-semibold text-rose-700">Sick Leave (SL)</p>
+                <p className="text-sm text-rose-900">
+                  Medical proof required if more than 2 consecutive days.
+                </p>
+              </div>
             ) : isRuleBased && (
               <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -333,6 +340,13 @@ const LeavePolicyPage = () => {
                     <p>Encashment: As per company policy</p>
                   </div>
                 </div>
+              ) : formData.leave_type === "sick" ? (
+                <div className="md:col-span-2 rounded-lg border border-rose-100 bg-rose-50 p-4 space-y-2">
+                  <p className="text-sm font-semibold text-rose-700">Sick Leave (SL)</p>
+                  <p className="text-sm text-rose-900">
+                    Medical proof required if more than 2 consecutive days.
+                  </p>
+                </div>
               ) : isRuleBased && (
                 <>
                   <div>
@@ -386,6 +400,8 @@ const LeavePolicyPage = () => {
                       <TableCell>
                         {policy.leave_type === "earned"
                           ? "1 day/month; carry forward up to 24 days"
+                          : policy.leave_type === "sick"
+                          ? "Medical proof required if more than 2 consecutive days"
                           : RULE_BASED_TYPES.includes(policy.leave_type)
                           ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave`
                           : "-"}

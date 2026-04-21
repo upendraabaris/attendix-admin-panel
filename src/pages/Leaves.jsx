@@ -297,6 +297,22 @@ const Leaves = () => {
                       </div>
                     )}
 
+                    {request.medical_proof_url && (
+                      <div className="mt-3 rounded-lg bg-indigo-50 border border-indigo-100 px-3.5 py-2.5">
+                        <p className="text-xs font-medium text-indigo-500 mb-1">
+                          Medical Proof
+                        </p>
+                        <a
+                          href={request.medical_proof_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm font-medium text-indigo-700 hover:text-indigo-800"
+                        >
+                          View attachment
+                        </a>
+                      </div>
+                    )}
+
                     {/* Admin comment */}
                     {request.adminComment && (
                       <div className="mt-2 rounded-lg bg-indigo-50 border border-indigo-100 px-3.5 py-2.5">

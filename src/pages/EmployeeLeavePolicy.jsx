@@ -94,6 +94,8 @@ const EmployeeLeavePolicy = () => {
                       <TableCell>
                         {policy.leave_type === "earned"
                           ? "1 day/month; planned leave / vacation; carry forward up to 24 days; encashment as per company policy"
+                          : policy.leave_type === "sick"
+                          ? "Medical proof required if more than 2 consecutive days"
                           : isRuleBased
                           ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave`
                           : "-"}

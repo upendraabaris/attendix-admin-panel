@@ -120,6 +120,13 @@ const LeavePolicyForm = ({
             </div>
           )}
 
+          {formData.leave_type === "sick" && (
+            <div className="md:col-span-2 rounded-lg border border-rose-100 bg-rose-50 p-4 space-y-2 text-sm text-rose-900">
+              <p className="font-semibold text-rose-700">Sick Leave (SL)</p>
+              <p>Medical proof required if more than 2 consecutive days.</p>
+            </div>
+          )}
+
           <div className="md:col-span-2 flex gap-2">
             <Button type="submit" disabled={submitting}>
               {submitting ? "Saving..." : mode === "edit" ? "Update Policy" : "Save Policy"}

@@ -32,6 +32,15 @@ import {
 
 const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned", "compensation", "casual"];
 const HIDDEN_BALANCE_TYPES = ["vacation"];
+const SICK_LEAVE_PROOF_THRESHOLD_DAYS = 2;
+
+const getLeaveTypeHelpText = (leaveType) => {
+  if (leaveType === "sick") {
+    return "Sick Leave (SL) — Medical proof required if more than 2 consecutive days.";
+  }
+
+  return "";
+};
 
 const formatDate = (dateStr) =>
   dateStr
@@ -73,7 +82,22 @@ function EmployeeLeaves() {
     startDate: "",
     endDate: "",
     reason: "",
+    medicalProof: null,
   });
+  // const [dateError, setDateError] = useState("");
+
+  const requestedDays =
+    formData.startDate && formData.endDate
+      ? Math.max(
+          Math.floor(
+            (new Date(formData.endDate) - new Date(formData.startDate)) /
+              (1000 * 60 * 60 * 24),
+          ) + 1,
+          0,
+        )
+      : 0;
+  const isMedicalProofRequired =
+    formData.type === "sick" && requestedDays > SICK_LEAVE_PROOF_THRESHOLD_DAYS;
 
   const fetchMyLeaves = async () => {
     try {
@@ -115,6 +139,14 @@ function EmployeeLeaves() {
     }
   };
 
+//   useEffect(() => {
+//   if (formData.type === "casual" && requestedDays > 2) {
+//     setDateError("Casual Leave max 2 consecutive days tak hi allowed hai");
+//   } else {
+//     setDateError("");
+//   }
+// }, [formData.type, formData.startDate, formData.endDate]);
+
   useEffect(() => {
     fetchMyLeaves();
   }, []);
@@ -129,11 +161,24 @@ function EmployeeLeaves() {
       toast.error("End date cannot be before start date");
       return;
     }
+    if (isMedicalProofRequired && !formData.medicalProof) {
+      toast.error("Medical proof is required for sick leave longer than 2 consecutive days");
+      return;
+    }
     try {
       setSubmitting(true);
-      await api.post("/leave", formData);
+      const payload = new FormData();
+      payload.append("type", formData.type);
+      payload.append("startDate", formData.startDate);
+      payload.append("endDate", formData.endDate);
+      payload.append("reason", formData.reason || "");
+      if (formData.medicalProof) {
+        payload.append("medicalProof", formData.medicalProof);
+      }
+
+      await api.post("/leave", payload);
       toast.success("Leave request submitted");
-      setFormData({ type: "", startDate: "", endDate: "", reason: "" });
+      setFormData({ type: "", startDate: "", endDate: "", reason: "", medicalProof: null });
       fetchMyLeaves();
     } catch (error) {
       console.error("Error submitting leave:", error);
@@ -232,6 +277,16 @@ function EmployeeLeaves() {
                     ))}
                   </SelectContent>
                 </Select>
+                {getLeaveTypeHelpText(formData.type) && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    {getLeaveTypeHelpText(formData.type)}
+                  </p>
+                )}
+                {formData.type === "sick" && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Medical proof becomes mandatory if the leave is more than 2 consecutive days.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -312,6 +367,36 @@ function EmployeeLeaves() {
                 />
               </div>
 
+              {formData.type === "sick" && (
+                <div className="md:col-span-2 space-y-1">
+                  <Label className="text-xs text-gray-500 font-medium">
+                    Medical Proof
+                    {isMedicalProofRequired ? (
+                      <span className="text-red-500"> *</span>
+                    ) : (
+                      <span className="text-gray-400"> (required above 2 consecutive days)</span>
+                    )}
+                  </Label>
+                  <Input
+                    type="file"
+                    accept=".pdf,image/png,image/jpeg,image/webp"
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        medicalProof: e.target.files?.[0] || null,
+                      }))
+                    }
+                    className="h-10 text-sm"
+                    required={isMedicalProofRequired}
+                  />
+                  {formData.medicalProof && (
+                    <p className="text-xs text-gray-500">
+                      Selected: {formData.medicalProof.name}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="md:col-span-2">
                 <Button
                   type="submit"
@@ -382,6 +467,16 @@ function EmployeeLeaves() {
                           <p className="text-xs text-gray-500 mt-1.5">
                             {leave.reason}
                           </p>
+                        )}
+                        {leave.medical_proof_url && (
+                          <a
+                            href={leave.medical_proof_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex mt-2 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                          >
+                            View Medical Proof
+                          </a>
                         )}
                       </div>
                     </div>

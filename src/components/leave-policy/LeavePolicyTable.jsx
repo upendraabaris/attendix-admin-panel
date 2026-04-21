@@ -35,6 +35,8 @@ const LeavePolicyTable = ({ policies = [], onEdit }) => {
               <TableCell>
                 {policy.leave_type === "earned"
                   ? "1 day/month; carry forward up to 24 days"
+                  : policy.leave_type === "sick"
+                  ? "Medical proof required if more than 2 consecutive days"
                   : "-"}
               </TableCell>
               <TableCell className="text-right">
