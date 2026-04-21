@@ -25,6 +25,9 @@ import EmployeeLogin from "./pages/EmployeeLogin";
 import EmployeeWebLogin from "./pages/EmployeeWebLogin";
 import EmployeeAttendanceTab from "./components/EmployeeAttendanceTab";
 import EmployeeLeaves from "./pages/EmployeeLeaves";
+import EmployeeHolidays from "./pages/EmployeeHolidays";
+import EmployeeLeavePolicy from "./pages/EmployeeLeavePolicy";
+import EmployeeWorkWeekPolicy from "./pages/EmployeeWorkWeekPolicy";
 import LeavePolicyPage from "./pages/LeavePolicyPage";
 import WorkWeekPolicyPage from "./pages/WorkWeekPolicyPage";
 import HolidayManagementPage from "./pages/HolidayManagementPage";
@@ -168,6 +171,30 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <EmployeeLeaves />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee-work-week-policy"
+            element={
+              <ProtectedRoute>
+                <EmployeeWorkWeekPolicy />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee-leave-policy"
+            element={
+              <ProtectedRoute>
+                <EmployeeLeavePolicy />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee-holidays"
+            element={
+              <ProtectedRoute>
+                <EmployeeHolidays />
               </ProtectedRoute>
             }
           />
