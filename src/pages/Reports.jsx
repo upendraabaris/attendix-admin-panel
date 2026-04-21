@@ -1,11 +1,10 @@
 import * as React from "react";
-import { format } from "date-fns";
-import { Calendar as CalendarIcon, Download, FileBarChart, Clock, Users } from "lucide-react";
+import ReactDOM from "react-dom";
+import { format, subDays, startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, startOfQuarter, subQuarters, endOfQuarter } from "date-fns";
+import { Calendar as CalendarIcon, Download, FileBarChart, Clock, Users, ChevronDown, Check } from "lucide-react";
 import api from "../hooks/useApi";
 import { cn } from "../lib/utils";
 import { Button } from "../components/ui/button";
-import { Calendar } from "../components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import Layout from "../components/Layout";
 import { Input } from "../components/ui/input";
@@ -19,90 +18,87 @@ import {
 } from "../components/ui/table";
 import { toast } from "sonner";
 
-// Mock holidays within range
-const HOLIDAYS = [
-    "2025-01-01",
-    "2025-01-26",
-    "2025-03-14",
-    "2025-08-15",
-    "2025-10-02",
-    "2025-12-25",
-    "2026-01-01",
-    "2026-01-26",
-];
+// ─── Preset Definitions ─────────────────────────────────────────────────────
+const today = () => new Date();
 
-const EMPLOYEES = [
-    "Aarav Sharma",
-    "Priya Patel",
-    "Rohan Mehta",
-    "Sneha Iyer",
-    "Vikram Singh",
-    "Ananya Reddy",
-    "Karan Kapoor",
-    "Meera Nair",
-];
+const PRESETS = [
+    {
+        label: "Today",
+        getValue: () => {
+            const d = today();
+            return { start: d, end: d }
+        }
+    },
+    {
+        label: "Yesterday",
+        getValue: () => {
+            const d = subDays(today(), 1);
+            return { start: d, end: d }
+        }
+    },
+    {
+        label: "Last 7 Days",
+        getValue: () => ({ start: subDays(today(), 6), end: today() }),
+    },
+    {
+        label: "Last 15 Days",
+        getValue: () => ({ start: subDays(today(), 14), end: today() })
+    },
+    {
+        label: "Last 30 Days",
+        getValue: () => ({ start: subDays(today(), 29), end: today() })
+    },
+    {
+        label: "This Week",
+        getValue: () => ({
+            start: startOfWeek(today(), { weekStartsOn: 1 }),
+            end: today(),
+        })
+    },
+    {
+        label: "Last Week",
+        getValue: () => ({
+            start: startOfWeek(subDays(today(), 7), { weekStartsOn: 1 }),
+            end: subDays(today(), 1),
+        })
+    },
+    {
+        label: "This Month",
+        getValue: () => ({
+            start: startOfMonth(today()),
+            end: today(),
+        })
+    },
+    {
+        label: "Last Month",
+        getValue: () => {
+            const last = subMonths(today(), 1);
+            return { start: startOfMonth(last), end: endOfMonth(last) };
+        },
+    },
+    {
+        label: "Last 3 Months",
+        getValue: () => ({ start: subDays(today(), 89), end: today() }),
+    },
+    {
+        label: "This Quarter",
+        getValue: () => ({ start: startOfQuarter(today()), end: today() }),
+    },
+    {
+        label: "Last Quarter",
+        getValue: () => {
+            const last = subQuarters(today(), 1);
+            return { start: startOfQuarter(last), end: endOfQuarter(last) };
+        },
+    },
+    {
+        label: "Custom Range",
+        getValue: () => null, // handled manually
+    },
+]
 
-function DatePicker({
-    date,
-    onChange,
-    placeholder,
-}) {
-    return (
-        <Popover>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    className={cn(
-                        "w-full justify-start text-left font-normal border-slate-200 hover:bg-slate-50",
-                        !date && "text-slate-400",
-                    )}
-                >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-blue-500" />
-                    {date ? format(date, "PPP") : <span>{placeholder}</span>}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={onChange}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                />
-            </PopoverContent>
-        </Popover>
-    );
-}
-
-/* --- Report Calculation Logic --- */
-function computeReport(startStr, endStr) {
-    const start = new Date(startStr);
-    const end = new Date(endStr);
-
-    const days = differenceInCalendarDays(end, start) + 1;
-    let weekendOffs = 0;
-    let holidays = 0;
-    let workingDays = 0;
-    const holidaySet = new Set(HOLIDAYS);
-
-    for (let i = 0; i < days; i++) {
-        const d = addDays(start, i);
-        const key = format(d, "yyyy-MM-dd");
-        if (isWeekend(d)) weekendOffs++;
-        else if (holidaySet.has(key)) holidays++;
-        else workingDays++;
-    }
-
-    const rows = EMPLOYEES.map((name) => {
-        const leave = Math.floor(Math.random() * 3);
-        return {
-            name,
-            workingDays: Math.max(0, workingDays - leave),
-            holidays,
-        };
-    });
-
-    return { start, end, workingDays, holidays, weekendOffs, rows };
+function formatDate(date) {
+    return format(date, "yyyy-MM-dd");
 }
 
 function downloadCSV(report) {
@@ -126,11 +122,124 @@ function downloadCSV(report) {
     URL.revokeObjectURL(url);
 }
 
+
+// ─── Preset Dropdown Component ───────────────────────────────────────────────
+// Uses fixed positioning so the dropdown is NEVER clipped by any parent's overflow:hidden
+
+function PresetDropdown({ selectedPreset, onSelect }) {
+    const [open, setOpen] = React.useState(false);
+    const [dropdownPos, setDropdownPos] = React.useState({ top: 0, left: 0 });
+    const triggerRef = React.useRef(null);
+    const dropdownRef = React.useRef(null);
+
+    // Calculate where to place the dropdown based on the trigger button's position on screen
+    function openDropdown() {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setDropdownPos({ top: rect.bottom + 8, left: rect.left });
+        }
+        setOpen(true);
+    }
+
+    // Close only when clicking OUTSIDE both the trigger AND the portal dropdown
+    // Note: portal is in document.body so triggerRef alone won't cover it
+    React.useEffect(() => {
+        if (!open) return;
+        function handleClick(e) {
+            const clickedTrigger = triggerRef.current?.contains(e.target);
+            const clickedDropdown = dropdownRef.current?.contains(e.target);
+            if (!clickedTrigger && !clickedDropdown) setOpen(false);
+        }
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, [open]);
+
+    return (
+        <div ref={triggerRef} className="relative">
+            {/* Trigger Button */}
+            <button
+                onClick={() => open ? setOpen(false) : openDropdown()}
+                className={cn(
+                    "flex items-center gap-2 h-10 px-4 rounded-lg border text-sm font-semibold transition-all",
+                    "border-slate-200 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50/50",
+                    open && "border-blue-500 ring-2 ring-blue-100"
+                )}
+            >
+                <CalendarIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                <span>{selectedPreset || "Select Period"}</span>
+                <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform", open && "rotate-180")} />
+            </button>
+
+            {/* Portal dropdown — renders in document.body to escape overflow:hidden on Card */}
+            {open && typeof document !== "undefined" && ReactDOM.createPortal(
+                <div
+                    ref={dropdownRef}
+                    style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999, maxHeight: "260px", overflowY: "auto" }}
+                    className="w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5"
+                >
+                    {PRESETS.map((preset) => (
+                        <button
+                            key={preset.label}
+                            onClick={() => { onSelect(preset); setOpen(false); }}
+                            className={cn(
+                                "w-full text-left px-4 py-2 text-sm font-medium transition-colors flex items-center justify-between",
+                                selectedPreset === preset.label
+                                    ? "bg-blue-50 text-blue-700"
+                                    : "text-slate-600 hover:bg-slate-50"
+                            )}
+                        >
+                            {preset.label}
+                            {selectedPreset === preset.label && (
+                                <Check className="w-3.5 h-3.5 text-blue-500" />
+                            )}
+                        </button>
+                    ))}
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+}
+
 export default function Reports() {
-    const [startDate, setStartDate] = React.useState("");
-    const [endDate, setEndDate] = React.useState("");
+    const [selectedPreset, setSelectedPreset] = React.useState("Last 30 Days");
+    const [startDate, setStartDate] = React.useState(() => formatDate(subDays(new Date(), 29)));
+    const [endDate, setEndDate] = React.useState(() => formatDate(new Date()));
+    const [isCustom, setIsCustom] = React.useState(false);
     const [report, setReport] = React.useState(null);
     const [isGenerating, setIsGenerating] = React.useState(false);
+
+    const handlePresetSelect = (preset) => {
+        setSelectedPreset(preset.label);
+        if (preset.label === "Custom Range") {
+            setIsCustom(true);
+            // Keep existing dates as starting point for custom
+        } else {
+            const range = preset.getValue();
+            setStartDate(formatDate(range.start));
+            setEndDate(formatDate(range.end));
+            setIsCustom(false);
+        }
+    };
+
+    const handleCustomDateChange = (field, value) => {
+        if (field === "start") setStartDate(value);
+        if (field === "end") setEndDate(value);
+        setSelectedPreset("Custom Range");
+        setIsCustom(true);
+    };
+
+    // Derive a readable label for the selected range
+    const rangeLabel = React.useMemo(() => {
+        if (!startDate || !endDate) return null;
+        const s = new Date(startDate);
+        const e = new Date(endDate);
+        if (format(s, "yyyy-MM-dd") === format(e, "yyyy-MM-dd")) {
+            return format(s, "dd MMM yyyy");
+        }
+        return `${format(s, "dd MMM yyyy")} – ${format(e, "dd MMM yyyy")}`;
+    }, [startDate, endDate]);
+
 
     const handleGenerate = async () => {
         if (!startDate || !endDate) {
@@ -148,7 +257,7 @@ export default function Reports() {
             const res = await api.get(`/reports/attendance-summary`, {
                 params: { startDate, endDate }
             });
-            
+
             if (res.data.statusCode === 200) {
                 setReport({
                     ...res.data.data.summary,
@@ -198,25 +307,49 @@ export default function Reports() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="py-6">
-                        <div className="grid gap-6 md:grid-cols-[1fr_1fr_auto] items-end">
+                        <div className="flex flex-wrap gap-4 items-end">
+
+                            {/* Preset Picker */}
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-0.5">Start Date</label>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-0.5">
+                                    Quick Select
+                                </label>
+                                <PresetDropdown
+                                    selectedPreset={selectedPreset}
+                                    onSelect={handlePresetSelect}
+                                />
+                            </div>
+
+                            {/* Divider */}
+                            <div className="flex items-end pb-2.5">
+                                <span className="text-slate-300 font-light text-lg select-none">|</span>
+                            </div>
+
+                            {/* Date Inputs — always visible, editable for custom */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-0.5">
+                                    Start Date
+                                </label>
                                 <Input
                                     type="date"
                                     value={startDate}
-                                    onChange={e => setStartDate(e.target.value)}
-                                    className="h-10 border-slate-200 focus:ring-blue-500 rounded-lg text-slate-600"
+                                    onChange={e => handleCustomDateChange("start", e.target.value)}
+                                    className="h-10 border-slate-200 focus:ring-blue-500 rounded-lg text-slate-600 w-44"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-0.5">End Date</label>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-0.5">
+                                    End Date
+                                </label>
                                 <Input
                                     type="date"
                                     value={endDate}
-                                    onChange={e => setEndDate(e.target.value)}
-                                    className="h-10 border-slate-200 focus:ring-blue-500 rounded-lg text-slate-600"
+                                    onChange={e => handleCustomDateChange("end", e.target.value)}
+                                    className="h-10 border-slate-200 focus:ring-blue-500 rounded-lg text-slate-600 w-44"
                                 />
                             </div>
+
+                            {/* Generate Button */}
                             <Button
                                 onClick={handleGenerate}
                                 disabled={isGenerating}
@@ -229,6 +362,19 @@ export default function Reports() {
                                 {isGenerating ? "Generating..." : "Generate Analysis"}
                             </Button>
                         </div>
+
+                        {/* Selected range display */}
+                        {rangeLabel && (
+                            <p className="mt-4 text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                Showing data for: <span className="text-slate-600 font-bold">{rangeLabel}</span>
+                                {selectedPreset && selectedPreset !== "Custom Range" && (
+                                    <span className="ml-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold border border-blue-100">
+                                        {selectedPreset}
+                                    </span>
+                                )}
+                            </p>
+                        )}
                     </CardContent>
                 </Card>
 
