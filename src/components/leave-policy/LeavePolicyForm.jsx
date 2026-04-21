@@ -12,7 +12,12 @@ import {
   SelectValue,
 } from "../ui/select";
 
-const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned"];
+const LEAVE_TYPES = ["sick", "personal", "other", "earned"];
+const EARNED_LEAVE_DEFAULTS = {
+  yearly_limit: 12,
+  earned_days_required: 1,
+  earned_leave_award: 1,
+};
 
 const LeavePolicyForm = ({
   initialData,
@@ -25,7 +30,7 @@ const LeavePolicyForm = ({
     leave_type: "sick",
     yearly_limit: 0,
     is_enabled: true,
-    earned_days_required: 20,
+    earned_days_required: EARNED_LEAVE_DEFAULTS.earned_days_required,
     earned_leave_award: 1,
   });
 
@@ -35,7 +40,7 @@ const LeavePolicyForm = ({
         leave_type: initialData.leave_type || "sick",
         yearly_limit: Number(initialData.yearly_limit ?? 0),
         is_enabled: Boolean(initialData.is_enabled),
-        earned_days_required: Number(initialData.earned_days_required ?? 20),
+        earned_days_required: Number(initialData.earned_days_required ?? (initialData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_days_required : 20)),
         earned_leave_award: Number(initialData.earned_leave_award ?? 1),
       });
     }
@@ -47,10 +52,10 @@ const LeavePolicyForm = ({
     e.preventDefault();
     const payload = {
       leave_type: formData.leave_type,
-      yearly_limit: Number(formData.yearly_limit),
+      yearly_limit: isEarned ? EARNED_LEAVE_DEFAULTS.yearly_limit : Number(formData.yearly_limit),
       is_enabled: Boolean(formData.is_enabled),
-      earned_days_required: isEarned ? Number(formData.earned_days_required) : null,
-      earned_leave_award: isEarned ? Number(formData.earned_leave_award) : null,
+      earned_days_required: isEarned ? EARNED_LEAVE_DEFAULTS.earned_days_required : null,
+      earned_leave_award: isEarned ? EARNED_LEAVE_DEFAULTS.earned_leave_award : null,
     };
     onSubmit(payload);
   };
@@ -106,39 +111,13 @@ const LeavePolicyForm = ({
           </div>
 
           {isEarned && (
-            <>
-              <div>
-                <Label>Earned Days Required</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={formData.earned_days_required}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      earned_days_required: e.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <Label>Earned Leave Award</Label>
-                <Input
-                  type="number"
-                  min={0.5}
-                  step="0.5"
-                  value={formData.earned_leave_award}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      earned_leave_award: e.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-            </>
+            <div className="md:col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-2 text-sm text-blue-900">
+              <p className="font-semibold text-blue-700">Earned Leave (EL) - 12 Days</p>
+              <p>Accrual: 1 day per month</p>
+              <p>Use: Planned leave / vacation</p>
+              <p>Carry forward: Up to 24 days</p>
+              <p>Encashment: As per company policy</p>
+            </div>
           )}
 
           <div className="md:col-span-2 flex gap-2">

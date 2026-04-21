@@ -15,7 +15,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
 
-const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned", "casual","compensation"];
+const LEAVE_TYPES = ["sick", "personal", "other", "earned", "casual","compensation"];
+const EARNED_LEAVE_DEFAULTS = {
+  yearly_limit: 12,
+  earned_days_required: 1,
+  earned_leave_award: 1,
+};
 const RULE_BASED_TYPES = ["earned", "casual"]; // ← both use days-required + award config
 
 /* ─── Custom Toggle ─────────────────────────────────────────────────── */
@@ -47,7 +52,7 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
     leave_type: policy.leave_type || "sick",
     yearly_limit: Number(policy.yearly_limit ?? 0),
     is_enabled: Boolean(policy.is_enabled),
-    earned_days_required: Number(policy.earned_days_required ?? 20),
+    earned_days_required: Number(policy.earned_days_required ?? (policy.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_days_required : 20)),
     earned_leave_award: Number(policy.earned_leave_award ?? 1),
   });
   const [submitting, setSubmitting] = useState(false);
@@ -58,13 +63,12 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
     e.preventDefault();
     const payload = {
       leave_type: formData.leave_type,
-      yearly_limit: isRuleBased ? null : Number(formData.yearly_limit), // ← updated
+      yearly_limit: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.yearly_limit : isRuleBased ? null : Number(formData.yearly_limit),
       is_enabled: Boolean(formData.is_enabled),
-      earned_days_required: isRuleBased ? Number(formData.earned_days_required) : null,
-      earned_leave_award: isRuleBased ? Number(formData.earned_leave_award) : null,
+      earned_days_required: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_days_required : isRuleBased ? Number(formData.earned_days_required) : null,
+      earned_leave_award: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_leave_award : isRuleBased ? Number(formData.earned_leave_award) : null,
     };
     try {
-      debugger;
       setSubmitting(true);
       await api.put(`/admin/leave-policy/${policy.id}`, payload);
       toast.success("Leave policy updated");
@@ -138,7 +142,17 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
             </div>
 
             {/* Rule-based Leave Config (earned + casual) */}
-            {isRuleBased && (
+            {formData.leave_type === "earned" ? (
+              <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-3">
+                <p className="text-sm font-semibold text-blue-700">Earned Leave (EL) - 12 Days</p>
+                <div className="space-y-1 text-sm text-blue-900">
+                  <p>Accrual: 1 day per month</p>
+                  <p>Use: Planned leave / vacation</p>
+                  <p>Carry forward: Up to 24 days</p>
+                  <p>Encashment: As per company policy</p>
+                </div>
+              </div>
+            ) : isRuleBased && (
               <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-4">
                 <div className="flex items-center gap-2 mb-1">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -218,11 +232,13 @@ const LeavePolicyPage = () => {
     leave_type: "sick",
     yearly_limit: 0,
     is_enabled: true,
-    earned_days_required: 20,
+    earned_days_required: EARNED_LEAVE_DEFAULTS.earned_days_required,
     earned_leave_award: 1,
   });
 
   const isRuleBased = RULE_BASED_TYPES.includes(formData.leave_type); // ← updated
+
+  const visiblePolicies = policies.filter((policy) => policy.leave_type && policy.leave_type !== "vacation");
 
   const fetchPolicies = async () => {
     try {
@@ -242,16 +258,16 @@ const LeavePolicyPage = () => {
     e.preventDefault();
     const payload = {
       leave_type: formData.leave_type,
-      yearly_limit: isRuleBased ? null : Number(formData.yearly_limit), // ← updated
+      yearly_limit: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.yearly_limit : isRuleBased ? null : Number(formData.yearly_limit),
       is_enabled: Boolean(formData.is_enabled),
-      earned_days_required: isRuleBased ? Number(formData.earned_days_required) : null,
-      earned_leave_award: isRuleBased ? Number(formData.earned_leave_award) : null,
+      earned_days_required: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_days_required : isRuleBased ? Number(formData.earned_days_required) : null,
+      earned_leave_award: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_leave_award : isRuleBased ? Number(formData.earned_leave_award) : null,
     };
     try {
       setSubmitting(true);
       await api.post("/admin/leave-policy", payload);
       toast.success("Leave policy created");
-      setFormData({ leave_type: "sick", yearly_limit: 0, is_enabled: true, earned_days_required: 20, earned_leave_award: 1 });
+      setFormData({ leave_type: "sick", yearly_limit: 0, is_enabled: true, earned_days_required: EARNED_LEAVE_DEFAULTS.earned_days_required, earned_leave_award: 1 });
       fetchPolicies();
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to save leave policy");
@@ -307,7 +323,17 @@ const LeavePolicyPage = () => {
               </div>
 
               {/* Rule-based fields (earned + casual) */}
-              {isRuleBased && (
+              {formData.leave_type === "earned" ? (
+                <div className="md:col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-3">
+                  <p className="text-sm font-semibold text-blue-700">Earned Leave (EL) - 12 Days</p>
+                  <div className="grid gap-1 text-sm text-blue-900 md:grid-cols-2">
+                    <p>Accrual: 1 day per month</p>
+                    <p>Use: Planned leave / vacation</p>
+                    <p>Carry forward: Up to 24 days</p>
+                    <p>Encashment: As per company policy</p>
+                  </div>
+                </div>
+              ) : isRuleBased && (
                 <>
                   <div>
                     <Label>Working Days Required</Label>
@@ -331,7 +357,7 @@ const LeavePolicyPage = () => {
           </CardContent>
         </Card>
 
-        {policies.length > 0 && (
+        {visiblePolicies.length > 0 && (
           <div className="border rounded-lg overflow-hidden bg-white">
             <Table>
               <TableHeader>
@@ -345,13 +371,12 @@ const LeavePolicyPage = () => {
               </TableHeader>
               <TableBody>
                 {/* {policies.map((policy) => ( */}
-                {policies
-                  .filter((policy) => policy.leave_type !== "")
+                {visiblePolicies
                   .map((policy) => (
                     <TableRow key={policy.id}>
                       <TableCell className="capitalize">{policy.leave_type}</TableCell>
                       <TableCell>
-                        {RULE_BASED_TYPES.includes(policy.leave_type) ? "-" : policy.yearly_limit}
+                        {policy.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.yearly_limit : RULE_BASED_TYPES.includes(policy.leave_type) ? "-" : policy.yearly_limit}
                       </TableCell>
                       <TableCell>
                         <Badge className={policy.is_enabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}>
@@ -359,8 +384,10 @@ const LeavePolicyPage = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {RULE_BASED_TYPES.includes(policy.leave_type)
-                          ? `${policy.earned_days_required} days → ${policy.earned_leave_award} leave`
+                        {policy.leave_type === "earned"
+                          ? "1 day/month; carry forward up to 24 days"
+                          : RULE_BASED_TYPES.includes(policy.leave_type)
+                          ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave`
                           : "-"}
                       </TableCell>
                       <TableCell className="text-right">
@@ -382,3 +409,5 @@ const LeavePolicyPage = () => {
 };
 
 export default LeavePolicyPage;
+
+

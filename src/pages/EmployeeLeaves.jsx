@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 
 const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned", "compensation", "casual"];
+const HIDDEN_BALANCE_TYPES = ["vacation"];
 
 const formatDate = (dateStr) =>
   dateStr
@@ -89,7 +90,9 @@ function EmployeeLeaves() {
 
       const [leaveRes, balanceRes, compOffRes] = await Promise.all(requests);
       setLeaveList(leaveRes?.data?.data || []);
-      const baseBalances = balanceRes?.data?.data || [];
+      const baseBalances = (balanceRes?.data?.data || []).filter(
+        (balance) => !HIDDEN_BALANCE_TYPES.includes(balance.leave_type),
+      );
       const compOffBalance = compOffRes?.data?.data;
 
       const mergedBalances = [...baseBalances];
@@ -181,6 +184,11 @@ function EmployeeLeaves() {
                   <p className="text-xs text-gray-400 mt-2">
                     Used: {Number(item.used_days || 0)}
                   </p>
+                  {Number(item.pending_days || 0) > 0 && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Pending: {Number(item.pending_days || 0)}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ))

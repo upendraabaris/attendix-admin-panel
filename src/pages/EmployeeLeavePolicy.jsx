@@ -15,6 +15,7 @@ import {
 import api from "../hooks/useApi";
 
 const RULE_BASED_TYPES = ["earned", "casual"];
+const EARNED_LEAVE_YEARLY_LIMIT = 12;
 
 const EmployeeLeavePolicy = () => {
   const [policies, setPolicies] = useState([]);
@@ -36,7 +37,9 @@ const EmployeeLeavePolicy = () => {
     fetchPolicies();
   }, []);
 
-  const visiblePolicies = policies.filter((policy) => policy.leave_type);
+  const visiblePolicies = policies.filter(
+    (policy) => policy.leave_type && policy.leave_type !== "vacation",
+  );
 
   return (
     <Layout>
@@ -81,7 +84,7 @@ const EmployeeLeavePolicy = () => {
                         {policy.leave_type}
                       </TableCell>
                       <TableCell>
-                        {isRuleBased ? "-" : policy.yearly_limit}
+                        {policy.leave_type === "earned" ? EARNED_LEAVE_YEARLY_LIMIT : isRuleBased ? "-" : policy.yearly_limit}
                       </TableCell>
                       {/* <TableCell>
                         <Badge className={policy.is_enabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}>
@@ -89,7 +92,9 @@ const EmployeeLeavePolicy = () => {
                         </Badge>
                       </TableCell> */}
                       <TableCell>
-                        {isRuleBased
+                        {policy.leave_type === "earned"
+                          ? "1 day/month; planned leave / vacation; carry forward up to 24 days; encashment as per company policy"
+                          : isRuleBased
                           ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave`
                           : "-"}
                       </TableCell>
