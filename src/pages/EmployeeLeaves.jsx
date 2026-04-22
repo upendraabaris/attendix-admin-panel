@@ -32,13 +32,20 @@ import {
 
 const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned", "compensation", "casual"];
 const HIDDEN_BALANCE_TYPES = ["vacation"];
-const SICK_LEAVE_PROOF_THRESHOLD_DAYS = 2;
+// const SICK_LEAVE_PROOF_THRESHOLD_DAYS = 2;
 
-const getLeaveTypeHelpText = (leaveType) => {
+// const getLeaveTypeHelpText = (leaveType) => {
+//   if (leaveType === "sick") {
+//     return "Sick Leave (SL) — Medical proof required if more than 2 consecutive days.";
+//   }
+
+//   return "";
+// };
+
+const getLeaveTypeHelpText = (leaveType, proofDays) => {
   if (leaveType === "sick") {
-    return "Sick Leave (SL) — Medical proof required if more than 2 consecutive days.";
+    return `Sick Leave (SL) — Medical proof required if more than ${proofDays} consecutive day${proofDays > 1 ? "s" : ""}.`;
   }
-
   return "";
 };
 
@@ -84,20 +91,38 @@ function EmployeeLeaves() {
     reason: "",
     medicalProof: null,
   });
-  // const [dateError, setDateError] = useState("");
+  
+ const [policies, setPolicies] = useState([]);
+
+  useEffect(() => {
+    const fetchPolicies = async () => {
+      try {
+        const res = await api.get("/admin/leave-policy");
+        setPolicies(res?.data?.data || []);
+      } catch (err) {
+        console.error("Failed to fetch policies");
+      }
+    };
+
+    fetchPolicies();
+  }, []);
 
   const requestedDays =
     formData.startDate && formData.endDate
       ? Math.max(
-          Math.floor(
-            (new Date(formData.endDate) - new Date(formData.startDate)) /
-              (1000 * 60 * 60 * 24),
-          ) + 1,
-          0,
-        )
+        Math.floor(
+          (new Date(formData.endDate) - new Date(formData.startDate)) /
+          (1000 * 60 * 60 * 24),
+        ) + 1,
+        0,
+      )
       : 0;
+  const sickPolicy = policies.find(p => p.leave_type === "sick");
+  const proofDays = sickPolicy?.document_days_required || 0;
+  // const isMedicalProofRequired =
+  //   formData.type === "sick" && requestedDays > SICK_LEAVE_PROOF_THRESHOLD_DAYS;
   const isMedicalProofRequired =
-    formData.type === "sick" && requestedDays > SICK_LEAVE_PROOF_THRESHOLD_DAYS;
+    formData.type === "sick" && requestedDays > proofDays;
 
   const fetchMyLeaves = async () => {
     try {
@@ -139,14 +164,6 @@ function EmployeeLeaves() {
     }
   };
 
-//   useEffect(() => {
-//   if (formData.type === "casual" && requestedDays > 2) {
-//     setDateError("Casual Leave max 2 consecutive days tak hi allowed hai");
-//   } else {
-//     setDateError("");
-//   }
-// }, [formData.type, formData.startDate, formData.endDate]);
-
   useEffect(() => {
     fetchMyLeaves();
   }, []);
@@ -162,7 +179,8 @@ function EmployeeLeaves() {
       return;
     }
     if (isMedicalProofRequired && !formData.medicalProof) {
-      toast.error("Medical proof is required for sick leave longer than 2 consecutive days");
+      // toast.error("Medical proof is required for sick leave longer than 2 consecutive days");
+      toast.error(`Medical proof is required for sick leave longer than ${proofDays} consecutive day${proofDays > 1 ? "s" : ""}`);
       return;
     }
     try {
@@ -191,6 +209,7 @@ function EmployeeLeaves() {
   };
 
   const today = new Date().toISOString().split("T")[0];
+
 
   return (
     <Layout>
@@ -277,14 +296,20 @@ function EmployeeLeaves() {
                     ))}
                   </SelectContent>
                 </Select>
-                {getLeaveTypeHelpText(formData.type) && (
+                {/* {getLeaveTypeHelpText(formData.type) && (
                   <p className="text-xs text-amber-700 mt-1">
                     {getLeaveTypeHelpText(formData.type)}
+                  </p> */}
+                {getLeaveTypeHelpText(formData.type, proofDays) && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    {getLeaveTypeHelpText(formData.type, proofDays)}
                   </p>
                 )}
+
                 {formData.type === "sick" && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Medical proof becomes mandatory if the leave is more than 2 consecutive days.
+                    {/* Medical proof becomes mandatory if the leave is more than 2 consecutive days. */}
+                    Medical proof becomes mandatory if the leave is more than {proofDays} consecutive day{proofDays > 1 ? "s" : ""}.
                   </p>
                 )}
               </div>

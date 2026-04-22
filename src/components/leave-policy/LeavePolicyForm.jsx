@@ -17,6 +17,7 @@ const EARNED_LEAVE_DEFAULTS = {
   yearly_limit: 12,
   earned_days_required: 1,
   earned_leave_award: 1,
+  document_days_required: 2,
 };
 
 const LeavePolicyForm = ({
@@ -32,6 +33,7 @@ const LeavePolicyForm = ({
     is_enabled: true,
     earned_days_required: EARNED_LEAVE_DEFAULTS.earned_days_required,
     earned_leave_award: 1,
+    document_days_required: EARNED_LEAVE_DEFAULTS.document_days_required,
   });
 
   useEffect(() => {
@@ -42,6 +44,7 @@ const LeavePolicyForm = ({
         is_enabled: Boolean(initialData.is_enabled),
         earned_days_required: Number(initialData.earned_days_required ?? (initialData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_days_required : 20)),
         earned_leave_award: Number(initialData.earned_leave_award ?? 1),
+        document_days_required: Number(initialData.document_days_required ?? EARNED_LEAVE_DEFAULTS.document_days_required),
       });
     }
   }, [initialData]);
@@ -56,6 +59,7 @@ const LeavePolicyForm = ({
       is_enabled: Boolean(formData.is_enabled),
       earned_days_required: isEarned ? EARNED_LEAVE_DEFAULTS.earned_days_required : null,
       earned_leave_award: isEarned ? EARNED_LEAVE_DEFAULTS.earned_leave_award : null,
+      document_days_required: Number(formData.document_days_required),
     };
     onSubmit(payload);
   };
@@ -95,6 +99,19 @@ const LeavePolicyForm = ({
               value={formData.yearly_limit}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, yearly_limit: e.target.value }))
+              }
+              required
+            />
+          </div>
+
+          <div>
+            <Label>Document Days Required</Label>
+            <Input
+              type="number"
+              min={0}
+              value={formData.document_days_required}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, document_days_required: e.target.value }))
               }
               required
             />

@@ -84,21 +84,35 @@ const EmployeeLeavePolicy = () => {
                         {policy.leave_type}
                       </TableCell>
                       <TableCell>
-                        {policy.leave_type === "earned" ? EARNED_LEAVE_YEARLY_LIMIT : isRuleBased ? "-" : policy.yearly_limit}
+                        {/* {policy.leave_type === "earned" ? EARNED_LEAVE_YEARLY_LIMIT : isRuleBased ? "-" : policy.yearly_limit} */}
+                        {isRuleBased ? "-" : policy.yearly_limit}
                       </TableCell>
                       {/* <TableCell>
                         <Badge className={policy.is_enabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}>
                           {policy.is_enabled ? "Enabled" : "Disabled"}
                         </Badge>
                       </TableCell> */}
-                      <TableCell>
-                        {policy.leave_type === "earned"
-                          ? "1 day/month; planned leave / vacation; carry forward up to 24 days; encashment as per company policy"
-                          : policy.leave_type === "sick"
+                      {/* <TableCell>
+                        {
+                        // policy.leave_type === "earned"
+                        //   ? "1 day/month; planned leave / vacation; carry forward up to 24 days; encashment as per company policy"
+                        //   :
+                           policy.leave_type === "sick"
                           ? "Medical proof required if more than 2 consecutive days"
                           : isRuleBased
                           ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave`
                           : "-"}
+                      </TableCell> */}
+                      <TableCell>
+                        {
+                          policy.leave_type === "sick"
+                            ? policy.document_days_required
+                              ? `Medical proof required if more than ${policy.document_days_required} consecutive day${policy.document_days_required > 1 ? "s" : ""}`
+                              : "Medical proof required for extended consecutive leave"
+                            : isRuleBased
+                              ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave`
+                              : "-"
+                        }
                       </TableCell>
                     </TableRow>
                   );

@@ -15,7 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
 
-const LEAVE_TYPES = ["sick", "personal", "other", "earned", "casual","compensation"];
+const LEAVE_TYPES = ["sick", "personal", "other", "earned", "casual", "compensation"];
 const EARNED_LEAVE_DEFAULTS = {
   yearly_limit: 12,
   earned_days_required: 1,
@@ -53,7 +53,9 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
     yearly_limit: Number(policy.yearly_limit ?? 0),
     is_enabled: Boolean(policy.is_enabled),
     earned_days_required: Number(policy.earned_days_required ?? (policy.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_days_required : 20)),
+    // earned_days_required: Number(policy.earned_days_required ?? (policy.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_days_required : 20)),
     earned_leave_award: Number(policy.earned_leave_award ?? 1),
+    document_days_required: Number(policy.document_days_required ?? 2),
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -63,10 +65,15 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
     e.preventDefault();
     const payload = {
       leave_type: formData.leave_type,
-      yearly_limit: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.yearly_limit : isRuleBased ? null : Number(formData.yearly_limit),
+      // yearly_limit: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.yearly_limit : isRuleBased ? null : Number(formData.yearly_limit),
+      yearly_limit: isRuleBased ? null : Number(formData.yearly_limit),
       is_enabled: Boolean(formData.is_enabled),
-      earned_days_required: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_days_required : isRuleBased ? Number(formData.earned_days_required) : null,
-      earned_leave_award: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_leave_award : isRuleBased ? Number(formData.earned_leave_award) : null,
+      earned_days_required: isRuleBased ? Number(formData.earned_days_required) : null,
+      earned_leave_award: isRuleBased ? Number(formData.earned_leave_award) : null,
+      earned_leave_award: isRuleBased ? Number(formData.earned_leave_award) : null,
+      document_days_required: Number(formData.document_days_required) || null,
+      // earned_days_required: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_days_required : isRuleBased ? Number(formData.earned_days_required) : null,
+      // earned_leave_award: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_leave_award : isRuleBased ? Number(formData.earned_leave_award) : null,
     };
     try {
       setSubmitting(true);
@@ -125,6 +132,21 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
               </div>
             )}
 
+            {/* Document Days Required — only allow when sick leave */}
+            {formData.leave_type === "sick" && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Document Days Required</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={formData.document_days_required}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, document_days_required: e.target.value }))}
+                  required
+                />
+              </div>
+            )}
+
+
             {/* Enabled Toggle */}
             <div className="flex items-center justify-between rounded-lg border px-4 py-3 bg-gray-50">
               <div>
@@ -142,62 +164,64 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
             </div>
 
             {/* Rule-based Leave Config (earned + casual) */}
-            {formData.leave_type === "earned" ? (
-              <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-3">
-                <p className="text-sm font-semibold text-blue-700">Earned Leave (EL) - 12 Days</p>
-                <div className="space-y-1 text-sm text-blue-900">
-                  <p>Accrual: 1 day per month</p>
-                  <p>Use: Planned leave / vacation</p>
-                  <p>Carry forward: Up to 24 days</p>
-                  <p>Encashment: As per company policy</p>
+            {
+              // formData.leave_type === "earned" ? (
+              //   <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-3">
+              //     <p className="text-sm font-semibold text-blue-700">Earned Leave (EL) - {formData.yearly_limit} Days</p>
+              //     <div className="space-y-1 text-sm text-blue-900">
+              //       <p>Accrual: {formData.earned_days_required || "?"} day per month</p>
+              //       <p>Use: Vacation leave</p>
+              //       <p>Carry forward: Up to {formData.carry_forward_limit || "?"} days</p>
+              //       {/* <p>Encashment: As per company policy</p> */}
+              //     </div>
+              //   </div>
+              // ) : 
+              formData.leave_type === "sick" ? (
+                <div className="rounded-lg border border-rose-100 bg-rose-50 p-4 space-y-2">
+                  <p className="text-sm font-semibold text-rose-700">Sick Leave (SL)</p>
+                  <p className="text-sm text-rose-900">
+                    Medical proof required if more than {formData.document_days_required || "?"} consecutive days.
+                  </p>
                 </div>
-              </div>
-            ) : formData.leave_type === "sick" ? (
-              <div className="rounded-lg border border-rose-100 bg-rose-50 p-4 space-y-2">
-                <p className="text-sm font-semibold text-rose-700">Sick Leave (SL)</p>
-                <p className="text-sm text-rose-900">
-                  Medical proof required if more than 2 consecutive days.
-                </p>
-              </div>
-            ) : isRuleBased && (
-              <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-sm font-semibold text-blue-700">Leave Rules</p> {/* ← generic label */}
-                </div>
+              ) : isRuleBased && (
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm font-semibold text-blue-700">Leave Rules</p> {/* ← generic label */}
+                  </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-gray-700">Working Days Required</Label>
-                  <Input
-                    type="number" min={1}
-                    value={formData.earned_days_required}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, earned_days_required: e.target.value }))}
-                    className="bg-white"
-                  />
-                  <p className="text-xs text-gray-500">Days employee must work to earn leave</p>
-                </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Working Days Required</Label>
+                    <Input
+                      type="number" min={1}
+                      value={formData.earned_days_required}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, earned_days_required: e.target.value }))}
+                      className="bg-white"
+                    />
+                    <p className="text-xs text-gray-500">Days employee must work to earn leave</p>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-gray-700">Leave Days Awarded</Label>
-                  <Input
-                    type="number" min={0.5} step="0.5"
-                    value={formData.earned_leave_award}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, earned_leave_award: e.target.value }))}
-                    className="bg-white"
-                  />
-                  <p className="text-xs text-gray-500">Leave days given after required days are worked</p>
-                </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Leave Days Awarded</Label>
+                    <Input
+                      type="number" min={0.5} step="0.5"
+                      value={formData.earned_leave_award}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, earned_leave_award: e.target.value }))}
+                      className="bg-white"
+                    />
+                    <p className="text-xs text-gray-500">Leave days given after required days are worked</p>
+                  </div>
 
-                <div className="rounded-md bg-white border border-blue-200 px-3 py-2 text-sm text-blue-800">
-                  <span className="font-medium">Rule: </span>
-                  Every <span className="font-semibold">{formData.earned_days_required || "?"} working days</span>
-                  {" → "}
-                  <span className="font-semibold">{formData.earned_leave_award || "?"} leave day(s)</span> awarded
+                  <div className="rounded-md bg-white border border-blue-200 px-3 py-2 text-sm text-blue-800">
+                    <span className="font-medium">Rule: </span>
+                    Every <span className="font-semibold">{formData.earned_days_required || "?"} working days</span>
+                    {" → "}
+                    <span className="font-semibold">{formData.earned_leave_award || "?"} leave day(s)</span> awarded
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
 
           <div className="px-6 py-4 border-t bg-gray-50 flex gap-3">
@@ -241,6 +265,7 @@ const LeavePolicyPage = () => {
     is_enabled: true,
     earned_days_required: EARNED_LEAVE_DEFAULTS.earned_days_required,
     earned_leave_award: 1,
+    document_days_required: 2,
   });
 
   const isRuleBased = RULE_BASED_TYPES.includes(formData.leave_type); // ← updated
@@ -263,18 +288,23 @@ const LeavePolicyPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    debugger;
     const payload = {
       leave_type: formData.leave_type,
-      yearly_limit: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.yearly_limit : isRuleBased ? null : Number(formData.yearly_limit),
+      // yearly_limit: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.yearly_limit : isRuleBased ? null : Number(formData.yearly_limit),
+      yearly_limit: isRuleBased ? null : Number(formData.yearly_limit),
       is_enabled: Boolean(formData.is_enabled),
-      earned_days_required: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_days_required : isRuleBased ? Number(formData.earned_days_required) : null,
-      earned_leave_award: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_leave_award : isRuleBased ? Number(formData.earned_leave_award) : null,
+      earned_days_required: isRuleBased ? Number(formData.earned_days_required) : null,
+      earned_leave_award: isRuleBased ? Number(formData.earned_leave_award) : null,
+      // earned_days_required: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_days_required : isRuleBased ? Number(formData.earned_days_required) : null,
+      // earned_leave_award: formData.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.earned_leave_award : isRuleBased ? Number(formData.earned_leave_award) : null,
+      document_days_required: Number(formData.document_days_required),
     };
     try {
       setSubmitting(true);
       await api.post("/admin/leave-policy", payload);
       toast.success("Leave policy created");
-      setFormData({ leave_type: "sick", yearly_limit: 0, is_enabled: true, earned_days_required: EARNED_LEAVE_DEFAULTS.earned_days_required, earned_leave_award: 1 });
+      setFormData({ leave_type: "sick", yearly_limit: 0, is_enabled: true, earned_days_required: EARNED_LEAVE_DEFAULTS.earned_days_required, earned_leave_award: 1 ,document_days_required: 2,});
       fetchPolicies();
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to save leave policy");
@@ -314,6 +344,15 @@ const LeavePolicyPage = () => {
                 </div>
               )}
 
+              {/* Document Days Required — only allow when sick leave */}
+              {formData.leave_type === "sick" && (
+                <div>
+                  <Label>Document Days Required</Label>
+                  <Input type="number" min={1} value={formData.document_days_required}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, document_days_required: e.target.value }))} />
+                </div>
+              )}
+
               <div className="md:col-span-2 flex items-center justify-between border rounded-lg px-4 py-3 bg-gray-50">
                 <div>
                   <p className="text-sm font-medium text-gray-700">Policy Status</p>
@@ -330,37 +369,39 @@ const LeavePolicyPage = () => {
               </div>
 
               {/* Rule-based fields (earned + casual) */}
-              {formData.leave_type === "earned" ? (
-                <div className="md:col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-3">
-                  <p className="text-sm font-semibold text-blue-700">Earned Leave (EL) - 12 Days</p>
-                  <div className="grid gap-1 text-sm text-blue-900 md:grid-cols-2">
-                    <p>Accrual: 1 day per month</p>
-                    <p>Use: Planned leave / vacation</p>
-                    <p>Carry forward: Up to 24 days</p>
-                    <p>Encashment: As per company policy</p>
+              {
+                // formData.leave_type === "earned" ? (
+                //   <div className="md:col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-3">
+                //     <p className="text-sm font-semibold text-blue-700">Earned Leave (EL) - 12 Days</p>
+                //     <div className="grid gap-1 text-sm text-blue-900 md:grid-cols-2">
+                //       <p>Accrual: 1 day per month</p>
+                //       <p>Use: Planned leave / vacation</p>
+                //       <p>Carry forward: Up to 24 days</p>
+                //       <p>Encashment: As per company policy</p>
+                //     </div>
+                //   </div>
+                // ) : 
+                formData.leave_type === "sick" ? (
+                  <div className="md:col-span-2 rounded-lg border border-rose-100 bg-rose-50 p-4 space-y-2">
+                    <p className="text-sm font-semibold text-rose-700">Sick Leave (SL)</p>
+                    <p className="text-sm text-rose-900">
+                      Medical proof required for extended consecutive leave.
+                    </p>
                   </div>
-                </div>
-              ) : formData.leave_type === "sick" ? (
-                <div className="md:col-span-2 rounded-lg border border-rose-100 bg-rose-50 p-4 space-y-2">
-                  <p className="text-sm font-semibold text-rose-700">Sick Leave (SL)</p>
-                  <p className="text-sm text-rose-900">
-                    Medical proof required if more than 2 consecutive days.
-                  </p>
-                </div>
-              ) : isRuleBased && (
-                <>
-                  <div>
-                    <Label>Working Days Required</Label>
-                    <Input type="number" min={1} value={formData.earned_days_required}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, earned_days_required: e.target.value }))} />
-                  </div>
-                  <div>
-                    <Label>Leave Days Awarded</Label>
-                    <Input type="number" min={0.5} step="0.5" value={formData.earned_leave_award}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, earned_leave_award: e.target.value }))} />
-                  </div>
-                </>
-              )}
+                ) : isRuleBased && (
+                  <>
+                    <div>
+                      <Label>Working Days Required</Label>
+                      <Input type="number" min={1} value={formData.earned_days_required}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, earned_days_required: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label>Leave Days Awarded</Label>
+                      <Input type="number" min={0.5} step="0.5" value={formData.earned_leave_award}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, earned_leave_award: e.target.value }))} />
+                    </div>
+                  </>
+                )}
 
               <div className="md:col-span-2">
                 <Button type="submit" disabled={submitting} className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -390,7 +431,7 @@ const LeavePolicyPage = () => {
                     <TableRow key={policy.id}>
                       <TableCell className="capitalize">{policy.leave_type}</TableCell>
                       <TableCell>
-                        {policy.leave_type === "earned" ? EARNED_LEAVE_DEFAULTS.yearly_limit : RULE_BASED_TYPES.includes(policy.leave_type) ? "-" : policy.yearly_limit}
+                        {RULE_BASED_TYPES.includes(policy.leave_type) ? "-" : policy.yearly_limit}
                       </TableCell>
                       <TableCell>
                         <Badge className={policy.is_enabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}>
@@ -398,13 +439,11 @@ const LeavePolicyPage = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {policy.leave_type === "earned"
-                          ? "1 day/month; carry forward up to 24 days"
-                          : policy.leave_type === "sick"
-                          ? "Medical proof required if more than 2 consecutive days"
+                        {policy.leave_type === "sick"
+                          ? `Medical proof required if more than ${policy.document_days_required || "?"} consecutive days`
                           : RULE_BASED_TYPES.includes(policy.leave_type)
-                          ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave`
-                          : "-"}
+                            ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave`
+                            : "-"}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="outline" onClick={() => setEditingPolicy(policy)}>Edit</Button>
