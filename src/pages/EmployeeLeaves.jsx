@@ -30,7 +30,7 @@ import {
   SendHorizonal,
 } from "lucide-react";
 
-const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned", "compensation", "casual"];
+const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned", "compensation", "casual","paternity"];
 const HIDDEN_BALANCE_TYPES = ["vacation"];
 // const SICK_LEAVE_PROOF_THRESHOLD_DAYS = 2;
 
@@ -91,7 +91,7 @@ function EmployeeLeaves() {
     reason: "",
     medicalProof: null,
   });
-  
+
  const [policies, setPolicies] = useState([]);
 
   useEffect(() => {
