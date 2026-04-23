@@ -30,7 +30,6 @@ import {
   SendHorizonal,
 } from "lucide-react";
 
-const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned", "compensation", "casual","paternity"];
 const HIDDEN_BALANCE_TYPES = ["vacation"];
 // const SICK_LEAVE_PROOF_THRESHOLD_DAYS = 2;
 
@@ -92,7 +91,7 @@ function EmployeeLeaves() {
     medicalProof: null,
   });
 
- const [policies, setPolicies] = useState([]);
+  const [policies, setPolicies] = useState([]);
 
   useEffect(() => {
     const fetchPolicies = async () => {
@@ -117,7 +116,15 @@ function EmployeeLeaves() {
         0,
       )
       : 0;
-  const sickPolicy = policies.find(p => p.leave_type === "sick");
+  const availableLeaveTypes = policies
+    .filter((policy) => policy.leave_type && policy.is_enabled)
+    .map((policy) => policy.leave_type);
+
+  if (!availableLeaveTypes.includes("vacation")) {
+    availableLeaveTypes.push("vacation");
+  }
+
+  const sickPolicy = policies.find((p) => p.leave_type === "sick");
   const proofDays = sickPolicy?.document_days_required || 0;
   // const isMedicalProofRequired =
   //   formData.type === "sick" && requestedDays > SICK_LEAVE_PROOF_THRESHOLD_DAYS;
@@ -168,10 +175,20 @@ function EmployeeLeaves() {
     fetchMyLeaves();
   }, []);
 
+  useEffect(() => {
+    if (formData.type && !availableLeaveTypes.includes(formData.type)) {
+      setFormData((prev) => ({ ...prev, type: "" }));
+    }
+  }, [availableLeaveTypes, formData.type]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.type || !formData.startDate || !formData.endDate) {
       toast.error("Type, start date and end date are required");
+      return;
+    }
+    if (!availableLeaveTypes.includes(formData.type)) {
+      toast.error(`Leave policy is not enabled for "${formData.type}"`);
       return;
     }
     if (new Date(formData.endDate) < new Date(formData.startDate)) {
@@ -285,7 +302,7 @@ function EmployeeLeaves() {
                     <SelectValue placeholder="Select leave type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {LEAVE_TYPES.map((type) => (
+                    {availableLeaveTypes.map((type) => (
                       <SelectItem
                         key={type}
                         value={type}
@@ -296,6 +313,11 @@ function EmployeeLeaves() {
                     ))}
                   </SelectContent>
                 </Select>
+                {!availableLeaveTypes.length && (
+                  <p className="mt-1 text-xs text-red-500">
+                    No enabled leave policies are configured yet.
+                  </p>
+                )}
                 {/* {getLeaveTypeHelpText(formData.type) && (
                   <p className="text-xs text-amber-700 mt-1">
                     {getLeaveTypeHelpText(formData.type)}
