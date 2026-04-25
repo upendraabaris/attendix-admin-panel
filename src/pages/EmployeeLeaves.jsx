@@ -30,7 +30,31 @@ import {
   SendHorizonal,
 } from "lucide-react";
 
-const LEAVE_TYPES = ["sick", "vacation", "personal", "other", "earned", "compensation", "casual"];
+const HIDDEN_BALANCE_TYPES = ["vacation"];
+// const SICK_LEAVE_PROOF_THRESHOLD_DAYS = 2;
+
+// const getLeaveTypeHelpText = (leaveType) => {
+//   if (leaveType === "sick") {
+//     return "Sick Leave (SL) — Medical proof required if more than 2 consecutive days.";
+//   }
+
+//   return "";
+// };
+
+const getSickProofMessage = (proofDays) => {
+  if (!proofDays || proofDays <= 0) {
+    return "Sick Leave (SL) — No document required.";
+  }
+
+  return `Sick Leave (SL) — Medical proof required if more than ${proofDays} consecutive day${proofDays > 1 ? "s" : ""}.`;
+};
+
+const getLeaveTypeHelpText = (leaveType, proofDays) => {
+  if (leaveType === "sick") {
+    return getSickProofMessage(proofDays);
+  }
+  return "";
+};
 
 const formatDate = (dateStr) =>
   dateStr
@@ -72,7 +96,48 @@ function EmployeeLeaves() {
     startDate: "",
     endDate: "",
     reason: "",
+    medicalProof: null,
   });
+
+  const [policies, setPolicies] = useState([]);
+
+  useEffect(() => {
+    const fetchPolicies = async () => {
+      try {
+        const res = await api.get("/admin/leave-policy");
+        setPolicies(res?.data?.data || []);
+      } catch (err) {
+        console.error("Failed to fetch policies");
+      }
+    };
+
+    fetchPolicies();
+  }, []);
+
+  const requestedDays =
+    formData.startDate && formData.endDate
+      ? Math.max(
+        Math.floor(
+          (new Date(formData.endDate) - new Date(formData.startDate)) /
+          (1000 * 60 * 60 * 24),
+        ) + 1,
+        0,
+      )
+      : 0;
+  const availableLeaveTypes = policies
+    .filter((policy) => policy.leave_type && policy.is_enabled)
+    .map((policy) => policy.leave_type);
+
+  if (!availableLeaveTypes.includes("vacation")) {
+    availableLeaveTypes.push("vacation");
+  }
+
+  const sickPolicy = policies.find((p) => p.leave_type === "sick");
+  const proofDays = Number(sickPolicy?.document_days_required ?? 0);
+  // const isMedicalProofRequired =
+  //   formData.type === "sick" && requestedDays > SICK_LEAVE_PROOF_THRESHOLD_DAYS;
+  const isMedicalProofRequired =
+    formData.type === "sick" && proofDays > 0 && requestedDays > proofDays;
 
   const fetchMyLeaves = async () => {
     try {
@@ -89,7 +154,9 @@ function EmployeeLeaves() {
 
       const [leaveRes, balanceRes, compOffRes] = await Promise.all(requests);
       setLeaveList(leaveRes?.data?.data || []);
-      const baseBalances = balanceRes?.data?.data || [];
+      const baseBalances = (balanceRes?.data?.data || []).filter(
+        (balance) => !HIDDEN_BALANCE_TYPES.includes(balance.leave_type),
+      );
       const compOffBalance = compOffRes?.data?.data;
 
       const mergedBalances = [...baseBalances];
@@ -100,6 +167,7 @@ function EmployeeLeaves() {
           leave_type: "compensation",
           balance: Number(compOffBalance.available_balance || 0),
           used_days: Number(compOffBalance.used_count || 0),
+          pending_days: Number(compOffBalance.pending_days || 0),
         });
       }
 
@@ -116,21 +184,45 @@ function EmployeeLeaves() {
     fetchMyLeaves();
   }, []);
 
+  useEffect(() => {
+    if (formData.type && !availableLeaveTypes.includes(formData.type)) {
+      setFormData((prev) => ({ ...prev, type: "" }));
+    }
+  }, [availableLeaveTypes, formData.type]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.type || !formData.startDate || !formData.endDate) {
       toast.error("Type, start date and end date are required");
       return;
     }
+    if (!availableLeaveTypes.includes(formData.type)) {
+      toast.error(`Leave policy is not enabled for "${formData.type}"`);
+      return;
+    }
     if (new Date(formData.endDate) < new Date(formData.startDate)) {
       toast.error("End date cannot be before start date");
       return;
     }
+    if (isMedicalProofRequired && !formData.medicalProof) {
+      // toast.error("Medical proof is required for sick leave longer than 2 consecutive days");
+      toast.error(`Medical proof is required for sick leave longer than ${proofDays} consecutive day${proofDays > 1 ? "s" : ""}`);
+      return;
+    }
     try {
       setSubmitting(true);
-      await api.post("/leave", formData);
+      const payload = new FormData();
+      payload.append("type", formData.type);
+      payload.append("startDate", formData.startDate);
+      payload.append("endDate", formData.endDate);
+      payload.append("reason", formData.reason || "");
+      if (formData.medicalProof) {
+        payload.append("medicalProof", formData.medicalProof);
+      }
+
+      await api.post("/leave", payload);
       toast.success("Leave request submitted");
-      setFormData({ type: "", startDate: "", endDate: "", reason: "" });
+      setFormData({ type: "", startDate: "", endDate: "", reason: "", medicalProof: null });
       fetchMyLeaves();
     } catch (error) {
       console.error("Error submitting leave:", error);
@@ -143,6 +235,7 @@ function EmployeeLeaves() {
   };
 
   const today = new Date().toISOString().split("T")[0];
+
 
   return (
     <Layout>
@@ -181,6 +274,11 @@ function EmployeeLeaves() {
                   <p className="text-xs text-gray-400 mt-2">
                     Used: {Number(item.used_days || 0)}
                   </p>
+                  {Number(item.pending_days || 0) > 0 && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Pending: {Number(item.pending_days || 0)}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ))
@@ -213,7 +311,7 @@ function EmployeeLeaves() {
                     <SelectValue placeholder="Select leave type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {LEAVE_TYPES.map((type) => (
+                    {availableLeaveTypes.map((type) => (
                       <SelectItem
                         key={type}
                         value={type}
@@ -224,6 +322,29 @@ function EmployeeLeaves() {
                     ))}
                   </SelectContent>
                 </Select>
+                {!availableLeaveTypes.length && (
+                  <p className="mt-1 text-xs text-red-500">
+                    No enabled leave policies are configured yet.
+                  </p>
+                )}
+                {/* {getLeaveTypeHelpText(formData.type) && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    {getLeaveTypeHelpText(formData.type)}
+                  </p> */}
+                {getLeaveTypeHelpText(formData.type, proofDays) && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    {getLeaveTypeHelpText(formData.type, proofDays)}
+                  </p>
+                )}
+
+                {formData.type === "sick" && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {/* Medical proof becomes mandatory if the leave is more than 2 consecutive days. */}
+                    {proofDays > 0
+                      ? `Medical proof becomes mandatory if the leave is more than ${proofDays} consecutive day${proofDays > 1 ? "s" : ""}.`
+                      : "No document is required for sick leave."}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -304,6 +425,40 @@ function EmployeeLeaves() {
                 />
               </div>
 
+              {formData.type === "sick" && (
+                <div className="md:col-span-2 space-y-1">
+                  <Label className="text-xs text-gray-500 font-medium">
+                    Medical Proof
+                    {isMedicalProofRequired ? (
+                      <span className="text-red-500"> *</span>
+                    ) : (
+                      <span className="text-gray-400">
+                        {proofDays > 0
+                          ? ` (required above ${proofDays} consecutive day${proofDays > 1 ? "s" : ""})`
+                          : " (not required)"}
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    type="file"
+                    accept=".pdf,image/png,image/jpeg,image/webp"
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        medicalProof: e.target.files?.[0] || null,
+                      }))
+                    }
+                    className="h-10 text-sm"
+                    required={isMedicalProofRequired}
+                  />
+                  {formData.medicalProof && (
+                    <p className="text-xs text-gray-500">
+                      Selected: {formData.medicalProof.name}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="md:col-span-2">
                 <Button
                   type="submit"
@@ -374,6 +529,16 @@ function EmployeeLeaves() {
                           <p className="text-xs text-gray-500 mt-1.5">
                             {leave.reason}
                           </p>
+                        )}
+                        {leave.medical_proof_url && (
+                          <a
+                            href={leave.medical_proof_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex mt-2 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                          >
+                            View Medical Proof
+                          </a>
                         )}
                       </div>
                     </div>

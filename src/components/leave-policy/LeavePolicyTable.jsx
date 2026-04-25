@@ -23,10 +23,10 @@ const LeavePolicyTable = ({ policies = [], onEdit }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {policies.map((policy) => (
+          {policies.filter((policy) => policy.leave_type !== "vacation").map((policy) => (
             <TableRow key={`${policy.leave_type}-${policy.id || "new"}`}>
               <TableCell className="font-medium capitalize">{policy.leave_type}</TableCell>
-              <TableCell>{policy.yearly_limit}</TableCell>
+              <TableCell>{policy.leave_type === "earned" ? 12 : policy.yearly_limit}</TableCell>
               <TableCell>
                 <Badge className={policy.is_enabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}>
                   {policy.is_enabled ? "Enabled" : "Disabled"}
@@ -34,7 +34,9 @@ const LeavePolicyTable = ({ policies = [], onEdit }) => {
               </TableCell>
               <TableCell>
                 {policy.leave_type === "earned"
-                  ? `${policy.earned_days_required || 0} present days -> ${policy.earned_leave_award || 0} leave`
+                  ? "1 day/month; carry forward up to 24 days"
+                  : policy.leave_type === "sick"
+                  ? "Medical proof required if more than 2 consecutive days"
                   : "-"}
               </TableCell>
               <TableCell className="text-right">
