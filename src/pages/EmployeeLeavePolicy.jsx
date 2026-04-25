@@ -17,6 +17,16 @@ import api from "../hooks/useApi";
 const RULE_BASED_TYPES = ["earned", "casual"];
 const EARNED_LEAVE_YEARLY_LIMIT = 12;
 
+const getSickDocumentRuleText = (documentDaysRequired) => {
+  const proofDays = Number(documentDaysRequired ?? 0);
+
+  if (!proofDays || proofDays <= 0) {
+    return "No document required";
+  }
+
+  return `Medical proof required if more than ${proofDays} consecutive day${proofDays > 1 ? "s" : ""}`;
+};
+
 const EmployeeLeavePolicy = () => {
   const [policies, setPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -106,11 +116,11 @@ const EmployeeLeavePolicy = () => {
                       <TableCell>
                         {
                           policy.leave_type === "sick"
-                            ? policy.document_days_required
-                              ? `Medical proof required if more than ${policy.document_days_required} consecutive day${policy.document_days_required > 1 ? "s" : ""}`
-                              : "Medical proof required for extended consecutive leave"
+                            ? getSickDocumentRuleText(policy.document_days_required)
+                            : policy.leave_type === "compensation"
+                              ? `Expires in ${policy.expire_limit || "?"} day(s)`
                             : isRuleBased
-                              ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave`
+                              ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave${policy.leave_type === "casual" && policy.max_consecutive_days ? ` | Max ${policy.max_consecutive_days} consecutive days` : ""}`
                               : "-"
                         }
                       </TableCell>

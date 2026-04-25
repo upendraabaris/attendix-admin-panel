@@ -41,12 +41,33 @@ const DEFAULT_FORM_DATA = {
   is_enabled: true,
   earned_days_required: 1,
   earned_leave_award: 1,
-  document_days_required: 2,
+  document_days_required: null,
+  max_consecutive_days: 2,
+  expire_limit: 30,
 };
 
 const RULE_BASED_TYPES = ["earned", "casual"];
 
 const isRuleBasedLeave = (leaveType) => RULE_BASED_TYPES.includes(leaveType);
+
+const getSickDocumentRuleText = (documentDaysRequired) => {
+  const proofDays = Number(documentDaysRequired ?? 0);
+
+  if (!proofDays || proofDays <= 0) {
+    return "No document required";
+  }
+
+  return `Medical proof required if more than ${proofDays} consecutive day${proofDays > 1 ? "s" : ""}`;
+};
+
+const parseOptionalNumber = (value) => {
+  if (value === "" || value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
 
 const buildPolicyPayload = (formData) => {
   const isRuleBased = isRuleBasedLeave(formData.leave_type);
@@ -58,7 +79,11 @@ const buildPolicyPayload = (formData) => {
     earned_days_required: isRuleBased ? Number(formData.earned_days_required) : null,
     earned_leave_award: isRuleBased ? Number(formData.earned_leave_award) : null,
     document_days_required:
-      formData.leave_type === "sick" ? Number(formData.document_days_required) || null : null,
+      formData.leave_type === "sick" ? parseOptionalNumber(formData.document_days_required) : null,
+    max_consecutive_days:
+      formData.leave_type === "casual" ? parseOptionalNumber(formData.max_consecutive_days) : null,
+    expire_limit:
+      formData.leave_type === "compensation" ? parseOptionalNumber(formData.expire_limit) : null,
   };
 };
 
@@ -112,6 +137,10 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
     document_days_required: Number(
       policy.document_days_required ?? DEFAULT_FORM_DATA.document_days_required,
     ),
+    max_consecutive_days: Number(
+      policy.max_consecutive_days ?? DEFAULT_FORM_DATA.max_consecutive_days,
+    ),
+    expire_limit: Number(policy.expire_limit ?? DEFAULT_FORM_DATA.expire_limit),
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -207,12 +236,29 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
                 <Label className="text-sm font-medium text-gray-700">Document Days Required</Label>
                 <Input
                   type="number"
-                  min={1}
-                  value={formData.document_days_required}
+                  min={0}
+                  value={formData.document_days_required ?? ""}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
                       document_days_required: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            )}
+
+            {formData.leave_type === "compensation" && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">Expire Limit (days)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={formData.expire_limit}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      expire_limit: e.target.value,
                     }))
                   }
                   required
@@ -248,10 +294,7 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
             {formData.leave_type === "sick" ? (
               <div className="space-y-2 rounded-lg border border-rose-100 bg-rose-50 p-4">
                 <p className="text-sm font-semibold text-rose-700">Sick Leave (SL)</p>
-                <p className="text-sm text-rose-900">
-                  Medical proof required if more than{" "}
-                  {formData.document_days_required || "?"} consecutive days.
-                </p>
+                <p className="text-sm text-rose-900">{getSickDocumentRuleText(formData.document_days_required)}.</p>
               </div>
             ) : isRuleBased ? (
               <div className="space-y-4 rounded-lg border border-blue-100 bg-blue-50 p-4">
@@ -290,6 +333,27 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
                   <p className="text-xs text-gray-500">Days employee must work to earn leave</p>
                 </div>
 
+                {formData.leave_type === "casual" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Max Consecutive Days</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={formData.max_consecutive_days}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          max_consecutive_days: e.target.value,
+                        }))
+                      }
+                      className="bg-white"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Maximum casual leave days allowed in one request
+                    </p>
+                  </div>
+                )}
+
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium text-gray-700">Leave Days Awarded</Label>
                   <Input
@@ -321,7 +385,22 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
                     {formData.earned_leave_award || "?"} leave day(s)
                   </span>{" "}
                   awarded
+                  {formData.leave_type === "casual" && (
+                    <>
+                      {" "} | Max{" "}
+                      <span className="font-semibold">
+                        {formData.max_consecutive_days || "?"} consecutive day(s)
+                      </span>
+                    </>
+                  )}
                 </div>
+              </div>
+            ) : formData.leave_type === "compensation" ? (
+              <div className="space-y-2 rounded-lg border border-amber-100 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-700">Compensation Leave</p>
+                <p className="text-sm text-amber-900">
+                  Compensation leave expires after {formData.expire_limit || "?"} day(s).
+                </p>
               </div>
             ) : null}
           </div>
@@ -474,12 +553,46 @@ const LeavePolicyPage = () => {
                   <Label>Document Days Required</Label>
                   <Input
                     type="number"
-                    min={1}
-                    value={formData.document_days_required}
+                    min={0}
+                    value={formData.document_days_required ?? ""}
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
                         document_days_required: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              )}
+
+              {formData.leave_type === "casual" && (
+                <div>
+                  <Label>Max Consecutive Days</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={formData.max_consecutive_days}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        max_consecutive_days: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              )}
+
+              {formData.leave_type === "compensation" && (
+                <div>
+                  <Label>Expire Limit (days)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={formData.expire_limit}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        expire_limit: e.target.value,
                       }))
                     }
                   />
@@ -514,10 +627,7 @@ const LeavePolicyPage = () => {
               {formData.leave_type === "sick" ? (
                 <div className="md:col-span-2 space-y-2 rounded-lg border border-rose-100 bg-rose-50 p-4">
                   <p className="text-sm font-semibold text-rose-700">Sick Leave (SL)</p>
-                  <p className="text-sm text-rose-900">
-                    Medical proof required if more than{" "}
-                    {formData.document_days_required || "?"} consecutive days.
-                  </p>
+                  <p className="text-sm text-rose-900">{getSickDocumentRuleText(formData.document_days_required)}.</p>
                 </div>
               ) : isRuleBased ? (
                 <>
@@ -551,6 +661,13 @@ const LeavePolicyPage = () => {
                     />
                   </div>
                 </>
+              ) : formData.leave_type === "compensation" ? (
+                <div className="md:col-span-2 space-y-2 rounded-lg border border-amber-100 bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-700">Compensation Leave</p>
+                  <p className="text-sm text-amber-900">
+                    Compensation leave expires after {formData.expire_limit || "?"} day(s).
+                  </p>
+                </div>
               ) : null}
 
               <div className="md:col-span-2">
@@ -599,9 +716,11 @@ const LeavePolicyPage = () => {
                       </TableCell>
                       <TableCell>
                         {policy.leave_type === "sick"
-                          ? `Medical proof required if more than ${policy.document_days_required || "?"} consecutive days`
+                          ? getSickDocumentRuleText(policy.document_days_required)
+                          : policy.leave_type === "compensation"
+                            ? `Expires in ${policy.expire_limit || "?"} day(s)`
                           : policyIsRuleBased
-                            ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave`
+                            ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave${policy.leave_type === "casual" && policy.max_consecutive_days ? ` | Max ${policy.max_consecutive_days} consecutive days` : ""}`
                             : "-"}
                       </TableCell>
                       <TableCell className="text-right">

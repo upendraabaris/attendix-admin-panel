@@ -41,9 +41,17 @@ const HIDDEN_BALANCE_TYPES = ["vacation"];
 //   return "";
 // };
 
+const getSickProofMessage = (proofDays) => {
+  if (!proofDays || proofDays <= 0) {
+    return "Sick Leave (SL) — No document required.";
+  }
+
+  return `Sick Leave (SL) — Medical proof required if more than ${proofDays} consecutive day${proofDays > 1 ? "s" : ""}.`;
+};
+
 const getLeaveTypeHelpText = (leaveType, proofDays) => {
   if (leaveType === "sick") {
-    return `Sick Leave (SL) — Medical proof required if more than ${proofDays} consecutive day${proofDays > 1 ? "s" : ""}.`;
+    return getSickProofMessage(proofDays);
   }
   return "";
 };
@@ -125,11 +133,11 @@ function EmployeeLeaves() {
   }
 
   const sickPolicy = policies.find((p) => p.leave_type === "sick");
-  const proofDays = sickPolicy?.document_days_required || 0;
+  const proofDays = Number(sickPolicy?.document_days_required ?? 0);
   // const isMedicalProofRequired =
   //   formData.type === "sick" && requestedDays > SICK_LEAVE_PROOF_THRESHOLD_DAYS;
   const isMedicalProofRequired =
-    formData.type === "sick" && requestedDays > proofDays;
+    formData.type === "sick" && proofDays > 0 && requestedDays > proofDays;
 
   const fetchMyLeaves = async () => {
     try {
@@ -159,6 +167,7 @@ function EmployeeLeaves() {
           leave_type: "compensation",
           balance: Number(compOffBalance.available_balance || 0),
           used_days: Number(compOffBalance.used_count || 0),
+          pending_days: Number(compOffBalance.pending_days || 0),
         });
       }
 
@@ -331,7 +340,9 @@ function EmployeeLeaves() {
                 {formData.type === "sick" && (
                   <p className="text-xs text-gray-500 mt-1">
                     {/* Medical proof becomes mandatory if the leave is more than 2 consecutive days. */}
-                    Medical proof becomes mandatory if the leave is more than {proofDays} consecutive day{proofDays > 1 ? "s" : ""}.
+                    {proofDays > 0
+                      ? `Medical proof becomes mandatory if the leave is more than ${proofDays} consecutive day${proofDays > 1 ? "s" : ""}.`
+                      : "No document is required for sick leave."}
                   </p>
                 )}
               </div>
@@ -421,7 +432,11 @@ function EmployeeLeaves() {
                     {isMedicalProofRequired ? (
                       <span className="text-red-500"> *</span>
                     ) : (
-                      <span className="text-gray-400"> (required above 2 consecutive days)</span>
+                      <span className="text-gray-400">
+                        {proofDays > 0
+                          ? ` (required above ${proofDays} consecutive day${proofDays > 1 ? "s" : ""})`
+                          : " (not required)"}
+                      </span>
                     )}
                   </Label>
                   <Input
