@@ -33,6 +33,7 @@ const LEAVE_TYPES = [
   "casual",
   "compensation",
   "paternity",
+  "vacation"
 ];
 
 const DEFAULT_FORM_DATA = {
@@ -466,7 +467,7 @@ const LeavePolicyPage = () => {
 
   const isRuleBased = isRuleBasedLeave(formData.leave_type);
   const visiblePolicies = policies.filter(
-    (policy) => policy.leave_type && policy.leave_type !== "vacation",
+    (policy) => policy.leave_type,
   );
 
   const fetchPolicies = async () => {
@@ -719,9 +720,9 @@ const LeavePolicyPage = () => {
                           ? getSickDocumentRuleText(policy.document_days_required)
                           : policy.leave_type === "compensation"
                             ? `Expires in ${policy.expire_limit || "?"} day(s)`
-                          : policyIsRuleBased
-                            ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave${policy.leave_type === "casual" && policy.max_consecutive_days ? ` | Max ${policy.max_consecutive_days} consecutive days` : ""}`
-                            : "-"}
+                            : policyIsRuleBased
+                              ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave${policy.leave_type === "casual" && policy.max_consecutive_days ? ` | Max ${policy.max_consecutive_days} consecutive days` : ""}`
+                              : "-"}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
