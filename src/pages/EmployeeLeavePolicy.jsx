@@ -48,7 +48,7 @@ const EmployeeLeavePolicy = () => {
   }, []);
 
   const visiblePolicies = policies.filter(
-    (policy) => policy.leave_type && policy.leave_type !== "vacation",
+    (policy) => policy.leave_type,
   );
 
   return (
