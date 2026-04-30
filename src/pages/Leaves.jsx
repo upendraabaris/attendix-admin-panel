@@ -37,6 +37,9 @@ const countDays = (start, end) => {
   return diff > 0 ? diff : 1;
 };
 
+const getLeaveDuration = (start, end, isHalfDay) =>
+  isHalfDay ? 0.5 : countDays(start, end);
+
 const formatDate = (dateStr) =>
   dateStr
     ? new Date(dateStr).toLocaleDateString("en-GB", {
@@ -259,6 +262,11 @@ const Leaves = () => {
                         >
                           {request.type}
                         </Badge>
+                        {request.is_half_day && (
+                          <Badge className="border border-amber-200 bg-amber-50 text-amber-800">
+                            Half Day
+                          </Badge>
+                        )}
                         <Badge
                           className={`inline-flex items-center gap-1 border text-xs font-medium ${cfg.badge}`}
                         >
@@ -281,7 +289,16 @@ const Leaves = () => {
                         </span>
                       </div>
                       <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                        {countDays(request.start_date, request.end_date)} day{countDays(request.start_date, request.end_date) !== 1 ? "s" : ""}
+                        {getLeaveDuration(
+                          request.start_date,
+                          request.end_date,
+                          request.is_half_day,
+                        )}{" "}
+                        {request.is_half_day
+                          ? "day"
+                          : countDays(request.start_date, request.end_date) !== 1
+                            ? "days"
+                            : "day"}
                       </span>
                     </div>
 
