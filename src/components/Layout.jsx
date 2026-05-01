@@ -46,7 +46,7 @@ const Layout = ({ children }) => {
     navigation = [
       { name: "Attendance", href: "/employee-attendance", icon: Clock },
       { name: "Leave Request", href: "/employee-leaves", icon: Calendar },
-      { name: "Work Week Policy", href: "/employee-work-week-policy", icon: KeyRound },
+      { name: "Work Week Policy", href: "/employee-work-week-policy", icon: Scale },
       { name: "Leave Policy", href: "/employee-leave-policy", icon: KeyRound },
       { name: "Holiday", href: "/employee-holidays", icon: CalendarDays },
       ...(orgID !== "13"

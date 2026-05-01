@@ -75,6 +75,32 @@ const getLeaveDuration = (start, end, isHalfDay) => {
   return diff > 0 ? diff : 0;
 };
 
+const isHalfDayLeave = (leave) => {
+  if (!leave) {
+    return false;
+  }
+
+  if (
+    leave.is_half_day === true ||
+    leave.is_half_day === "true" ||
+    leave.is_half_day === "t" ||
+    leave.is_half_day === 1 ||
+    leave.is_half_day === "1"
+  ) {
+    return true;
+  }
+
+  const durationCandidates = [
+    leave.requested_days,
+    leave.leave_days,
+    leave.total_days,
+    leave.duration,
+    leave.days,
+  ];
+
+  return durationCandidates.some((value) => Number(value) === 0.5);
+};
+
 const formatDate = (dateStr) =>
   dateStr
     ? new Date(dateStr).toLocaleDateString("en-GB", {
@@ -568,6 +594,7 @@ function EmployeeLeaves() {
               {leaveList.map((leave) => {
                 const cfg =
                   STATUS_CONFIG[leave.status] || STATUS_CONFIG.pending;
+                const halfDay = isHalfDayLeave(leave);
                 return (
                   <div
                     key={leave.leave_id || leave.id}
@@ -583,7 +610,7 @@ function EmployeeLeaves() {
                               String(leave.type || "").slice(1)}{" "}
                             Leave
                           </p>
-                          {leave.is_half_day && (
+                          {halfDay && (
                             <Badge
                               variant="outline"
                               className="border-amber-200 bg-amber-50 text-amber-800"
@@ -607,14 +634,14 @@ function EmployeeLeaves() {
                             {getLeaveDuration(
                               leave.start_date,
                               leave.end_date,
-                              leave.is_half_day,
+                              halfDay,
                             )}{" "}
-                            {leave.is_half_day
+                            {halfDay
                               ? "day"
                               : getLeaveDuration(
                                   leave.start_date,
                                   leave.end_date,
-                                  leave.is_half_day,
+                                  halfDay,
                                 ) === 1
                                 ? "day"
                                 : "days"}
