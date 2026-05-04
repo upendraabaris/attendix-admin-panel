@@ -207,7 +207,7 @@ const Employees = () => {
                   <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="developer">Developer</SelectItem>
                   <SelectItem value="hr">HR</SelectItem>
-                  <SelectItem value="sales">Sales</SelectItem>
+                  <SelectItem value="sales">Sales</SelectItem>  
                 </SelectContent>
               </Select>
             </div>

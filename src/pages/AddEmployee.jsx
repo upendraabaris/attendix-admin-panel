@@ -115,6 +115,14 @@ const AddEmployee = () => {
                       <SelectItem value="hr-specialist">
                         HR Specialist
                       </SelectItem>
+
+                      {/* 👇 New roles */}
+                      <SelectItem value="Ecommerce Executive">Ecommerce Executive</SelectItem>
+                      <SelectItem value="Content Creator">Content Creator</SelectItem>
+                      <SelectItem value="Catalog Manager">Catalog Manager</SelectItem>
+                      <SelectItem value="Amazon PPC Manager">Amazon PPC Manager</SelectItem>
+                      <SelectItem value="Senior Account Manager">Senior Account Manager</SelectItem>
+                      <SelectItem value="Social Media Manager">Social Media Manager</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

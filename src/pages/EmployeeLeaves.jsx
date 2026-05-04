@@ -101,6 +101,14 @@ const isHalfDayLeave = (leave) => {
   return durationCandidates.some((value) => Number(value) === 0.5);
 };
 
+const formatLeaveValue = (value) => {
+  const numericValue = Number(value || 0);
+
+  return Number.isInteger(numericValue)
+    ? String(numericValue)
+    : numericValue.toFixed(1);
+};
+
 const formatDate = (dateStr) =>
   dateStr
     ? new Date(dateStr).toLocaleDateString("en-GB", {
@@ -318,17 +326,17 @@ function EmployeeLeaves() {
                     {String(item.leave_type || "other")}
                   </p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">
-                    {Number(item.balance || 0)}
+                    {formatLeaveValue(item.balance)}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Available balance
                   </p>
                   <p className="text-xs text-gray-400 mt-2">
-                    Used: {Number(item.used_days || 0)}
+                    Used: {formatLeaveValue(item.used_days)}
                   </p>
                   {Number(item.pending_days || 0) > 0 && (
                     <p className="text-xs text-amber-600 mt-1">
-                      Pending: {Number(item.pending_days || 0)}
+                      Pending: {formatLeaveValue(item.pending_days)}
                     </p>
                   )}
                 </CardContent>
