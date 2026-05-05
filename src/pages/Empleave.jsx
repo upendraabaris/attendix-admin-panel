@@ -39,6 +39,33 @@ const countDays = (start, end) => {
   return diff > 0 ? diff : 1;
 };
 
+const isHalfDayLeave = (leave) => {
+  if (!leave) return false;
+
+  if (
+    leave.is_half_day === true ||
+    leave.is_half_day === "true" ||
+    leave.is_half_day === "t" ||
+    leave.is_half_day === 1 ||
+    leave.is_half_day === "1"
+  ) {
+    return true;
+  }
+
+  const durationCandidates = [
+    leave.requested_days,
+    leave.leave_days,
+    leave.total_days,
+    leave.duration,
+    leave.days,
+  ];
+
+  return durationCandidates.some((value) => Number(value) === 0.5);
+};
+
+const getLeaveDuration = (leave) =>
+  isHalfDayLeave(leave) ? 0.5 : countDays(leave.start_date, leave.end_date);
+
 const STATUS_CONFIG = {
   approved: {
     border: "border-l-green-500",
@@ -225,6 +252,7 @@ function Empleave() {
           <div className="space-y-3">
             {filteredLeaves.map((leave) => {
               const cfg = STATUS_CONFIG[leave.status] || STATUS_CONFIG.pending;
+              const halfDay = isHalfDayLeave(leave);
               return (
                 <div
                   key={leave.id}
@@ -234,13 +262,20 @@ function Empleave() {
                     {/* Top row: leave type + status badge */}
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="font-semibold text-gray-900 text-sm">
-                          {leave.type
-                            ? leave.type.charAt(0).toUpperCase() +
-                              leave.type.slice(1)
-                            : "Leave"}{" "}
-                          Leave
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-gray-900 text-sm">
+                            {leave.type
+                              ? leave.type.charAt(0).toUpperCase() +
+                                leave.type.slice(1)
+                              : "Leave"}{" "}
+                            Leave
+                          </p>
+                          {halfDay && (
+                            <Badge className="border border-amber-200 bg-amber-50 text-amber-800">
+                              Half Day
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 mt-0.5">
                           Applied {formatDate(leave.created_at)}
                         </p>
@@ -266,10 +301,12 @@ function Empleave() {
                         </span>
                       </div>
                       <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                        {countDays(leave.start_date, leave.end_date)} day
-                        {countDays(leave.start_date, leave.end_date) !== 1
-                          ? "s"
-                          : ""}
+                        {getLeaveDuration(leave)}{" "}
+                        {halfDay
+                          ? "day"
+                          : countDays(leave.start_date, leave.end_date) !== 1
+                            ? "days"
+                            : "day"}
                       </span>
                     </div>
 
