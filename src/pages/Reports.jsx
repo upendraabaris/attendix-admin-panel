@@ -107,11 +107,16 @@ function downloadCSV(report) {
     lines.push(`Total Working Days,${report.workingDays}`);
     lines.push(`Total Holidays,${report.holidays}`);
     lines.push(`Weekend Offs,${report.weekendOffs}`);
-    lines.push(`Total Leaves,${report.totalLeaves || 0}`);
+    // lines.push(`Total Leaves,${report.totalLeaves || 0}`);
     lines.push("");
-    lines.push("Employee Name,Working Days,Leaves Taken,Holidays");
+    // lines.push("Employee Name,Total Working Days,Actual Working Days,Leaves Taken,Holidays");
+    lines.push("Employee Name,Total Working Days,Actual Working Days,Extra Days Worked,Leaves Taken,Holidays");
     report.rows.forEach((r) => {
-        lines.push(`${r.name},${r.workingDays},${r.leaves || 0},${r.holidays}`);
+        lines.push(`${r.name},${r.totalWorkingDays},${r.actualWorkingDays},${r.nonWorkingDaysWorked},${r.leaves || 0},${r.holidays}`);
+    });
+
+    report.rows.forEach((r) => {
+        lines.push(`${r.name},${r.totalWorkingDays},${r.actualWorkingDays},${r.leaves || 0},${r.holidays}`);
     });
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -392,13 +397,13 @@ export default function Reports() {
                                     bg: "bg-blue-50",
                                     indicator: "bg-blue-500"
                                 },
-                                {
-                                    title: "Leaves Taken",
-                                    value: report.totalLeaves || 0,
-                                    icon: <Users className="w-4 h-4 text-rose-500" />,
-                                    bg: "bg-rose-50",
-                                    indicator: "bg-rose-500"
-                                },
+                                // {
+                                //     title: "Leaves Taken",
+                                //     value: report.totalLeaves || 0,
+                                //     icon: <Users className="w-4 h-4 text-rose-500" />,
+                                //     bg: "bg-rose-50",
+                                //     indicator: "bg-rose-500"
+                                // },
                                 {
                                     title: "Total Holidays",
                                     value: report.holidays,
@@ -455,7 +460,9 @@ export default function Reports() {
                                         <TableHeader className="bg-slate-50/50">
                                             <TableRow className="border-b border-slate-100">
                                                 <TableHead className="py-3 font-bold text-slate-500 pl-6 text-[10px] uppercase tracking-wider">Employee</TableHead>
-                                                <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Working Days</TableHead>
+                                                <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Total Working Days</TableHead>
+                                                <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Actual Working Days</TableHead>
+                                                <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Extra Days Worked</TableHead>
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Leaves Taken</TableHead>
                                                 <TableHead className="text-right py-3 font-bold text-slate-500 pr-6 text-[10px] uppercase tracking-wider">Holidays</TableHead>
                                             </TableRow>
@@ -473,7 +480,17 @@ export default function Reports() {
                                                     </TableCell>
                                                     <TableCell className="text-center">
                                                         <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 font-bold text-[11px] border border-emerald-100/50">
-                                                            {r.workingDays} Days
+                                                            {r.totalWorkingDays} Days
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 font-bold text-[11px] border border-blue-100/50">
+                                                            {r.actualWorkingDays} Days
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-600 font-bold text-[11px] border border-rose-100/50">
+                                                            {r.nonWorkingDaysWorked} Days
                                                         </span>
                                                     </TableCell>
                                                     <TableCell className="text-center">

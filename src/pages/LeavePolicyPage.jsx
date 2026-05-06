@@ -720,9 +720,11 @@ const LeavePolicyPage = () => {
                           ? getSickDocumentRuleText(policy.document_days_required)
                           : policy.leave_type === "compensation"
                             ? `Expires in ${policy.expire_limit || "?"} day(s)`
-                            : policyIsRuleBased
-                              ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave${policy.leave_type === "casual" && policy.max_consecutive_days ? ` | Max ${policy.max_consecutive_days} consecutive days` : ""}`
-                              : "-"}
+                            : policy.leave_type === "vacation"
+                              ? "Vacation leave will be deducted from earned leave balance"
+                              : policyIsRuleBased
+                                ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave${policy.leave_type === "casual" && policy.max_consecutive_days ? ` | Max ${policy.max_consecutive_days} consecutive days` : ""}`
+                                : "-"}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
