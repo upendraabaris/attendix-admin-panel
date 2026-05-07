@@ -361,7 +361,8 @@ function Tasks() {
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map((emp) => (
+                    {/* {employees.map((emp) => ( */}
+                    {employees.filter(emp => emp.status === "active").map((emp) => (
                       <SelectItem key={emp.id} value={String(emp.id)}>
                         {emp.name}
                       </SelectItem>
