@@ -65,6 +65,7 @@ function EmployeeAttendanceTab() {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState("");
+  const [locationEnabled, setLocationEnabled] = useState(true);
 
   const fetchMyAttendance = useCallback(async () => {
     if (!employeeId) { setAttendance([]); return; }
@@ -82,18 +83,101 @@ function EmployeeAttendanceTab() {
     }
   }, [employeeId, filters.startDate, filters.endDate]);
 
+  const checkLocationEnabled = useCallback(async () => {
+    if (!navigator.geolocation) {
+      setLocationEnabled(false);
+      return false;
+    }
+
+    if (navigator.permissions) {
+      try {
+        const permission = await navigator.permissions.query({ name: "geolocation" });
+        if (permission.state === "denied") {
+          setLocationEnabled(false);
+          return false;
+        }
+      } catch {
+        // ignore permission query failures and fallback to direct geolocation test
+      }
+    }
+
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        () => {
+          setLocationEnabled(true);
+          resolve(true);
+        },
+        () => {
+          setLocationEnabled(false);
+          resolve(false);
+        },
+        { timeout: 5000, maximumAge: 0, enableHighAccuracy: false }
+      );
+    });
+  }, []);
+
+  useEffect(() => {
+    checkLocationEnabled();
+  }, [checkLocationEnabled]);
+
+  useEffect(() => {
+    let permissionStatus = null;
+
+    const subscribePermissionChange = async () => {
+      if (!navigator.permissions) return;
+      try {
+        permissionStatus = await navigator.permissions.query({ name: "geolocation" });
+        permissionStatus.onchange = () => {
+          setLocationEnabled(permissionStatus.state === "granted");
+        };
+      } catch {
+        // ignore unsupported permissions API
+      }
+    };
+
+    subscribePermissionChange();
+
+    return () => {
+      if (permissionStatus) {
+        permissionStatus.onchange = null;
+      }
+    };
+  }, []);
+
   useEffect(() => { fetchMyAttendance(); }, [fetchMyAttendance]);
 
   const handleClockAction = async (type) => {
     try {
       setActionLoading(type);
-      const coords = await getOptionalCoords();
+      const coords = await new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          return reject(new Error("Geolocation is not supported."));
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+          },
+          (err) => {
+            reject(err);
+          },
+          { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
+        );
+      });
+
+      setLocationEnabled(true);
       const endpoint = type === "in" ? "/attendance/clock-in" : "/attendance/clock-out";
       const res = await api.post(endpoint, { latitude: coords.latitude, longitude: coords.longitude });
-      const suffix = coords.tracked ? "" : " (without location)";
-      toast.success(`${res?.data?.message || "Attendance updated"}${suffix}`);
+      toast.success(res?.data?.message || "Attendance updated");
       fetchMyAttendance();
     } catch (error) {
+      if (error?.code === 1 || error?.code === 2 || error?.code === 3) {
+        setLocationEnabled(false);
+        return toast.error("Location access is required to mark attendance");
+      }
       console.error("Clock action failed:", error);
       toast.error(error?.response?.data?.message || "Unable to update attendance");
     } finally {
@@ -142,6 +226,18 @@ function EmployeeAttendanceTab() {
               </button>
             )}
           </div>
+          {!locationEnabled && (
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 space-y-2">
+              <p>Location access is required. Please allow location services and then click retry.</p>
+              <button
+                type="button"
+                onClick={checkLocationEnabled}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white text-red-700 border border-red-200 text-sm font-medium hover:bg-red-100 transition-colors"
+              >
+                Retry Location
+              </button>
+            </div>
+          )}
 
           {/* Date Filters */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-gray-100">
