@@ -279,7 +279,8 @@ const Attendance = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Employees</SelectItem>
-                    {employees.map((emp) => (
+                    {/* {employees.map((emp) => ( */}
+                    {employees.filter(emp => emp.status === "active").map((emp) => (
                       <SelectItem key={emp.id} value={emp.id.toString()}>
                         {emp.name ?? "No Name"}
                       </SelectItem>
