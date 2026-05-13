@@ -15,6 +15,7 @@ import {
   FileBarChart,
   Scale,
   CheckSquare,
+  LifeBuoy,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -41,6 +42,7 @@ const Layout = ({ children }) => {
       { name: "Employee Task", href: "/tasks", icon: CheckSquare },
       { name: "Workspace", href: "/workspace", icon: Briefcase },
       { name: "Reports", href: "/reports", icon: FileBarChart },
+      { name: "Support", href: "/support", icon: LifeBuoy },
     ];
   } else {
     navigation = [
@@ -52,6 +54,7 @@ const Layout = ({ children }) => {
       ...(orgID !== "13"
         ? [{ name: "Workspace", href: "/workspace", icon: Briefcase }]
         : []),
+      { name: "Support", href: "/support", icon: LifeBuoy },
     ];
   }
 

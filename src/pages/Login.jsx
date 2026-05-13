@@ -61,6 +61,8 @@ const Login = () => {
         localStorage.removeItem("orgID");
       }
       localStorage.setItem("role", employeeRole); // ✅ add this line
+      localStorage.setItem("employee_id", String(user.employee_id || ""));
+      localStorage.setItem("employee_name", user.employee_name || "");
 
       navigate("/dashboard");
     } catch (err) {

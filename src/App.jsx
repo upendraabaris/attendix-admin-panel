@@ -32,6 +32,7 @@ import LeavePolicyPage from "./pages/LeavePolicyPage";
 import WorkWeekPolicyPage from "./pages/WorkWeekPolicyPage";
 import HolidayManagementPage from "./pages/HolidayManagementPage";
 import Reports from "./pages/Reports";
+import Support from "./pages/Support";
 
 const queryClient = new QueryClient();
 
@@ -147,6 +148,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Reports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/support"
+            element={
+              <ProtectedRoute>
+                <Support />
               </ProtectedRoute>
             }
           />
