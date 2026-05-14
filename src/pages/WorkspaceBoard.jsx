@@ -209,7 +209,8 @@ const AddTaskModal = ({
               className="w-full border px-3 py-2 rounded-md text-sm"
             >
               <option value="">Select Employee</option>
-              {employees.map((emp) => (
+              {/* {employees.map((emp) => ( */}
+              {employees.filter(emp => emp.status === "active").map((emp) => (
                 <option key={emp.id} value={emp.id}>
                   {emp.name}
                 </option>

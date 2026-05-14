@@ -11,6 +11,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
+import { Checkbox } from "../components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -56,6 +57,58 @@ const getLeaveTypeHelpText = (leaveType, proofDays) => {
   return "";
 };
 
+const getLeaveDuration = (start, end, isHalfDay) => {
+  if (isHalfDay) {
+    return 0.5;
+  }
+
+  if (!start || !end) {
+    return 0;
+  }
+
+  const diff =
+    Math.floor(
+      (new Date(end).getTime() - new Date(start).getTime()) /
+        (1000 * 60 * 60 * 24),
+    ) + 1;
+
+  return diff > 0 ? diff : 0;
+};
+
+const isHalfDayLeave = (leave) => {
+  if (!leave) {
+    return false;
+  }
+
+  if (
+    leave.is_half_day === true ||
+    leave.is_half_day === "true" ||
+    leave.is_half_day === "t" ||
+    leave.is_half_day === 1 ||
+    leave.is_half_day === "1"
+  ) {
+    return true;
+  }
+
+  const durationCandidates = [
+    leave.requested_days,
+    leave.leave_days,
+    leave.total_days,
+    leave.duration,
+    leave.days,
+  ];
+
+  return durationCandidates.some((value) => Number(value) === 0.5);
+};
+
+const formatLeaveValue = (value) => {
+  const numericValue = Number(value || 0);
+
+  return Number.isInteger(numericValue)
+    ? String(numericValue)
+    : numericValue.toFixed(1);
+};
+
 const formatDate = (dateStr) =>
   dateStr
     ? new Date(dateStr).toLocaleDateString("en-GB", {
@@ -96,6 +149,7 @@ function EmployeeLeaves() {
     startDate: "",
     endDate: "",
     reason: "",
+    isHalfDay: false,
     medicalProof: null,
   });
 
@@ -116,13 +170,11 @@ function EmployeeLeaves() {
 
   const requestedDays =
     formData.startDate && formData.endDate
-      ? Math.max(
-        Math.floor(
-          (new Date(formData.endDate) - new Date(formData.startDate)) /
-          (1000 * 60 * 60 * 24),
-        ) + 1,
-        0,
-      )
+      ? getLeaveDuration(
+          formData.startDate,
+          formData.endDate,
+          formData.isHalfDay,
+        )
       : 0;
   const availableLeaveTypes = policies
     .filter((policy) => policy.leave_type && policy.is_enabled)
@@ -216,13 +268,21 @@ function EmployeeLeaves() {
       payload.append("startDate", formData.startDate);
       payload.append("endDate", formData.endDate);
       payload.append("reason", formData.reason || "");
+      payload.append("is_half_day", String(formData.isHalfDay));
       if (formData.medicalProof) {
         payload.append("medicalProof", formData.medicalProof);
       }
 
       await api.post("/leave", payload);
       toast.success("Leave request submitted");
-      setFormData({ type: "", startDate: "", endDate: "", reason: "", medicalProof: null });
+      setFormData({
+        type: "",
+        startDate: "",
+        endDate: "",
+        reason: "",
+        isHalfDay: false,
+        medicalProof: null,
+      });
       fetchMyLeaves();
     } catch (error) {
       console.error("Error submitting leave:", error);
@@ -266,17 +326,17 @@ function EmployeeLeaves() {
                     {String(item.leave_type || "other")}
                   </p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">
-                    {Number(item.balance || 0)}
+                    {formatLeaveValue(item.balance)}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Available balance
                   </p>
                   <p className="text-xs text-gray-400 mt-2">
-                    Used: {Number(item.used_days || 0)}
+                    Used: {formatLeaveValue(item.used_days)}
                   </p>
                   {Number(item.pending_days || 0) > 0 && (
                     <p className="text-xs text-amber-600 mt-1">
-                      Pending: {Number(item.pending_days || 0)}
+                      Pending: {formatLeaveValue(item.pending_days)}
                     </p>
                   )}
                 </CardContent>
@@ -368,10 +428,15 @@ function EmployeeLeaves() {
                   type="date"
                   value={formData.startDate}
                   onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      startDate: e.target.value,
-                    }))
+                    setFormData((prev) => {
+                      const nextStartDate = e.target.value;
+
+                      return {
+                        ...prev,
+                        startDate: nextStartDate,
+                        endDate: prev.isHalfDay ? nextStartDate : prev.endDate,
+                      };
+                    })
                   }
                   className="h-9 text-sm"
                   required
@@ -406,8 +471,42 @@ function EmployeeLeaves() {
                     }))
                   }
                   className="h-9 text-sm"
+                  disabled={formData.isHalfDay}
                   required
                 />
+                {formData.isHalfDay && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    For half-day leave, the start date and end date will be the same.
+                  </p>
+                )}
+              </div>
+
+              <div className="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="isHalfDay"
+                    checked={formData.isHalfDay}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        isHalfDay: checked === true,
+                        endDate: checked === true ? prev.startDate : prev.endDate,
+                      }))
+                    }
+                    className="mt-0.5"
+                  />
+                  <div className="space-y-1">
+                    <Label
+                      htmlFor="isHalfDay"
+                      className="text-sm font-medium text-amber-900"
+                    >
+                      Apply as half day
+                    </Label>
+                    <p className="text-xs text-amber-800">
+                      Half-day leave can only be applied for a single date and is counted as 0.5 day.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="md:col-span-2 space-y-1">
@@ -460,6 +559,12 @@ function EmployeeLeaves() {
               )}
 
               <div className="md:col-span-2">
+                <p className="mb-3 text-xs text-gray-500">
+                  Requested duration:{" "}
+                  <span className="font-semibold text-gray-700">
+                    {requestedDays} {requestedDays === 1 ? "day" : "days"}
+                  </span>
+                </p>
                 <Button
                   type="submit"
                   disabled={submitting}
@@ -497,6 +602,7 @@ function EmployeeLeaves() {
               {leaveList.map((leave) => {
                 const cfg =
                   STATUS_CONFIG[leave.status] || STATUS_CONFIG.pending;
+                const halfDay = isHalfDayLeave(leave);
                 return (
                   <div
                     key={leave.leave_id || leave.id}
@@ -512,6 +618,14 @@ function EmployeeLeaves() {
                               String(leave.type || "").slice(1)}{" "}
                             Leave
                           </p>
+                          {halfDay && (
+                            <Badge
+                              variant="outline"
+                              className="border-amber-200 bg-amber-50 text-amber-800"
+                            >
+                              Half Day
+                            </Badge>
+                          )}
                           <Badge
                             className={`inline-flex items-center gap-1 border text-xs font-medium ${cfg.badge}`}
                           >
@@ -524,6 +638,22 @@ function EmployeeLeaves() {
                           <span>{formatDate(leave.start_date)}</span>
                           <ArrowRight className="w-3 h-3 text-gray-400" />
                           <span>{formatDate(leave.end_date)}</span>
+                          <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                            {getLeaveDuration(
+                              leave.start_date,
+                              leave.end_date,
+                              halfDay,
+                            )}{" "}
+                            {halfDay
+                              ? "day"
+                              : getLeaveDuration(
+                                  leave.start_date,
+                                  leave.end_date,
+                                  halfDay,
+                                ) === 1
+                                ? "day"
+                                : "days"}
+                          </span>
                         </div>
                         {leave.reason && (
                           <p className="text-xs text-gray-500 mt-1.5">
