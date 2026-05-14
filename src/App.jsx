@@ -23,6 +23,7 @@ import Workspace from "./pages/Workspace";
 import WorkspaceBoard from "./pages/WorkspaceBoard";
 import EmployeeLogin from "./pages/EmployeeLogin";
 import EmployeeWebLogin from "./pages/EmployeeWebLogin";
+import SupportLogin from "./pages/SupportLogin";
 import EmployeeAttendanceTab from "./components/EmployeeAttendanceTab";
 import EmployeeLeaves from "./pages/EmployeeLeaves";
 import EmployeeHolidays from "./pages/EmployeeHolidays";
@@ -44,6 +45,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/support-login" element={<SupportLogin />} />
           <Route path="/employee-login" element={<EmployeeLogin />} />
           <Route path="/employee-login/web" element={<EmployeeWebLogin />} />
           <Route

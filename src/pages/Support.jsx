@@ -52,6 +52,8 @@ const prettifyStatus = (value) =>
 const Support = () => {
   const role = String(localStorage.getItem("role") || "").toLowerCase();
   const isAdmin = role.includes("admin");
+  const isSupport = role.includes("support");
+  const canManageAllTickets = isAdmin || isSupport;
 
   const [tickets, setTickets] = useState([]);
   const [commentsByTicket, setCommentsByTicket] = useState({});
@@ -227,67 +229,71 @@ const Support = () => {
           <p className="text-gray-500 mt-1 text-sm">
             {isAdmin
               ? "Create issues, review all employee issues, and respond from one place."
+              : isSupport
+              ? "Review and respond to support issues from all organizations."
               : "Raise an issue with screenshot support and track replies from admin or support."}
           </p>
         </div>
 
-        <Card className="border-gray-200 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-gray-800 flex items-center gap-2">
-              <Plus className="w-4 h-4 text-indigo-600" />
-              Raise Support Issue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreateTicket} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2 space-y-1">
-                <Label className="text-xs text-gray-500 font-medium">Issue Title</Label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="Example: Attendance not marking from mobile"
-                  className="h-9 text-sm"
-                />
-              </div>
-              <div className="md:col-span-2 space-y-1">
-                <Label className="text-xs text-gray-500 font-medium">Description</Label>
-                <Textarea
-                  rows={4}
-                  value={formData.description}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                  placeholder="Describe the issue, steps, and expected result..."
-                  className="text-sm resize-none"
-                />
-              </div>
-              <div className="md:col-span-2 space-y-1">
-                <Label className="text-xs text-gray-500 font-medium">Screenshot</Label>
-                <Input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      attachment: e.target.files?.[0] || null,
-                    }))
-                  }
-                  className="h-10 text-sm"
-                />
-                <p className="text-xs text-gray-500">
-                  Optional. Upload JPG, PNG, or WEBP up to 5 MB.
-                </p>
-              </div>
-              <div className="md:col-span-2">
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-5 text-sm font-medium"
-                >
-                  {submitting ? "Submitting..." : "Submit Issue"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        {!isSupport && (
+          <Card className="border-gray-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                <Plus className="w-4 h-4 text-indigo-600" />
+                Raise Support Issue
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateTicket} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2 space-y-1">
+                  <Label className="text-xs text-gray-500 font-medium">Issue Title</Label>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder="Example: Attendance not marking from mobile"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-1">
+                  <Label className="text-xs text-gray-500 font-medium">Description</Label>
+                  <Textarea
+                    rows={4}
+                    value={formData.description}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                    placeholder="Describe the issue, steps, and expected result..."
+                    className="text-sm resize-none"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-1">
+                  <Label className="text-xs text-gray-500 font-medium">Screenshot</Label>
+                  <Input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        attachment: e.target.files?.[0] || null,
+                      }))
+                    }
+                    className="h-10 text-sm"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Optional. Upload JPG, PNG, or WEBP up to 5 MB.
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <Button
+                    type="submit"
+                    disabled={submitting}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-5 text-sm font-medium"
+                  >
+                    {submitting ? "Submitting..." : "Submit Issue"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-6">
           <div className="space-y-4">
@@ -356,7 +362,7 @@ const Support = () => {
                       </Badge>
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-500">
-                      <span>{isAdmin ? ticket.employee_name : "My Ticket"}</span>
+                      <span>{canManageAllTickets ? `${ticket.employee_name}${ticket.organization_name ? ` • ${ticket.organization_name}` : ""}` : "My Ticket"}</span>
                       <span>{formatDate(ticket.created_at)}</span>
                     </div>
                   </button>
@@ -379,7 +385,9 @@ const Support = () => {
                     <div>
                       <h2 className="text-lg font-semibold text-gray-900">{activeTicket.title}</h2>
                       <p className="text-sm text-gray-500 mt-1">
-                        Raised by {activeTicket.employee_name} on {formatDate(activeTicket.created_at)}
+                        Raised by {activeTicket.employee_name}
+                        {activeTicket.organization_name ? ` • ${activeTicket.organization_name}` : ""}
+                        {" "}on {formatDate(activeTicket.created_at)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -388,7 +396,7 @@ const Support = () => {
                       >
                         {prettifyStatus(activeTicket.status)}
                       </Badge>
-                      {isAdmin && (
+                      {canManageAllTickets && (
                         <Select
                           value={activeTicket.status}
                           onValueChange={(value) => handleStatusUpdate(activeTicket.id, value)}
