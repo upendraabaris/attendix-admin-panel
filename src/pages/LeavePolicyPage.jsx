@@ -33,7 +33,8 @@ const LEAVE_TYPES = [
   "casual",
   "compensation",
   "paternity",
-  "vacation"
+  "vacation",
+  "unpaid"
 ];
 
 const DEFAULT_FORM_DATA = {
@@ -518,7 +519,7 @@ const LeavePolicyPage = () => {
                 <Select
                   value={formData.leave_type}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, leave_type: value }))
+                    setFormData((prev) => ({ ...prev, leave_type: value, yearly_limit: value === "unpaid" ? 365 : prev.yearly_limit }))
                   }
                 >
                   <SelectTrigger>
@@ -534,7 +535,7 @@ const LeavePolicyPage = () => {
                 </Select>
               </div>
 
-              {!isRuleBased && (
+              {!isRuleBased && formData.leave_type !== "unpaid" && (
                 <div>
                   <Label>Yearly Limit</Label>
                   <Input
