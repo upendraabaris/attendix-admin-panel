@@ -15,6 +15,7 @@ import {
   FileBarChart,
   Scale,
   CheckSquare,
+  Settings
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -41,6 +42,7 @@ const Layout = ({ children }) => {
       { name: "Employee Task", href: "/tasks", icon: CheckSquare },
       { name: "Workspace", href: "/workspace", icon: Briefcase },
       { name: "Reports", href: "/reports", icon: FileBarChart },
+      { name: "Tracking Settings", href: "/tracking-settings", icon: Settings }
     ];
   } else {
     navigation = [

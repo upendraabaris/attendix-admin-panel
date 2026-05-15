@@ -1,7 +1,7 @@
 import * as React from "react";
 import ReactDOM from "react-dom";
 import { format, subDays, startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, startOfQuarter, subQuarters, endOfQuarter } from "date-fns";
-import { Calendar as CalendarIcon, Download, FileBarChart, Clock, Users, ChevronDown, Check } from "lucide-react";
+import { Calendar as CalendarIcon, Download, FileBarChart, Clock, Users, ChevronDown, Check, Eye } from "lucide-react";
 import api from "../hooks/useApi";
 import { cn } from "../lib/utils";
 import { Button } from "../components/ui/button";
@@ -17,6 +17,9 @@ import {
     TableRow,
 } from "../components/ui/table";
 import { toast } from "sonner";
+// import { useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
+
 
 // ─── Preset Definitions ─────────────────────────────────────────────────────
 const today = () => new Date();
@@ -207,18 +210,66 @@ function PresetDropdown({ selectedPreset, onSelect }) {
 }
 
 export default function Reports() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
+
+    // 1. Initial State from URL or default
+    const [startDate, setStartDate] = React.useState(
+        searchParams.get("start") || formatDate(subDays(new Date(), 29))
+    );
+    const [endDate, setEndDate] = React.useState(
+        searchParams.get("end") || formatDate(new Date())
+    );
+
     const [selectedPreset, setSelectedPreset] = React.useState("Last 30 Days");
-    const [startDate, setStartDate] = React.useState(() => formatDate(subDays(new Date(), 29)));
-    const [endDate, setEndDate] = React.useState(() => formatDate(new Date()));
     const [isCustom, setIsCustom] = React.useState(false);
     const [report, setReport] = React.useState(null);
     const [isGenerating, setIsGenerating] = React.useState(false);
+
+    // 2. Extracted Fetch Logic
+    const fetchReportData = async (start, end) => {
+        setIsGenerating(true);
+        try {
+            const res = await api.get(`/reports/attendance-summary`, {
+                params: { startDate: start, endDate: end }
+            });
+
+            if (res.data.statusCode === 200) {
+                setReport({
+                    ...res.data.data.summary,
+                    rows: res.data.data.rows,
+                    start: new Date(start),
+                    end: new Date(end)
+                });
+            } else {
+                toast.error(res.data.message || "Failed to generate report");
+            }
+        } catch (error) {
+            console.error("Report Fetch Error:", error);
+            const errMsg = error.response?.data?.message || "An error occurred while calling the API";
+            toast.error(errMsg);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    // 3. React to URL Changes
+    React.useEffect(() => {
+        const start = searchParams.get("start");
+        const end = searchParams.get("end");
+
+        if (start && end) {
+            fetchReportData(start, end);
+            // Sync state with URL if they differ (e.g., direct navigation)
+            setStartDate(start);
+            setEndDate(end);
+        }
+    }, [searchParams]);
 
     const handlePresetSelect = (preset) => {
         setSelectedPreset(preset.label);
         if (preset.label === "Custom Range") {
             setIsCustom(true);
-            // Keep existing dates as starting point for custom
         } else {
             const range = preset.getValue();
             setStartDate(formatDate(range.start));
@@ -246,7 +297,7 @@ export default function Reports() {
     }, [startDate, endDate]);
 
 
-    const handleGenerate = async () => {
+    const handleGenerate = () => {
         if (!startDate || !endDate) {
             toast.error("Please select both start and end dates");
             return;
@@ -256,31 +307,8 @@ export default function Reports() {
             return;
         }
 
-        setIsGenerating(true);
-        try {
-            // ✅ Using the standard api hook
-            const res = await api.get(`/reports/attendance-summary`, {
-                params: { startDate, endDate }
-            });
-
-            if (res.data.statusCode === 200) {
-                setReport({
-                    ...res.data.data.summary,
-                    rows: res.data.data.rows,
-                    start: new Date(startDate),
-                    end: new Date(endDate)
-                });
-                toast.success("Report generated successfully");
-            } else {
-                toast.error(res.data.message || "Failed to generate report");
-            }
-        } catch (error) {
-            console.error("Report Fetch Error:", error);
-            const errMsg = error.response?.data?.message || "An error occurred while calling the API";
-            toast.error(errMsg);
-        } finally {
-            setIsGenerating(false);
-        }
+        // Just update URL params - useEffect handles the fetching
+        setSearchParams({ start: startDate, end: endDate });
     };
 
     return (
@@ -465,6 +493,7 @@ export default function Reports() {
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Extra Days Worked</TableHead>
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Leaves Taken</TableHead>
                                                 <TableHead className="text-right py-3 font-bold text-slate-500 pr-6 text-[10px] uppercase tracking-wider">Holidays</TableHead>
+                                                <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Break Details</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -501,6 +530,17 @@ export default function Reports() {
                                                     <TableCell className="text-right pr-6">
                                                         <span className="text-slate-500 font-semibold text-sm">{r.holidays} Days</span>
                                                     </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => navigate(`/reports/breaks/${r.employee_id}?start=${startDate}&end=${endDate}&name=${r.name}`)}
+                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 w-8 p-0 rounded-full"
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+
                                                 </TableRow>
                                             ))}
                                         </TableBody>
