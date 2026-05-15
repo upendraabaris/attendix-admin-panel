@@ -493,7 +493,7 @@ export default function Reports() {
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Extra Days Worked</TableHead>
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Leaves Taken</TableHead>
                                                 <TableHead className="text-right py-3 font-bold text-slate-500 pr-6 text-[10px] uppercase tracking-wider">Holidays</TableHead>
-                                                <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Break Details</TableHead>
+                                                {/* <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Break Details</TableHead> */}
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -530,7 +530,7 @@ export default function Reports() {
                                                     <TableCell className="text-right pr-6">
                                                         <span className="text-slate-500 font-semibold text-sm">{r.holidays} Days</span>
                                                     </TableCell>
-                                                    <TableCell className="text-center">
+                                                    {/* <TableCell className="text-center">
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -539,7 +539,7 @@ export default function Reports() {
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
-                                                    </TableCell>
+                                                    </TableCell> */}
 
                                                 </TableRow>
                                             ))}
