@@ -33,16 +33,32 @@ const STATUS_STYLES = {
   closed: "bg-slate-200 text-slate-700 border-slate-300",
 };
 
-const formatDate = (value) =>
-  value
-    ? new Date(value).toLocaleString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "-";
+// const formatDate = (value) =>
+//   value
+//     ? new Date(value).toLocaleString("en-GB", {
+//         day: "2-digit",
+//         month: "short",
+//         year: "numeric",
+//         hour: "2-digit",
+//         minute: "2-digit",
+//       })
+//     : "-";
+const formatDate = (value) => {
+  if (!value) return "-";
+
+  const date = new Date(value);
+
+  date.setMinutes(date.getMinutes() + 330);
+
+  return date.toLocaleString("en-GB", {
+    hour12: false,
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
 const prettifyStatus = (value) =>
   String(value || "open")
