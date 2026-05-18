@@ -155,15 +155,19 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+         <Route
+            path="/reports/breaks/:employeeId"
+            element={
+              <ProtectedRoute>
+                <BreakHistoryPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/support"
             element={
               <ProtectedRoute>
                 <Support />
-            path="/reports/breaks/:employeeId"
-            element={
-              <ProtectedRoute>
-                <BreakHistoryPage />
               </ProtectedRoute>
             }
           />
