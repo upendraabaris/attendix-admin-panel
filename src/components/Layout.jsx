@@ -15,6 +15,7 @@ import {
   FileBarChart,
   Scale,
   CheckSquare,
+  LifeBuoy,
   Settings
 } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -28,6 +29,7 @@ const Layout = ({ children }) => {
   const role = localStorage.getItem("role");
   const normalizedRole = (role || "").toLowerCase();
   const isAdminRole = normalizedRole.includes("admin");
+  const isSupportRole = normalizedRole.includes("support");
   const orgID = localStorage.getItem("orgID");
 
   let navigation = [];
@@ -42,8 +44,11 @@ const Layout = ({ children }) => {
       { name: "Employee Task", href: "/tasks", icon: CheckSquare },
       { name: "Workspace", href: "/workspace", icon: Briefcase },
       { name: "Reports", href: "/reports", icon: FileBarChart },
+      { name: "Support", href: "/support", icon: LifeBuoy },
       // { name: "Tracking Settings", href: "/tracking-settings", icon: Settings }
     ];
+  } else if (isSupportRole) {
+    navigation = [{ name: "Support", href: "/support", icon: LifeBuoy }];
   } else {
     navigation = [
       { name: "Attendance", href: "/employee-attendance", icon: Clock },
@@ -54,6 +59,7 @@ const Layout = ({ children }) => {
       ...(orgID !== "13"
         ? [{ name: "Workspace", href: "/workspace", icon: Briefcase }]
         : []),
+      { name: "Support", href: "/support", icon: LifeBuoy },
     ];
   }
 
@@ -67,7 +73,8 @@ const Layout = ({ children }) => {
   const isActive = (href) =>
     location.pathname === href || location.pathname.startsWith(href + "/");
 
-  const displayName = employeeName || (isAdminRole ? "Admin User" : "Employee User");
+  const displayName =
+    employeeName || (isAdminRole ? "Admin User" : isSupportRole ? "Support User" : "Employee User");
   const initials = displayName
     .split(" ")
     .map((w) => w[0])
@@ -103,7 +110,7 @@ const Layout = ({ children }) => {
           {sidebarOpen && (
             <div className="overflow-hidden">
               <p className="font-semibold text-sm text-slate-800 whitespace-nowrap leading-tight">
-                {isAdminRole ? "Admin Panel" : "Employee Portal"}
+                {isAdminRole ? "Admin Panel" : isSupportRole ? "Support Portal" : "Employee Portal"}
               </p>
               <p className="text-[11px] text-slate-400 whitespace-nowrap">Management Suite</p>
             </div>

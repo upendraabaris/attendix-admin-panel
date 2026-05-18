@@ -23,6 +23,7 @@ import Workspace from "./pages/Workspace";
 import WorkspaceBoard from "./pages/WorkspaceBoard";
 import EmployeeLogin from "./pages/EmployeeLogin";
 import EmployeeWebLogin from "./pages/EmployeeWebLogin";
+import SupportLogin from "./pages/SupportLogin";
 import EmployeeAttendanceTab from "./components/EmployeeAttendanceTab";
 import EmployeeLeaves from "./pages/EmployeeLeaves";
 import EmployeeHolidays from "./pages/EmployeeHolidays";
@@ -32,6 +33,7 @@ import LeavePolicyPage from "./pages/LeavePolicyPage";
 import WorkWeekPolicyPage from "./pages/WorkWeekPolicyPage";
 import HolidayManagementPage from "./pages/HolidayManagementPage";
 import Reports from "./pages/Reports";
+import Support from "./pages/Support";
 import TrackingSettings from "./pages/TrackingSettings";
 import BreakHistoryPage from "./components/BreakHistoryPage";
 
@@ -45,6 +47,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/support-login" element={<SupportLogin />} />
           <Route path="/employee-login" element={<EmployeeLogin />} />
           <Route path="/employee-login/web" element={<EmployeeWebLogin />} />
           <Route
@@ -153,6 +156,10 @@ const App = () => (
             }
           />
           <Route
+            path="/support"
+            element={
+              <ProtectedRoute>
+                <Support />
             path="/reports/breaks/:employeeId"
             element={
               <ProtectedRoute>

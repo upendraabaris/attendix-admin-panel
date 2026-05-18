@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -9,62 +9,36 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import { Shield, Mail, Lock } from "lucide-react";
+import { Headset, Mail, Lock } from "lucide-react";
 import api from "../hooks/useApi";
-import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
-const Login = () => {
+const SupportLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault()
-  //   setIsLoading(true)
-
-  //   // Simulate authentication
-  //   setTimeout(() => {
-  //     setIsLoading(false)
-  //     localStorage.setItem('isAuthenticated', 'true')
-  //     navigate('/dashboard')
-  //   }, 1000)
-  // }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const res = await api.post("/auth/admin-dashboard", {
+      const res = await api.post("/auth/support-dashboard", {
         email,
         password,
       });
 
       const { token, user } = res.data;
-      const organizationID =
-        user.organization_id ??
-        user.organizationId ??
-        user.organizationID ??
-        user.org_id ??
-        user.organization?.id ??
-        null;
-      const employeeRole = user.employee_role || user.role; // ✅ naya field
-
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      if (organizationID != null) {
-        localStorage.setItem("orgID", String(organizationID));
-      } else {
-        localStorage.removeItem("orgID");
-      }
-      localStorage.setItem("role", employeeRole); // ✅ add this line
-      localStorage.setItem("employee_id", String(user.employee_id || ""));
-      localStorage.setItem("employee_name", user.employee_name || "");
+      localStorage.removeItem("orgID");
+      localStorage.removeItem("employee_id");
+      localStorage.setItem("employee_name", user.name || "");
+      localStorage.setItem("role", "support");
 
-      navigate("/dashboard");
+      navigate("/support");
     } catch (err) {
       const msg = err.response?.data?.error || "Login failed";
       toast.error(msg);
@@ -74,16 +48,16 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
-            <Shield className="w-8 h-8 text-white" />
+          <div className="mx-auto w-16 h-16 bg-sky-600 rounded-full flex items-center justify-center">
+            <Headset className="w-8 h-8 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
-            Admin Portal
+            Support Portal
           </CardTitle>
-          <p className="text-gray-600">Employee Management System</p>
+          <p className="text-gray-600">Global support issue access</p>
         </CardHeader>
 
         <CardContent>
@@ -96,11 +70,11 @@ const Login = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter email"
+                placeholder="Enter support email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                className="transition-all duration-200 focus:ring-2 focus:ring-sky-500"
               />
             </div>
 
@@ -116,34 +90,25 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                className="transition-all duration-200 focus:ring-2 focus:ring-sky-500"
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+              className="w-full bg-sky-600 hover:bg-sky-700 transition-colors duration-200"
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
-            {/* ✅ Employee login link */}
-            <p className="text-center text-sm text-gray-600 mt-4">
-              Are you an employee?{" "}
-              <Link
-                to="/employee-login/web"
-                className="text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Employee Web Login
-              </Link>
-            </p>
+
             <p className="text-center text-sm text-gray-600">
-              Are you support staff?{" "}
+              Back to{" "}
               <Link
-                to="/support-login"
+                to="/login"
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
-                Support Login
+                Admin Login
               </Link>
             </p>
           </form>
@@ -153,4 +118,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default SupportLogin;
