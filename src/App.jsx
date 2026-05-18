@@ -34,6 +34,8 @@ import WorkWeekPolicyPage from "./pages/WorkWeekPolicyPage";
 import HolidayManagementPage from "./pages/HolidayManagementPage";
 import Reports from "./pages/Reports";
 import Support from "./pages/Support";
+import TrackingSettings from "./pages/TrackingSettings";
+import BreakHistoryPage from "./components/BreakHistoryPage";
 
 const queryClient = new QueryClient();
 
@@ -158,6 +160,10 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Support />
+            path="/reports/breaks/:employeeId"
+            element={
+              <ProtectedRoute>
+                <BreakHistoryPage />
               </ProtectedRoute>
             }
           />
@@ -173,7 +179,7 @@ const App = () => (
             path="/employee-attendance"
             element={
               <ProtectedRoute>
-                <EmployeeAttendanceTab/>
+                <EmployeeAttendanceTab />
               </ProtectedRoute>
             }
           />
@@ -234,6 +240,14 @@ const App = () => (
             }
           />
           <Route path="/workspace/:id" element={<WorkspaceBoard />} />
+          <Route
+            path="/tracking-settings"
+            element={
+              <ProtectedRoute>
+                <TrackingSettings />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

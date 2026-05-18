@@ -33,7 +33,8 @@ const LEAVE_TYPES = [
   "casual",
   "compensation",
   "paternity",
-  "vacation"
+  "vacation",
+  "unpaid"
 ];
 
 const DEFAULT_FORM_DATA = {
@@ -518,7 +519,7 @@ const LeavePolicyPage = () => {
                 <Select
                   value={formData.leave_type}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, leave_type: value }))
+                    setFormData((prev) => ({ ...prev, leave_type: value, yearly_limit: value === "unpaid" ? 365 : prev.yearly_limit }))
                   }
                 >
                   <SelectTrigger>
@@ -534,7 +535,7 @@ const LeavePolicyPage = () => {
                 </Select>
               </div>
 
-              {!isRuleBased && (
+              {!isRuleBased && formData.leave_type !== "unpaid" && (
                 <div>
                   <Label>Yearly Limit</Label>
                   <Input
@@ -720,9 +721,11 @@ const LeavePolicyPage = () => {
                           ? getSickDocumentRuleText(policy.document_days_required)
                           : policy.leave_type === "compensation"
                             ? `Expires in ${policy.expire_limit || "?"} day(s)`
-                            : policyIsRuleBased
-                              ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave${policy.leave_type === "casual" && policy.max_consecutive_days ? ` | Max ${policy.max_consecutive_days} consecutive days` : ""}`
-                              : "-"}
+                            : policy.leave_type === "vacation"
+                              ? "Vacation leave will be deducted from earned leave balance"
+                              : policyIsRuleBased
+                                ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave${policy.leave_type === "casual" && policy.max_consecutive_days ? ` | Max ${policy.max_consecutive_days} consecutive days` : ""}`
+                                : "-"}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
