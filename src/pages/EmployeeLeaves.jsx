@@ -370,7 +370,7 @@ function EmployeeLeaves() {
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="Select leave type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  {/* <SelectContent>
                     {availableLeaveTypes.map((type) => (
                       <SelectItem
                         key={type}
@@ -380,6 +380,19 @@ function EmployeeLeaves() {
                         {type.charAt(0).toUpperCase() + type.slice(1)}
                       </SelectItem>
                     ))}
+                  </SelectContent> */}
+                  <SelectContent>
+                    {availableLeaveTypes
+                      .filter((type) => type !== "other")
+                      .map((type) => (
+                        <SelectItem
+                          key={type}
+                          value={type}
+                          className="cursor-pointer"
+                        >
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {!availableLeaveTypes.length && (
