@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "../ui/select";
 
-const LEAVE_TYPES = ["sick", "personal", "other", "earned"];
+const LEAVE_TYPES = ["sick", "personal", "earned"];
 const EARNED_LEAVE_DEFAULTS = {
   yearly_limit: 12,
   earned_days_required: 1,

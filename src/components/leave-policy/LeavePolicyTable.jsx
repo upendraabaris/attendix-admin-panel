@@ -23,7 +23,12 @@ const LeavePolicyTable = ({ policies = [], onEdit }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {policies.filter((policy) => policy.leave_type !== "vacation").map((policy) => (
+          {policies
+            .filter(
+              (policy) =>
+                policy.leave_type !== "vacation" && policy.leave_type !== "other",
+            )
+            .map((policy) => (
             <TableRow key={`${policy.leave_type}-${policy.id || "new"}`}>
               <TableCell className="font-medium capitalize">{policy.leave_type}</TableCell>
               <TableCell>{policy.leave_type === "earned" ? 12 : policy.yearly_limit}</TableCell>

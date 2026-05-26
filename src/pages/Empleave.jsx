@@ -86,6 +86,7 @@ const STATUS_CONFIG = {
     label: "Pending",
   },
 };
+const HIDDEN_LEAVE_TYPES = ["other"];
 
 function Empleave() {
   const { id } = useParams();
@@ -119,14 +120,17 @@ function Empleave() {
 
   const filteredLeaves =
     statusFilter === "all"
-      ? leaves
-      : leaves.filter((l) => l.status === statusFilter);
+      ? leaves.filter((leave) => !HIDDEN_LEAVE_TYPES.includes(leave.type))
+      : leaves.filter(
+          (l) =>
+            l.status === statusFilter && !HIDDEN_LEAVE_TYPES.includes(l.type),
+        );
 
   const counts = {
-    all: leaves.length,
-    pending: leaves.filter((l) => l.status === "pending").length,
-    approved: leaves.filter((l) => l.status === "approved").length,
-    rejected: leaves.filter((l) => l.status === "rejected").length,
+    all: leaves.filter((leave) => !HIDDEN_LEAVE_TYPES.includes(leave.type)).length,
+    pending: leaves.filter((l) => l.status === "pending" && !HIDDEN_LEAVE_TYPES.includes(l.type)).length,
+    approved: leaves.filter((l) => l.status === "approved" && !HIDDEN_LEAVE_TYPES.includes(l.type)).length,
+    rejected: leaves.filter((l) => l.status === "rejected" && !HIDDEN_LEAVE_TYPES.includes(l.type)).length,
   };
 
   return (

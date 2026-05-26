@@ -16,6 +16,7 @@ import api from "../hooks/useApi";
 
 const RULE_BASED_TYPES = ["earned", "casual"];
 const EARNED_LEAVE_YEARLY_LIMIT = 12;
+const HIDDEN_LEAVE_TYPES = ["other"];
 
 const getSickDocumentRuleText = (documentDaysRequired) => {
   const proofDays = Number(documentDaysRequired ?? 0);
@@ -48,7 +49,7 @@ const EmployeeLeavePolicy = () => {
   }, []);
 
   const visiblePolicies = policies.filter(
-    (policy) => policy.leave_type,
+    (policy) => policy.leave_type && !HIDDEN_LEAVE_TYPES.includes(policy.leave_type),
   );
 
   return (
