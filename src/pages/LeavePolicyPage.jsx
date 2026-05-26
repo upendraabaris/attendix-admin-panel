@@ -28,7 +28,6 @@ import {
 const LEAVE_TYPES = [
   "sick",
   "personal",
-  "other",
   "earned",
   "casual",
   "compensation",
@@ -49,6 +48,7 @@ const DEFAULT_FORM_DATA = {
 };
 
 const RULE_BASED_TYPES = ["earned", "casual"];
+const HIDDEN_LEAVE_TYPES = ["other"];
 
 const isRuleBasedLeave = (leaveType) => RULE_BASED_TYPES.includes(leaveType);
 
@@ -468,7 +468,7 @@ const LeavePolicyPage = () => {
 
   const isRuleBased = isRuleBasedLeave(formData.leave_type);
   const visiblePolicies = policies.filter(
-    (policy) => policy.leave_type,
+    (policy) => policy.leave_type && !HIDDEN_LEAVE_TYPES.includes(policy.leave_type),
   );
 
   const fetchPolicies = async () => {
