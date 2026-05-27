@@ -45,7 +45,7 @@ const Layout = ({ children }) => {
       { name: "Workspace", href: "/workspace", icon: Briefcase },
       { name: "Reports", href: "/reports", icon: FileBarChart },
       { name: "Support", href: "/support", icon: LifeBuoy },
-      // { name: "Tracking Settings", href: "/tracking-settings", icon: Settings }
+      { name: "Tracking Settings", href: "/tracking-settings", icon: Settings }
     ];
   } else if (isSupportRole) {
     navigation = [{ name: "Support", href: "/support", icon: LifeBuoy }];
