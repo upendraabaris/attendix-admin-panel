@@ -343,7 +343,7 @@ const WorkWeekPolicyPage = () => {
                         Mark missed clock-ins as absent
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
-                        At midnight, employees with no clock-in for the completed day get an Other leave request with Absent as the reason. Weekly offs and holidays are skipped.
+                        At midnight, employees with no clock-in for the completed day get an Unpaid leave request with Absent as the reason. Weekly offs and holidays are skipped.
                       </p>
                     </div>
                 

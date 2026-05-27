@@ -16,6 +16,7 @@ import {
   Scale,
   CheckSquare,
   LifeBuoy,
+  MessageSquare,
   Settings
 } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -44,6 +45,7 @@ const Layout = ({ children }) => {
       { name: "Employee Task", href: "/tasks", icon: CheckSquare },
       { name: "Workspace", href: "/workspace", icon: Briefcase },
       { name: "Reports", href: "/reports", icon: FileBarChart },
+      { name: "Chat", href: "/chat", icon: MessageSquare },
       { name: "Support", href: "/support", icon: LifeBuoy },
       // { name: "Tracking Settings", href: "/tracking-settings", icon: Settings }
     ];
@@ -59,6 +61,7 @@ const Layout = ({ children }) => {
       ...(orgID !== "13"
         ? [{ name: "Workspace", href: "/workspace", icon: Briefcase }]
         : []),
+      { name: "Chat", href: "/chat", icon: MessageSquare },
       { name: "Support", href: "/support", icon: LifeBuoy },
     ];
   }
