@@ -538,7 +538,7 @@ export default function Reports() {
                                                             {r.unpaidLeaves || 0} days
                                                         </span>
                                                     </TableCell>
-                                                    {/* <TableCell className="text-center">
+                                                    <TableCell className="text-center">
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -547,7 +547,7 @@ export default function Reports() {
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
-                                                    </TableCell> */}
+                                                    </TableCell>
 
                                                 </TableRow>
                                             ))}
