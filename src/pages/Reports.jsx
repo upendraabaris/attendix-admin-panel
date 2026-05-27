@@ -493,6 +493,9 @@ export default function Reports() {
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Extra Days Worked</TableHead>
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Leaves Taken</TableHead>
                                                 <TableHead className="text-right py-3 font-bold text-slate-500 pr-6 text-[10px] uppercase tracking-wider">Holidays</TableHead>
+                                                <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">
+                                                    Unpaid Leave
+                                                </TableHead>
                                                 {/* <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Break Details</TableHead> */}
                                             </TableRow>
                                         </TableHeader>
@@ -529,6 +532,11 @@ export default function Reports() {
                                                     </TableCell>
                                                     <TableCell className="text-right pr-6">
                                                         <span className="text-slate-500 font-semibold text-sm">{r.holidays} Days</span>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <span className="px-3 py-1 rounded-full bg-yellow-50 text-yellow-700 font-bold text-[11px] border border-yellow-100/50">
+                                                            {r.unpaidLeaves || 0} days
+                                                        </span>
                                                     </TableCell>
                                                     <TableCell className="text-center">
                                                         <Button

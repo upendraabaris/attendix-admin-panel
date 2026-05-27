@@ -36,6 +36,7 @@ import Reports from "./pages/Reports";
 import Support from "./pages/Support";
 import TrackingSettings from "./pages/TrackingSettings";
 import BreakHistoryPage from "./components/BreakHistoryPage";
+import Chat from "./pages/Chat";
 
 const queryClient = new QueryClient();
 
@@ -168,6 +169,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Support />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <Chat />
               </ProtectedRoute>
             }
           />
