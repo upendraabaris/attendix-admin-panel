@@ -39,6 +39,7 @@ const Layout = ({ children }) => {
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Employees", href: "/employees", icon: Users },
       { name: "Leave Requests", href: "/leaves", icon: Calendar },
+      { name: "Leave Report", href: "/leave-report", icon: FileBarChart },
       { name: "Leave Policy", href: "/leave-policy", icon: KeyRound },
       { name: "Work Week Policy", href: "/work-week-policy", icon: Scale },
       { name: "Attendance", href: "/attendance", icon: Clock },
@@ -55,6 +56,7 @@ const Layout = ({ children }) => {
     navigation = [
       { name: "Attendance", href: "/employee-attendance", icon: Clock },
       { name: "Leave Request", href: "/employee-leaves", icon: Calendar },
+      { name: "Leave Report", href: "/leave-report", icon: FileBarChart },
       { name: "Work Week Policy", href: "/employee-work-week-policy", icon: Scale },
       { name: "Leave Policy", href: "/employee-leave-policy", icon: KeyRound },
       { name: "Holiday", href: "/employee-holidays", icon: CalendarDays },

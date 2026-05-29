@@ -31,7 +31,7 @@ import {
   SendHorizonal,
 } from "lucide-react";
 
-const HIDDEN_BALANCE_TYPES = ["vacation"];
+const HIDDEN_BALANCE_TYPES = ["vacation","unpaid", "other","compensation"];
 // const SICK_LEAVE_PROOF_THRESHOLD_DAYS = 2;
 
 // const getLeaveTypeHelpText = (leaveType) => {

@@ -37,6 +37,7 @@ import Support from "./pages/Support";
 import TrackingSettings from "./pages/TrackingSettings";
 import BreakHistoryPage from "./components/BreakHistoryPage";
 import Chat from "./pages/Chat";
+import LeaveReport from "./pages/LeaveReport";
 
 const queryClient = new QueryClient();
 
@@ -129,6 +130,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <LeavePolicyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leave-report"
+            element={
+              <ProtectedRoute>
+                <LeaveReport />
               </ProtectedRoute>
             }
           />
