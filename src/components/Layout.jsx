@@ -1,6 +1,6 @@
-﻿// export default Layout;
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { io } from "socket.io-client";
 import {
   LayoutDashboard,
   Users,
@@ -17,14 +17,44 @@ import {
   CheckSquare,
   LifeBuoy,
   MessageSquare,
-  Settings
+  Settings,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import BASE_URL from "../config/apiConfig";
+
+const CHAT_UNREAD_STORAGE_KEY = "chat_unread_counts";
+const CHAT_ACTIVE_CONVERSATION_KEY = "chat_active_conversation_id";
+const CHAT_UNREAD_EVENT = "chat-unread-updated";
+const SOCKET_URL = BASE_URL.replace(/\/api\/?$/, "");
+
+const readUnreadMap = () => {
+  try {
+    const rawValue = localStorage.getItem(CHAT_UNREAD_STORAGE_KEY);
+    return rawValue ? JSON.parse(rawValue) : {};
+  } catch (_error) {
+    return {};
+  }
+};
+
+const writeUnreadMap = (nextUnreadMap) => {
+  localStorage.setItem(CHAT_UNREAD_STORAGE_KEY, JSON.stringify(nextUnreadMap));
+  window.dispatchEvent(new CustomEvent(CHAT_UNREAD_EVENT));
+};
+
+const getUnreadTotal = (unreadMap) =>
+  Object.values(unreadMap || {}).reduce(
+    (total, count) => total + Number(count || 0),
+    0
+  );
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [chatUnreadTotal, setChatUnreadTotal] = useState(() =>
+    getUnreadTotal(readUnreadMap())
+  );
   const navigate = useNavigate();
   const location = useLocation();
+  const locationRef = useRef(location.pathname);
 
   const employeeName = localStorage.getItem("employee_name");
   const role = localStorage.getItem("role");
@@ -32,6 +62,68 @@ const Layout = ({ children }) => {
   const isAdminRole = normalizedRole.includes("admin");
   const isSupportRole = normalizedRole.includes("support");
   const orgID = localStorage.getItem("orgID");
+  const employeeId = Number(localStorage.getItem("employee_id") || 0);
+
+  useEffect(() => {
+    locationRef.current = location.pathname;
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const syncUnreadCount = () => {
+      setChatUnreadTotal(getUnreadTotal(readUnreadMap()));
+    };
+
+    syncUnreadCount();
+    window.addEventListener(CHAT_UNREAD_EVENT, syncUnreadCount);
+    window.addEventListener("storage", syncUnreadCount);
+
+    return () => {
+      window.removeEventListener(CHAT_UNREAD_EVENT, syncUnreadCount);
+      window.removeEventListener("storage", syncUnreadCount);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isSupportRole) {
+      return undefined;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      return undefined;
+    }
+
+    const socket = io(SOCKET_URL, {
+      auth: { token },
+      transports: ["websocket", "polling"],
+    });
+
+    const syncUnreadFromConversation = (conversation) => {
+      const conversationId = Number(conversation?.id || 0);
+      if (!conversationId) {
+        return;
+      }
+
+      const currentUnreadMap = readUnreadMap();
+      const nextUnreadMap = { ...currentUnreadMap };
+      const unreadCount = Number(conversation?.unread_count || 0);
+
+      if (unreadCount > 0) {
+        nextUnreadMap[conversationId] = unreadCount;
+      } else {
+        delete nextUnreadMap[conversationId];
+      }
+
+      writeUnreadMap(nextUnreadMap);
+    };
+
+    socket.on("chat:conversation:updated", syncUnreadFromConversation);
+    socket.on("chat:conversation:read", syncUnreadFromConversation);
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [employeeId, isSupportRole]);
 
   let navigation = [];
   if (isAdminRole) {
@@ -48,7 +140,7 @@ const Layout = ({ children }) => {
       { name: "Reports", href: "/reports", icon: FileBarChart },
       { name: "Chat", href: "/chat", icon: MessageSquare },
       { name: "Support", href: "/support", icon: LifeBuoy },
-      { name: "Tracking Settings", href: "/tracking-settings", icon: Settings }
+      { name: "Tracking Settings", href: "/tracking-settings", icon: Settings },
     ];
   } else if (isSupportRole) {
     navigation = [{ name: "Support", href: "/support", icon: LifeBuoy }];
@@ -69,9 +161,18 @@ const Layout = ({ children }) => {
   }
 
   const handleLogout = () => {
-    ["token", "user", "isAuthenticated", "orgID", "role", "employee_id", "employee_name"].forEach(
-      (k) => localStorage.removeItem(k)
-    );
+    [
+      "token",
+      "user",
+      "isAuthenticated",
+      "orgID",
+      "role",
+      "employee_id",
+      "employee_name",
+      CHAT_UNREAD_STORAGE_KEY,
+      CHAT_ACTIVE_CONVERSATION_KEY,
+    ].forEach((k) => localStorage.removeItem(k));
+    window.dispatchEvent(new CustomEvent(CHAT_UNREAD_EVENT));
     navigate("/login", { replace: true });
   };
 
@@ -79,7 +180,12 @@ const Layout = ({ children }) => {
     location.pathname === href || location.pathname.startsWith(href + "/");
 
   const displayName =
-    employeeName || (isAdminRole ? "Admin User" : isSupportRole ? "Support User" : "Employee User");
+    employeeName ||
+    (isAdminRole
+      ? "Admin User"
+      : isSupportRole
+        ? "Support User"
+        : "Employee User");
   const initials = displayName
     .split(" ")
     .map((w) => w[0])
@@ -92,7 +198,6 @@ const Layout = ({ children }) => {
       className="min-h-screen flex"
       style={{ backgroundColor: "#f0f4f8", fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}
     >
-      {/* Sidebar */}
       <aside
         className={cn(
           "flex flex-col h-screen sticky top-0 transition-all duration-300 ease-in-out flex-shrink-0",
@@ -104,7 +209,6 @@ const Layout = ({ children }) => {
           boxShadow: "2px 0 16px rgba(0,0,0,0.05)",
         }}
       >
-        {/* Logo */}
         <div className="flex items-center px-4 py-5 min-h-[68px] gap-3" style={{ borderBottom: "1px solid #e5eaf2" }}>
           <div
             className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
@@ -122,11 +226,11 @@ const Layout = ({ children }) => {
           )}
         </div>
 
-        {/* Nav items */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {navigation.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            const isChatItem = item.href === "/chat";
             return (
               <button
                 key={item.name}
@@ -148,19 +252,36 @@ const Layout = ({ children }) => {
                   className={active ? "text-blue-500" : "text-slate-400 group-hover:text-slate-500"}
                 />
                 {sidebarOpen && (
-                  <span className="text-sm truncate">{item.name}</span>
+                  <>
+                    <span className="text-sm truncate">{item.name}</span>
+                    {isChatItem && chatUnreadTotal > 0 ? (
+                      <span
+                        className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white"
+                        style={{ background: "#16a34a" }}
+                      >
+                        {chatUnreadTotal > 99 ? "99+" : chatUnreadTotal}
+                      </span>
+                    ) : null}
+                  </>
                 )}
                 {!sidebarOpen && (
                   <div className="absolute left-full ml-3 px-2.5 py-1 rounded-lg bg-slate-800 text-white text-xs whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-lg">
                     {item.name}
                   </div>
                 )}
+                {!sidebarOpen && isChatItem && chatUnreadTotal > 0 ? (
+                  <span
+                    className="absolute right-2 top-2 inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white"
+                    style={{ background: "#16a34a" }}
+                  >
+                    {chatUnreadTotal > 9 ? "9+" : chatUnreadTotal}
+                  </span>
+                ) : null}
               </button>
             );
           })}
         </nav>
 
-        {/* Bottom: user + logout */}
         <div className="px-3 pb-4 pt-2 space-y-1" style={{ borderTop: "1px solid #e5eaf2" }}>
           {sidebarOpen && (
             <div
@@ -204,10 +325,7 @@ const Layout = ({ children }) => {
         </div>
       </aside>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-
-        {/* Topbar */}
         <header
           className="flex items-center justify-between px-6 sticky top-0 z-20 min-h-[68px]"
           style={{
