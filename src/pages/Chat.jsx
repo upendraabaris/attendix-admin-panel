@@ -652,6 +652,9 @@ import api from "../hooks/useApi";
 import BASE_URL from "../config/apiConfig";
 
 const SOCKET_URL = BASE_URL.replace(/\/api\/?$/, "");
+const CHAT_UNREAD_STORAGE_KEY = "chat_unread_counts";
+const CHAT_ACTIVE_CONVERSATION_KEY = "chat_active_conversation_id";
+const CHAT_UNREAD_EVENT = "chat-unread-updated";
 
 const getTimeLabel = (value) => {
   if (!value) return "";
@@ -684,6 +687,20 @@ const upsertConversation = (items, next) => {
 const upsertMessage = (items, next) => {
   if (items.some((i) => Number(i.id) === Number(next.id))) return items;
   return [...items, next];
+};
+
+const readUnreadMap = () => {
+  try {
+    const rawValue = localStorage.getItem(CHAT_UNREAD_STORAGE_KEY);
+    return rawValue ? JSON.parse(rawValue) : {};
+  } catch (_error) {
+    return {};
+  }
+};
+
+const writeUnreadMap = (nextUnreadMap) => {
+  localStorage.setItem(CHAT_UNREAD_STORAGE_KEY, JSON.stringify(nextUnreadMap));
+  window.dispatchEvent(new CustomEvent(CHAT_UNREAD_EVENT));
 };
 
 const getInitials = (name = "") =>
@@ -738,6 +755,7 @@ export default function Chat() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [activeTab, setActiveTab] = useState("chats"); // "chats" | "contacts"
+  const [unreadMap, setUnreadMap] = useState(() => readUnreadMap());
 
   const socketRef = useRef(null);
   const selectedConversationIdRef = useRef(null);
@@ -747,6 +765,47 @@ export default function Chat() {
 
   useEffect(() => { selectedConversationIdRef.current = selectedConversation?.id || null; }, [selectedConversation]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  useEffect(() => {
+    const syncUnreadMap = () => {
+      setUnreadMap(readUnreadMap());
+    };
+
+    syncUnreadMap();
+    window.addEventListener(CHAT_UNREAD_EVENT, syncUnreadMap);
+    window.addEventListener("storage", syncUnreadMap);
+
+    return () => {
+      window.removeEventListener(CHAT_UNREAD_EVENT, syncUnreadMap);
+      window.removeEventListener("storage", syncUnreadMap);
+    };
+  }, []);
+
+  useEffect(() => {
+    const conversationId = selectedConversation?.id
+      ? String(selectedConversation.id)
+      : "";
+
+    if (conversationId) {
+      localStorage.setItem(CHAT_ACTIVE_CONVERSATION_KEY, conversationId);
+    } else {
+      localStorage.removeItem(CHAT_ACTIVE_CONVERSATION_KEY);
+    }
+
+    return () => {
+      localStorage.removeItem(CHAT_ACTIVE_CONVERSATION_KEY);
+    };
+  }, [selectedConversation?.id]);
+
+  const markConversationAsRead = (conversationId) => {
+    if (!conversationId) return;
+
+    const nextUnreadMap = { ...readUnreadMap() };
+    if (!nextUnreadMap[conversationId]) return;
+
+    delete nextUnreadMap[conversationId];
+    writeUnreadMap(nextUnreadMap);
+  };
 
   const loadSidebarData = async () => {
     setLoadingSidebar(true);
@@ -771,6 +830,7 @@ export default function Chat() {
 
   const openConversation = async (conversation) => {
     if (!conversation?.id) return;
+    markConversationAsRead(conversation.id);
     setSelectedConversation(conversation);
     setLoadingMessages(true);
     try {
@@ -995,10 +1055,16 @@ export default function Chat() {
                   const selected = Number(selectedConversation?.id) === Number(conv.id);
                   const admin = isAdmin(conv.other_employee_role);
                   const timeStr = getTimeLabel(conv.last_message_created_at || conv.updated_at) || getDateLabel(conv.created_at);
+                  const unreadCount = Number(unreadMap?.[conv.id] || 0);
                   return (
                     <div
                       key={conv.id}
                       className={`conv-item ${selected ? "active" : ""}`}
+                      style={
+                        unreadCount > 0 && !selected
+                          ? { background: "#f0fdf4", borderColor: "#86efac" }
+                          : undefined
+                      }
                       onClick={() => openConversation(conv)}
                     >
                       <Avatar name={conv.other_employee_name || "?"} size={42} isAdmin={admin} />
@@ -1006,12 +1072,48 @@ export default function Chat() {
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <span className="conv-name">{conv.other_employee_name || "Direct chat"}</span>
                           {admin && <span className="badge badge-admin">Admin</span>}
+                          {unreadCount > 0 && !selected ? (
+                            <span
+                              style={{
+                                marginLeft: 4,
+                                minWidth: 18,
+                                height: 18,
+                                borderRadius: 999,
+                                background: "#16a34a",
+                                color: "#fff",
+                                fontSize: 10,
+                                fontWeight: 700,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: "0 6px",
+                              }}
+                            >
+                              {unreadCount > 99 ? "99+" : unreadCount}
+                            </span>
+                          ) : null}
                         </div>
-                        <div className="conv-preview">
+                        <div
+                          className="conv-preview"
+                          style={
+                            unreadCount > 0 && !selected
+                              ? { color: "#166534", fontWeight: 600 }
+                              : undefined
+                          }
+                        >
                           {conv.last_message_text || conv.last_message_attachment_name || "No messages yet"}
                         </div>
                       </div>
-                      <div className="conv-time">{timeStr}</div>
+                      <div
+                        className="conv-time"
+                        style={
+                          unreadCount > 0 && !selected
+                            ? { color: "#166534", fontWeight: 700 }
+                            : undefined
+                        }
+                      >
+                        {timeStr}
+                      </div>
                     </div>
                   );
                 })
