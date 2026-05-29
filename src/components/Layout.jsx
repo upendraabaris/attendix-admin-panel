@@ -36,6 +36,11 @@ const readUnreadMap = () => {
   }
 };
 
+const writeUnreadMap = (nextUnreadMap) => {
+  localStorage.setItem(CHAT_UNREAD_STORAGE_KEY, JSON.stringify(nextUnreadMap));
+  window.dispatchEvent(new CustomEvent(CHAT_UNREAD_EVENT));
+};
+
 const getUnreadTotal = (unreadMap) =>
   Object.values(unreadMap || {}).reduce(
     (total, count) => total + Number(count || 0),
@@ -93,37 +98,27 @@ const Layout = ({ children }) => {
       transports: ["websocket", "polling"],
     });
 
-    socket.on("chat:message:new", ({ message }) => {
-      const conversationId = Number(message?.conversation_id || 0);
+    const syncUnreadFromConversation = (conversation) => {
+      const conversationId = Number(conversation?.id || 0);
       if (!conversationId) {
         return;
       }
 
-      if (Number(message?.sender_employee_id || 0) === employeeId) {
-        return;
-      }
-
-      const activeConversationId = Number(
-        localStorage.getItem(CHAT_ACTIVE_CONVERSATION_KEY) || 0
-      );
-      const isChatPageOpen = locationRef.current.startsWith("/chat");
-
-      if (isChatPageOpen && activeConversationId === conversationId) {
-        return;
-      }
-
       const currentUnreadMap = readUnreadMap();
-      const nextUnreadMap = {
-        ...currentUnreadMap,
-        [conversationId]: Number(currentUnreadMap?.[conversationId] || 0) + 1,
-      };
+      const nextUnreadMap = { ...currentUnreadMap };
+      const unreadCount = Number(conversation?.unread_count || 0);
 
-      localStorage.setItem(
-        CHAT_UNREAD_STORAGE_KEY,
-        JSON.stringify(nextUnreadMap)
-      );
-      window.dispatchEvent(new CustomEvent(CHAT_UNREAD_EVENT));
-    });
+      if (unreadCount > 0) {
+        nextUnreadMap[conversationId] = unreadCount;
+      } else {
+        delete nextUnreadMap[conversationId];
+      }
+
+      writeUnreadMap(nextUnreadMap);
+    };
+
+    socket.on("chat:conversation:updated", syncUnreadFromConversation);
+    socket.on("chat:conversation:read", syncUnreadFromConversation);
 
     return () => {
       socket.disconnect();
