@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import Layout from "../components/Layout";
 import { Card, CardContent } from "../components/ui/card";
@@ -21,13 +21,45 @@ import {
   Clock,
   AlertTriangle,
   UserCircle2,
+  CalendarDays,
 } from "lucide-react";
 import api from "../hooks/useApi";
 
+const formatDateOnly = (value) => {
+  if (!value) return null;
+
+  const rawValue = String(value).trim();
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(rawValue);
+  if (isDateOnly) {
+    return rawValue;
+  }
+
+  const parsed = new Date(rawValue);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  return formatter.format(parsed);
+};
+
+const formatCompOffReason = (reason) => {
+  if (reason === "weekly_off") return "Weekly Off";
+  if (reason === "holiday") return "Holiday";
+  return "Comp Off";
+};
+
 const parseWorkedHours = (workedTime) => {
   if (!workedTime || workedTime === "N/A") return -1;
-  if (workedTime === "Missing Clock Out" || workedTime.includes("Invalid time"))
+  if (workedTime === "Missing Clock Out" || workedTime.includes("Invalid time")) {
     return -2;
+  }
   const hMatch = workedTime.match(/(\d+)h/);
   const mMatch = workedTime.match(/(\d+)m/);
   const h = hMatch ? parseInt(hMatch[1]) : 0;
@@ -36,22 +68,25 @@ const parseWorkedHours = (workedTime) => {
 };
 
 const getStatusCell = (workedTime) => {
-  if (workedTime === "Missing Clock Out")
+  if (workedTime === "Missing Clock Out") {
     return (
       <span className="inline-flex items-center gap-1 text-red-600 font-medium text-xs">
         <AlertTriangle className="w-3.5 h-3.5" />
         Missing Clock Out
       </span>
     );
-  if (workedTime && workedTime.includes("Invalid time"))
+  }
+  if (workedTime && workedTime.includes("Invalid time")) {
     return (
       <span className="inline-flex items-center gap-1 text-red-600 font-medium text-xs">
         <AlertTriangle className="w-3.5 h-3.5" />
         Invalid Time
       </span>
     );
-  if (!workedTime || workedTime === "N/A")
+  }
+  if (!workedTime || workedTime === "N/A") {
     return <span className="text-gray-400 text-sm">—</span>;
+  }
   return (
     <Badge className="bg-green-100 text-green-800 border border-green-200 whitespace-nowrap font-medium">
       {workedTime}
@@ -60,8 +95,9 @@ const getStatusCell = (workedTime) => {
 };
 
 const SortIcon = ({ column, sortConfig }) => {
-  if (sortConfig.key !== column)
+  if (sortConfig.key !== column) {
     return <ChevronsUpDown className="w-3.5 h-3.5 ml-1 inline opacity-40" />;
+  }
   return sortConfig.direction === "asc" ? (
     <ChevronUp className="w-3.5 h-3.5 ml-1 inline text-indigo-600" />
   ) : (
@@ -94,6 +130,7 @@ function EmpAttendance() {
     endDate: getToday(),
   });
   const [attendance, setAttendance] = useState([]);
+  const [compOffHistoryMap, setCompOffHistoryMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState({
     key: "date",
@@ -101,6 +138,29 @@ function EmpAttendance() {
   });
 
   const orgID = localStorage.getItem("orgID");
+
+  const fetchCompOffHistory = async () => {
+    if (!id) {
+      setCompOffHistoryMap({});
+      return;
+    }
+
+    try {
+      const res = await api.get(`/comp-off/history/${id}`);
+      const nextMap = {};
+
+      (res?.data?.data || []).forEach((item) => {
+        const workDate = formatDateOnly(item.work_date);
+        if (!workDate) return;
+        nextMap[workDate] = item;
+      });
+
+      setCompOffHistoryMap(nextMap);
+    } catch (error) {
+      console.error("Error fetching comp off history:", error);
+      setCompOffHistoryMap({});
+    }
+  };
 
   const fetchAttendance = async () => {
     try {
@@ -114,8 +174,10 @@ function EmpAttendance() {
         },
       });
       setAttendance(res.data.data || []);
+      await fetchCompOffHistory();
     } catch (err) {
       console.error("Error fetching employee attendance:", err);
+      setCompOffHistoryMap({});
     } finally {
       setLoading(false);
     }
@@ -153,20 +215,33 @@ function EmpAttendance() {
     });
   }, [attendance, sortConfig]);
 
+  const getCompOffEntry = (record) => {
+    const workDate = formatDateOnly(record.date);
+    if (!workDate) {
+      return null;
+    }
+    return compOffHistoryMap[workDate] || null;
+  };
+
   const totalHours = useMemo(
     () =>
       attendance
-        .reduce((total, r) => {
-          const h = parseWorkedHours(r.worked_time);
-          return total + (h > 0 ? h : 0);
+        .reduce((total, record) => {
+          const hours = parseWorkedHours(record.worked_time);
+          return total + (hours > 0 ? hours : 0);
         }, 0)
         .toFixed(1),
     [attendance],
   );
 
   const missingCount = attendance.filter(
-    (r) => r.worked_time === "Missing Clock Out",
+    (record) => record.worked_time === "Missing Clock Out",
   ).length;
+
+  const compOffCount = useMemo(
+    () => sorted.filter((record) => Boolean(getCompOffEntry(record))).length,
+    [sorted, compOffHistoryMap],
+  );
 
   const SortableHead = ({ column, label }) => (
     <TableHead
@@ -181,8 +256,6 @@ function EmpAttendance() {
   return (
     <Layout>
       <div className="space-y-6">
-
-        {/* Page Header */}
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-indigo-50">
             <UserCircle2 className="w-7 h-7 text-indigo-600" />
@@ -193,8 +266,7 @@ function EmpAttendance() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center gap-4">
             <div className="p-2.5 rounded-lg bg-indigo-50">
               <ClipboardList className="w-5 h-5 text-indigo-600" />
@@ -214,6 +286,15 @@ function EmpAttendance() {
             </div>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center gap-4">
+            <div className="p-2.5 rounded-lg bg-amber-50">
+              <CalendarDays className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{compOffCount}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Comp Off Earned Days</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center gap-4">
             <div className="p-2.5 rounded-lg bg-red-50">
               <AlertTriangle className="w-5 h-5 text-red-500" />
             </div>
@@ -224,7 +305,6 @@ function EmpAttendance() {
           </div>
         </div>
 
-        {/* Date Filters */}
         <Card className="border-gray-200 shadow-sm">
           <CardContent className="p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -250,7 +330,6 @@ function EmpAttendance() {
           </CardContent>
         </Card>
 
-        {/* Table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
@@ -278,6 +357,9 @@ function EmpAttendance() {
                       Status
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Comp Off
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Clock In Address
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -288,6 +370,8 @@ function EmpAttendance() {
                 <TableBody>
                   {sorted.map((record, index) => {
                     const isMissing = record.worked_time === "Missing Clock Out";
+                    const compOffEntry = getCompOffEntry(record);
+
                     return (
                       <TableRow
                         key={index}
@@ -316,6 +400,15 @@ function EmpAttendance() {
                           {record.clock_out || "—"}
                         </TableCell>
                         <TableCell>{getStatusCell(record.worked_time)}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {compOffEntry ? (
+                            <Badge className="bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap font-medium">
+                              {formatCompOffReason(compOffEntry.reason)}
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400 text-sm">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm text-gray-500 min-w-[200px] whitespace-normal break-words">
                           {record.clock_in_address || "—"}
                         </TableCell>
@@ -330,7 +423,6 @@ function EmpAttendance() {
             </div>
           )}
         </div>
-
       </div>
     </Layout>
   );
