@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { io } from "socket.io-client";
 import {
   LayoutDashboard,
   Users,
@@ -20,13 +19,11 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import BASE_URL from "../config/apiConfig";
+import { createAppSocket } from "../lib/socketConfig";
 
 const CHAT_UNREAD_STORAGE_KEY = "chat_unread_counts";
 const CHAT_ACTIVE_CONVERSATION_KEY = "chat_active_conversation_id";
 const CHAT_UNREAD_EVENT = "chat-unread-updated";
-const SOCKET_URL = BASE_URL.replace(/\/api\/?$/, "");
-
 const readUnreadMap = () => {
   try {
     const rawValue = localStorage.getItem(CHAT_UNREAD_STORAGE_KEY);
@@ -93,10 +90,7 @@ const Layout = ({ children }) => {
       return undefined;
     }
 
-    const socket = io(SOCKET_URL, {
-      auth: { token },
-      transports: ["websocket", "polling"],
-    });
+    const socket = createAppSocket(token, "layout");
 
     const syncUnreadFromConversation = (conversation) => {
       const conversationId = Number(conversation?.id || 0);
