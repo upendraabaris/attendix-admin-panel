@@ -1,7 +1,7 @@
 import * as React from "react";
 import ReactDOM from "react-dom";
 import { format, subDays, startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, startOfQuarter, subQuarters, endOfQuarter } from "date-fns";
-import { Calendar as CalendarIcon, Download, FileBarChart, Clock, Users, ChevronDown, Check, Eye } from "lucide-react";
+import { Calendar as CalendarIcon, Download, FileBarChart, Clock, Users, ChevronDown, Check, Eye, X, Briefcase, TreePalm, AlertCircle, Loader2 } from "lucide-react";
 import api from "../hooks/useApi";
 import { cn } from "../lib/utils";
 import { Button } from "../components/ui/button";
@@ -209,6 +209,112 @@ function PresetDropdown({ selectedPreset, onSelect }) {
     );
 }
 
+// ─── Detail Popup Component ──────────────────────────────────────────────────
+function DetailPopup({ open, onClose, title, color, icon, data, loading }) {
+    // Trap close on Escape
+    React.useEffect(() => {
+        if (!open) return;
+        const handleKey = (e) => { if (e.key === "Escape") onClose(); };
+        document.addEventListener("keydown", handleKey);
+        return () => document.removeEventListener("keydown", handleKey);
+    }, [open, onClose]);
+
+    if (!open) return null;
+
+    const colorMap = {
+        purple: { bg: "bg-purple-500", light: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", badge: "bg-purple-100 text-purple-700 border border-purple-200" },
+        rose:   { bg: "bg-rose-500",   light: "bg-rose-50",   text: "text-rose-700",   border: "border-rose-200",   badge: "bg-rose-100 text-rose-700 border border-rose-200" },
+        yellow: { bg: "bg-yellow-500", light: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200", badge: "bg-yellow-100 text-yellow-700 border border-yellow-200" },
+        amber:  { bg: "bg-amber-500",  light: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200",  badge: "bg-amber-100 text-amber-700 border border-amber-200" },
+    };
+    const c = colorMap[color] || colorMap.purple;
+
+    const formatDisplayDate = (dateStr) => {
+        try {
+            const [y, m, d] = dateStr.split("-");
+            const dt = new Date(Number(y), Number(m) - 1, Number(d));
+            return dt.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+        } catch { return dateStr; }
+    };
+
+    return ReactDOM.createPortal(
+        <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center"
+            style={{ backgroundColor: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div
+                className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+                style={{ maxHeight: "80vh", animation: "popupIn 0.2s cubic-bezier(0.34,1.56,0.64,1) both" }}
+            >
+                {/* Header */}
+                <div className={`${c.bg} px-6 py-4 flex items-center justify-between`}>
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white">
+                            {icon}
+                        </div>
+                        <div>
+                            <p className="text-white font-bold text-sm tracking-tight">{title}</p>
+                            <p className="text-white/70 text-[11px]">{loading ? "Loading..." : `${data?.length || 0} record${data?.length !== 1 ? "s" : ""} found`}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="overflow-y-auto" style={{ maxHeight: "calc(80vh - 80px)" }}>
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-3">
+                            <Loader2 className={`w-8 h-8 animate-spin ${c.text}`} />
+                            <p className="text-slate-400 text-sm">Fetching details...</p>
+                        </div>
+                    ) : !data || data.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-3">
+                            <div className={`w-14 h-14 rounded-2xl ${c.light} flex items-center justify-center`}>
+                                <AlertCircle className={`w-7 h-7 ${c.text} opacity-50`} />
+                            </div>
+                            <p className="text-slate-400 text-sm font-medium">No records found for this period</p>
+                        </div>
+                    ) : (
+                        <ul className="divide-y divide-slate-50">
+                            {data.map((item, idx) => (
+                                <li key={idx} className="flex items-start gap-4 px-6 py-3.5 hover:bg-slate-50/60 transition-colors">
+                                    <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${c.bg} mt-2`} />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-slate-700 font-semibold text-sm">
+                                            {formatDisplayDate(item.date)}
+                                        </p>
+                                        {(item.reason || item.type || item.name) && (
+                                            <p className="text-slate-400 text-xs mt-0.5">
+                                                {item.name || item.type}{item.reason ? ` — ${item.reason}` : ""}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${c.badge}`}>
+                                        {item.reason || item.type || ""}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            </div>
+            <style>{`
+                @keyframes popupIn {
+                    from { opacity: 0; transform: scale(0.88) translateY(16px); }
+                    to   { opacity: 1; transform: scale(1) translateY(0); }
+                }
+            `}</style>
+        </div>,
+        document.body
+    );
+}
+
 export default function Reports() {
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -225,6 +331,34 @@ export default function Reports() {
     const [isCustom, setIsCustom] = React.useState(false);
     const [report, setReport] = React.useState(null);
     const [isGenerating, setIsGenerating] = React.useState(false);
+
+    // Popup state
+    const [popup, setPopup] = React.useState({ open: false, title: "", color: "purple", icon: null, data: [], loading: false });
+
+    const openPopup = async (row, type) => {
+        const configs = {
+            extraDays:    { title: `Extra Days Worked — ${row.name}`,  color: "purple", icon: <Briefcase className="w-4 h-4" />,    dataKey: "extraDays" },
+            leaves:       { title: `Leaves Taken — ${row.name}`,       color: "rose",   icon: <TreePalm className="w-4 h-4" />,     dataKey: "leaves" },
+            unpaidLeaves: { title: `Unpaid Leaves — ${row.name}`,      color: "yellow", icon: <AlertCircle className="w-4 h-4" />,  dataKey: "unpaidLeaves" },
+            holidays:     { title: `Holidays — ${row.name}`,           color: "amber",  icon: <CalendarIcon className="w-4 h-4" />, dataKey: "holidays" },
+        };
+        const cfg = configs[type];
+        setPopup({ open: true, title: cfg.title, color: cfg.color, icon: cfg.icon, data: [], loading: true });
+        try {
+            const res = await api.get("/reports/employee-details", {
+                params: { employeeId: row.employee_id, startDate, endDate }
+            });
+            if (res.data.statusCode === 200) {
+                setPopup(prev => ({ ...prev, loading: false, data: res.data.data[cfg.dataKey] || [] }));
+            } else {
+                setPopup(prev => ({ ...prev, loading: false, data: [] }));
+            }
+        } catch {
+            setPopup(prev => ({ ...prev, loading: false, data: [] }));
+        }
+    };
+
+    const closePopup = () => setPopup(prev => ({ ...prev, open: false }));
 
     // 2. Extracted Fetch Logic
     const fetchReportData = async (start, end) => {
@@ -492,10 +626,11 @@ export default function Reports() {
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Actual Working Days</TableHead>
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Extra Days Worked</TableHead>
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Leaves Taken</TableHead>
-                                                <TableHead className="text-right py-3 font-bold text-slate-500 pr-6 text-[10px] uppercase tracking-wider">Holidays</TableHead>
-                                                <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">
+                                                
+                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">
                                                     Unpaid Leave
                                                 </TableHead>
+                                                <TableHead className="text-right py-3 font-bold text-slate-500 pr-6 text-[10px] uppercase tracking-wider">Holidays</TableHead>
                                                 {/* <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Break Details</TableHead> */}
                                             </TableRow>
                                         </TableHeader>
@@ -521,23 +656,50 @@ export default function Reports() {
                                                         </span>
                                                     </TableCell>
                                                     <TableCell className="text-center">
-                                                        <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-600 font-bold text-[11px] border border-rose-100/50">
+                                                        <button
+                                                            onClick={() => r.nonWorkingDaysWorked > 0 && openPopup(r, "extraDays")}
+                                                            title={r.nonWorkingDaysWorked > 0 ? "Click to see dates" : ""}
+                                                            className={`px-3 py-1 rounded-full bg-purple-50 text-purple-700 font-bold text-[11px] border border-purple-100/50 transition-all ${
+                                                                r.nonWorkingDaysWorked > 0 ? "cursor-pointer hover:bg-purple-100 hover:scale-105 hover:shadow-md" : "opacity-60 cursor-default"
+                                                            }`}
+                                                        >
                                                             {r.nonWorkingDaysWorked} Days
-                                                        </span>
+                                                        </button>
                                                     </TableCell>
                                                     <TableCell className="text-center">
-                                                        <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-600 font-bold text-[11px] border border-rose-100/50">
+                                                        <button
+                                                            onClick={() => (r.leaves || 0) > 0 && openPopup(r, "leaves")}
+                                                            title={(r.leaves || 0) > 0 ? "Click to see dates" : ""}
+                                                            className={`px-3 py-1 rounded-full bg-rose-50 text-rose-600 font-bold text-[11px] border border-rose-100/50 transition-all ${
+                                                                (r.leaves || 0) > 0 ? "cursor-pointer hover:bg-rose-100 hover:scale-105 hover:shadow-md" : "opacity-60 cursor-default"
+                                                            }`}
+                                                        >
                                                             {r.leaves || 0} Days
-                                                        </span>
+                                                        </button>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <button
+                                                            onClick={() => (r.unpaidLeaves || 0) > 0 && openPopup(r, "unpaidLeaves")}
+                                                            title={(r.unpaidLeaves || 0) > 0 ? "Click to see dates" : ""}
+                                                            className={`px-3 py-1 rounded-full bg-yellow-50 text-yellow-700 font-bold text-[11px] border border-yellow-100/50 transition-all ${
+                                                                (r.unpaidLeaves || 0) > 0 ? "cursor-pointer hover:bg-yellow-100 hover:scale-105 hover:shadow-md" : "opacity-60 cursor-default"
+                                                            }`}
+                                                        >
+                                                            {r.unpaidLeaves || 0} Days
+                                                        </button>
                                                     </TableCell>
                                                     <TableCell className="text-right pr-6">
-                                                        <span className="text-slate-500 font-semibold text-sm">{r.holidays} Days</span>
+                                                        <button
+                                                            onClick={() => r.holidays > 0 && openPopup(r, "holidays")}
+                                                            title={r.holidays > 0 ? "Click to see dates" : ""}
+                                                            className={`text-amber-600 font-semibold text-sm transition-all ${
+                                                                r.holidays > 0 ? "cursor-pointer hover:text-amber-700 hover:underline" : "text-slate-500 cursor-default"
+                                                            }`}
+                                                        >
+                                                            {r.holidays} Days
+                                                        </button>
                                                     </TableCell>
-                                                    <TableCell className="text-center">
-                                                        <span className="px-3 py-1 rounded-full bg-yellow-50 text-yellow-700 font-bold text-[11px] border border-yellow-100/50">
-                                                            {r.unpaidLeaves || 0} days
-                                                        </span>
-                                                    </TableCell>
+                                                    
                                                     <TableCell className="text-center">
                                                         <Button
                                                             variant="ghost"
@@ -569,8 +731,15 @@ export default function Reports() {
                     </div>
                 )}
             </div>
+        <DetailPopup
+            open={popup.open}
+            onClose={closePopup}
+            title={popup.title}
+            color={popup.color}
+            icon={popup.icon}
+            data={popup.data}
+            loading={popup.loading}
+        />
         </Layout>
     );
 }
-
-
