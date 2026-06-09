@@ -223,9 +223,9 @@ function DetailPopup({ open, onClose, title, color, icon, data, loading }) {
 
     const colorMap = {
         purple: { bg: "bg-purple-500", light: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", badge: "bg-purple-100 text-purple-700 border border-purple-200" },
-        rose:   { bg: "bg-rose-500",   light: "bg-rose-50",   text: "text-rose-700",   border: "border-rose-200",   badge: "bg-rose-100 text-rose-700 border border-rose-200" },
+        rose: { bg: "bg-rose-500", light: "bg-rose-50", text: "text-rose-700", border: "border-rose-200", badge: "bg-rose-100 text-rose-700 border border-rose-200" },
         yellow: { bg: "bg-yellow-500", light: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200", badge: "bg-yellow-100 text-yellow-700 border border-yellow-200" },
-        amber:  { bg: "bg-amber-500",  light: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200",  badge: "bg-amber-100 text-amber-700 border border-amber-200" },
+        amber: { bg: "bg-amber-500", light: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", badge: "bg-amber-100 text-amber-700 border border-amber-200" },
     };
     const c = colorMap[color] || colorMap.purple;
 
@@ -337,10 +337,10 @@ export default function Reports() {
 
     const openPopup = async (row, type) => {
         const configs = {
-            extraDays:    { title: `Extra Days Worked — ${row.name}`,  color: "purple", icon: <Briefcase className="w-4 h-4" />,    dataKey: "extraDays" },
-            leaves:       { title: `Leaves Taken — ${row.name}`,       color: "rose",   icon: <TreePalm className="w-4 h-4" />,     dataKey: "leaves" },
-            unpaidLeaves: { title: `Unpaid Leaves — ${row.name}`,      color: "yellow", icon: <AlertCircle className="w-4 h-4" />,  dataKey: "unpaidLeaves" },
-            holidays:     { title: `Holidays — ${row.name}`,           color: "amber",  icon: <CalendarIcon className="w-4 h-4" />, dataKey: "holidays" },
+            extraDays: { title: `Extra Days Worked — ${row.name}`, color: "purple", icon: <Briefcase className="w-4 h-4" />, dataKey: "extraDays" },
+            leaves: { title: `Leaves Taken — ${row.name}`, color: "rose", icon: <TreePalm className="w-4 h-4" />, dataKey: "leaves" },
+            unpaidLeaves: { title: `Unpaid Leaves — ${row.name}`, color: "yellow", icon: <AlertCircle className="w-4 h-4" />, dataKey: "unpaidLeaves" },
+            holidays: { title: `Holidays — ${row.name}`, color: "amber", icon: <CalendarIcon className="w-4 h-4" />, dataKey: "holidays" },
         };
         const cfg = configs[type];
         setPopup({ open: true, title: cfg.title, color: cfg.color, icon: cfg.icon, data: [], loading: true });
@@ -349,7 +349,20 @@ export default function Reports() {
                 params: { employeeId: row.employee_id, startDate, endDate }
             });
             if (res.data.statusCode === 200) {
-                setPopup(prev => ({ ...prev, loading: false, data: res.data.data[cfg.dataKey] || [] }));
+                // setPopup(prev => ({ ...prev, loading: false, data: res.data.data[cfg.dataKey] || [] }));
+                let popupData = res.data.data[cfg.dataKey] || [];
+
+                if (type === "leaves") {
+                    popupData = popupData.filter(
+                        item => item.type?.toLowerCase() !== "unpaid"
+                    );
+                }
+
+                setPopup(prev => ({
+                    ...prev,
+                    loading: false,
+                    data: popupData
+                }));
             } else {
                 setPopup(prev => ({ ...prev, loading: false, data: [] }));
             }
@@ -626,8 +639,8 @@ export default function Reports() {
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Actual Working Days</TableHead>
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Extra Days Worked</TableHead>
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Leaves Taken</TableHead>
-                                                
-                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">
+
+                                                <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">
                                                     Unpaid Leave
                                                 </TableHead>
                                                 <TableHead className="text-right py-3 font-bold text-slate-500 pr-6 text-[10px] uppercase tracking-wider">Holidays</TableHead>
@@ -659,31 +672,30 @@ export default function Reports() {
                                                         <button
                                                             onClick={() => r.nonWorkingDaysWorked > 0 && openPopup(r, "extraDays")}
                                                             title={r.nonWorkingDaysWorked > 0 ? "Click to see dates" : ""}
-                                                            className={`px-3 py-1 rounded-full bg-purple-50 text-purple-700 font-bold text-[11px] border border-purple-100/50 transition-all ${
-                                                                r.nonWorkingDaysWorked > 0 ? "cursor-pointer hover:bg-purple-100 hover:scale-105 hover:shadow-md" : "opacity-60 cursor-default"
-                                                            }`}
+                                                            className={`px-3 py-1 rounded-full bg-purple-50 text-purple-700 font-bold text-[11px] border border-purple-100/50 transition-all ${r.nonWorkingDaysWorked > 0 ? "cursor-pointer hover:bg-purple-100 hover:scale-105 hover:shadow-md" : "opacity-60 cursor-default"
+                                                                }`}
                                                         >
                                                             {r.nonWorkingDaysWorked} Days
                                                         </button>
                                                     </TableCell>
                                                     <TableCell className="text-center">
                                                         <button
-                                                            onClick={() => (r.leaves || 0) > 0 && openPopup(r, "leaves")}
+                                                            // onClick={() => (r.leaves || 0) > 0 && openPopup(r, "leaves")}
+                                                            onClick={() => Math.max((r.leaves || 0) - (r.unpaidLeaves || 0), 0) > 0 && openPopup(r, "leaves")}
                                                             title={(r.leaves || 0) > 0 ? "Click to see dates" : ""}
-                                                            className={`px-3 py-1 rounded-full bg-rose-50 text-rose-600 font-bold text-[11px] border border-rose-100/50 transition-all ${
-                                                                (r.leaves || 0) > 0 ? "cursor-pointer hover:bg-rose-100 hover:scale-105 hover:shadow-md" : "opacity-60 cursor-default"
-                                                            }`}
+                                                            className={`px-3 py-1 rounded-full bg-rose-50 text-rose-600 font-bold text-[11px] border border-rose-100/50 transition-all ${(r.leaves || 0) > 0 ? "cursor-pointer hover:bg-rose-100 hover:scale-105 hover:shadow-md" : "opacity-60 cursor-default"
+                                                                }`}
                                                         >
-                                                            {r.leaves || 0} Days
+                                                            {/* {r.leaves || 0} Days */}
+                                                            {Math.max((r.leaves || 0) - (r.unpaidLeaves || 0), 0)} Days
                                                         </button>
                                                     </TableCell>
                                                     <TableCell className="text-center">
                                                         <button
                                                             onClick={() => (r.unpaidLeaves || 0) > 0 && openPopup(r, "unpaidLeaves")}
                                                             title={(r.unpaidLeaves || 0) > 0 ? "Click to see dates" : ""}
-                                                            className={`px-3 py-1 rounded-full bg-yellow-50 text-yellow-700 font-bold text-[11px] border border-yellow-100/50 transition-all ${
-                                                                (r.unpaidLeaves || 0) > 0 ? "cursor-pointer hover:bg-yellow-100 hover:scale-105 hover:shadow-md" : "opacity-60 cursor-default"
-                                                            }`}
+                                                            className={`px-3 py-1 rounded-full bg-yellow-50 text-yellow-700 font-bold text-[11px] border border-yellow-100/50 transition-all ${(r.unpaidLeaves || 0) > 0 ? "cursor-pointer hover:bg-yellow-100 hover:scale-105 hover:shadow-md" : "opacity-60 cursor-default"
+                                                                }`}
                                                         >
                                                             {r.unpaidLeaves || 0} Days
                                                         </button>
@@ -692,14 +704,13 @@ export default function Reports() {
                                                         <button
                                                             onClick={() => r.holidays > 0 && openPopup(r, "holidays")}
                                                             title={r.holidays > 0 ? "Click to see dates" : ""}
-                                                            className={`text-amber-600 font-semibold text-sm transition-all ${
-                                                                r.holidays > 0 ? "cursor-pointer hover:text-amber-700 hover:underline" : "text-slate-500 cursor-default"
-                                                            }`}
+                                                            className={`text-amber-600 font-semibold text-sm transition-all ${r.holidays > 0 ? "cursor-pointer hover:text-amber-700 hover:underline" : "text-slate-500 cursor-default"
+                                                                }`}
                                                         >
                                                             {r.holidays} Days
                                                         </button>
                                                     </TableCell>
-                                                    
+
                                                     <TableCell className="text-center">
                                                         <Button
                                                             variant="ghost"
@@ -731,15 +742,15 @@ export default function Reports() {
                     </div>
                 )}
             </div>
-        <DetailPopup
-            open={popup.open}
-            onClose={closePopup}
-            title={popup.title}
-            color={popup.color}
-            icon={popup.icon}
-            data={popup.data}
-            loading={popup.loading}
-        />
+            <DetailPopup
+                open={popup.open}
+                onClose={closePopup}
+                title={popup.title}
+                color={popup.color}
+                icon={popup.icon}
+                data={popup.data}
+                loading={popup.loading}
+            />
         </Layout>
     );
 }
