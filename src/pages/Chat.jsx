@@ -16,6 +16,8 @@ import {
 import Layout from "../components/Layout";
 import api from "../hooks/useApi";
 import { createAppSocket } from "../lib/socketConfig";
+import notificationSound from "../Sound/AttSound.wav";
+
 const CHAT_UNREAD_STORAGE_KEY = "chat_unread_counts";
 const CHAT_ACTIVE_CONVERSATION_KEY = "chat_active_conversation_id";
 const CHAT_UNREAD_EVENT = "chat-unread-updated";
@@ -131,6 +133,7 @@ export default function Chat() {
   const [unreadMap, setUnreadMap] = useState(() => readUnreadMap());
 
   const socketRef = useRef(null);
+  const notificationAudioRef = useRef(null);
   const selectedConversationIdRef = useRef(null);
   const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
@@ -138,6 +141,17 @@ export default function Chat() {
 
   useEffect(() => { selectedConversationIdRef.current = selectedConversation?.id || null; }, [selectedConversation]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => {
+    notificationAudioRef.current = new Audio(notificationSound);
+    notificationAudioRef.current.preload = "auto";
+
+    return () => {
+      if (notificationAudioRef.current) {
+        notificationAudioRef.current.pause();
+        notificationAudioRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const syncUnreadMap = () => {
@@ -183,6 +197,16 @@ export default function Chat() {
     }
 
     writeUnreadMap(nextUnreadMap);
+  };
+
+  const playNotificationSound = () => {
+    const audio = notificationAudioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = 0;
+    audio.play().catch(() => {
+      // Ignore autoplay failures until the browser allows playback.
+    });
   };
 
   const loadSidebarData = async () => {
@@ -272,6 +296,9 @@ export default function Chat() {
       if (conversation) {
         setConversations((cur) => upsertConversation(cur, conversation));
         syncUnreadMapForConversation(conversation);
+      }
+      if (Number(message?.sender_employee_id) !== Number(employeeId)) {
+        playNotificationSound();
       }
       if (Number(selectedConversationIdRef.current) === Number(message?.conversation_id)) {
         setMessages((cur) => upsertMessage(cur, message));

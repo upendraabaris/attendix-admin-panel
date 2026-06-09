@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { createAppSocket } from "../lib/socketConfig";
+import notificationSound from "../Sound/AttSound.wav";
 
 const CHAT_UNREAD_STORAGE_KEY = "chat_unread_counts";
 const CHAT_ACTIVE_CONVERSATION_KEY = "chat_active_conversation_id";
@@ -52,6 +53,7 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const locationRef = useRef(location.pathname);
+  const notificationAudioRef = useRef(null);
 
   const employeeName = localStorage.getItem("employee_name");
   const role = localStorage.getItem("role");
@@ -64,6 +66,18 @@ const Layout = ({ children }) => {
   useEffect(() => {
     locationRef.current = location.pathname;
   }, [location.pathname]);
+
+  useEffect(() => {
+    notificationAudioRef.current = new Audio(notificationSound);
+    notificationAudioRef.current.preload = "auto";
+
+    return () => {
+      if (notificationAudioRef.current) {
+        notificationAudioRef.current.pause();
+        notificationAudioRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const syncUnreadCount = () => {
@@ -111,8 +125,44 @@ const Layout = ({ children }) => {
       writeUnreadMap(nextUnreadMap);
     };
 
+    const playNotificationSound = () => {
+      const audio = notificationAudioRef.current;
+      if (!audio) {
+        return;
+      }
+
+      audio.currentTime = 0;
+      audio.play().catch(() => {
+        // Ignore autoplay failures until the browser allows playback.
+      });
+    };
+
     socket.on("chat:conversation:updated", syncUnreadFromConversation);
     socket.on("chat:conversation:read", syncUnreadFromConversation);
+    // socket.on("chat:message:new", ({ conversation, message }) => {
+    //   if (conversation) {
+    //     syncUnreadFromConversation(conversation);
+    //   }
+
+    //   const isOwnMessage =
+    //     Number(message?.sender_employee_id) === Number(employeeId);
+    //   const isChatRoute = locationRef.current === "/chat";
+
+    //   if (!isOwnMessage && !isChatRoute) {
+    //     playNotificationSound();
+    //   }
+    // });
+    socket.on("chat:message:new", ({ message }) => {
+  const isOwnMessage =
+    Number(message?.sender_employee_id) === Number(employeeId);
+
+  const isChatRoute =
+    locationRef.current === "/chat";
+
+  if (!isOwnMessage && !isChatRoute) {
+    playNotificationSound();
+  }
+});
 
     return () => {
       socket.disconnect();
