@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import ReactDOM from "react-dom";
 import { useParams, useLocation } from "react-router-dom";
 import Layout from "../components/Layout";
 import { Card, CardContent } from "../components/ui/card";
@@ -22,8 +23,14 @@ import {
   AlertTriangle,
   UserCircle2,
   CalendarDays,
+  Pencil,
+  X,
+  CheckCircle2,
+  Loader2,
+  MessageSquare,
 } from "lucide-react";
 import api from "../hooks/useApi";
+import { toast } from "sonner";
 
 const formatDateOnly = (value) => {
   if (!value) return null;
@@ -105,6 +112,223 @@ const SortIcon = ({ column, sortConfig }) => {
   );
 };
 
+// ─── Clock-Out Edit Modal ────────────────────────────────────────────────────
+function ClockOutEditModal({ open, onClose, record, employeeId, employeeName, onSuccess }) {
+  const [clockOutTime, setClockOutTime] = useState("18:00");
+  const [remark, setRemark] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const inputRef = useRef(null);
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (open) {
+      setClockOutTime("18:00");
+      setRemark("");
+      setDone(false);
+      setSubmitting(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [open]);
+
+  // Escape to close
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+
+  if (!open || !record) return null;
+
+  // workDate from record.date (YYYY-MM-DD)
+  const workDate = record.date
+    ? (() => {
+        const d = new Date(record.date);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      })()
+    : null;
+
+  const displayDate = record.date
+    ? new Date(record.date).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!clockOutTime) {
+      toast.error("Please enter clock-out time");
+      return;
+    }
+    if (!workDate) {
+      toast.error("Invalid date on record");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await api.post("/attendance/admin/update-clockout", {
+        employeeId,
+        workDate,
+        clockOutTime,
+        remark: remark.trim() || undefined,
+      });
+      if (res.data.statusCode === 200) {
+        setDone(true);
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+        }, 1200);
+      } else {
+        toast.error(res.data.message || "Failed to update clock-out");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "An error occurred");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return ReactDOM.createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ backgroundColor: "rgba(15,23,42,0.5)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+        style={{ animation: "slideUpIn 0.22s cubic-bezier(0.34,1.56,0.64,1) both" }}
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm tracking-tight">Update Clock-Out</p>
+              <p className="text-white/75 text-[11px] mt-0.5">{employeeName} · {displayDate}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6">
+          {done ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
+              <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
+                <CheckCircle2 className="w-9 h-9 text-green-500" />
+              </div>
+              <p className="text-slate-700 font-bold text-base">Clock-Out Updated!</p>
+              <p className="text-slate-400 text-sm text-center">The attendance record has been updated successfully.</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Clock-in info */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-4 h-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Clock-In Time</p>
+                  <p className="text-slate-700 font-bold text-sm font-mono">{record.clock_in || "—"}</p>
+                </div>
+              </div>
+
+              {/* Clock-out time input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-orange-500" />
+                  Clock-Out Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  ref={inputRef}
+                  type="time"
+                  value={clockOutTime}
+                  onChange={(e) => setClockOutTime(e.target.value)}
+                  required
+                  className="w-full h-11 px-4 rounded-xl border border-slate-200 text-slate-700 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all bg-white"
+                />
+              </div>
+
+              {/* Remark input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-orange-500" />
+                  Admin Remark <span className="text-slate-300 font-normal normal-case">(optional)</span>
+                </label>
+                <textarea
+                  value={remark}
+                  onChange={(e) => setRemark(e.target.value)}
+                  placeholder="e.g. Employee forgot to clock out, verified via camera..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all bg-white resize-none placeholder:text-slate-300"
+                />
+              </div>
+
+              {/* Warning note */}
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-100">
+                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-amber-700 text-xs leading-relaxed">
+                  This action will <strong>permanently add</strong> a clock-out record for this date. Make sure the time is correct before submitting.
+                </p>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 h-11 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-sm hover:from-orange-600 hover:to-amber-600 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      Save Clock-Out
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
+        <style>{`
+          @keyframes slideUpIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+          }
+        `}</style>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 function EmpAttendance() {
   const { id } = useParams();
   const location = useLocation();
@@ -136,6 +360,9 @@ function EmpAttendance() {
     key: "date",
     direction: "asc",
   });
+
+  // Modal state
+  const [editModal, setEditModal] = useState({ open: false, record: null });
 
   const orgID = localStorage.getItem("orgID");
 
@@ -365,6 +592,12 @@ function EmpAttendance() {
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Clock Out Address
                     </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Admin Remark
+                    </TableHead>
+                    <TableHead className="text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Action
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -397,7 +630,12 @@ function EmpAttendance() {
                           {record.clock_in || "—"}
                         </TableCell>
                         <TableCell className="whitespace-nowrap font-mono text-sm text-gray-700">
-                          {record.clock_out || "—"}
+                          {record.clock_out || (
+                            <span className="inline-flex items-center gap-1 text-red-400 text-xs font-medium">
+                              <AlertTriangle className="w-3 h-3" />
+                              Missing
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>{getStatusCell(record.worked_time)}</TableCell>
                         <TableCell className="whitespace-nowrap">
@@ -415,6 +653,34 @@ function EmpAttendance() {
                         <TableCell className="text-sm text-gray-500 min-w-[200px] whitespace-normal break-words">
                           {record.clock_out_address || "—"}
                         </TableCell>
+                        <TableCell className="min-w-[180px]">
+                          {record.admin_remark ? (
+                            <div className="flex items-start gap-2">
+                              <div className="flex-shrink-0 mt-0.5">
+                                <MessageSquare className="w-3.5 h-3.5 text-orange-400" />
+                              </div>
+                              <span className="text-xs text-orange-700 bg-orange-50 border border-orange-200 px-2 py-1 rounded-lg leading-relaxed font-medium break-words">
+                                {record.admin_remark}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-300 text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {isMissing ? (
+                            <button
+                              onClick={() => setEditModal({ open: true, record })}
+                              title="Add missing clock-out"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 text-orange-600 border border-orange-200 text-xs font-semibold hover:bg-orange-100 hover:border-orange-300 active:scale-95 transition-all"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Fix
+                            </button>
+                          ) : (
+                            <span className="text-gray-300 text-xs">—</span>
+                          )}
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -424,6 +690,16 @@ function EmpAttendance() {
           )}
         </div>
       </div>
+
+      {/* Clock-Out Edit Modal */}
+      <ClockOutEditModal
+        open={editModal.open}
+        onClose={() => setEditModal({ open: false, record: null })}
+        record={editModal.record}
+        employeeId={id}
+        employeeName={employeeName}
+        onSuccess={fetchAttendance}
+      />
     </Layout>
   );
 }
