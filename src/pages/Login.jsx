@@ -63,6 +63,7 @@ const Login = () => {
       localStorage.setItem("role", employeeRole); // ✅ add this line
       localStorage.setItem("employee_id", String(user.employee_id || ""));
       localStorage.setItem("employee_name", user.employee_name || "");
+      localStorage.setItem("lastActiveTime", Date.now().toString()); // ✅ Fix for instant session timeout bug
 
       navigate("/dashboard");
     } catch (err) {
