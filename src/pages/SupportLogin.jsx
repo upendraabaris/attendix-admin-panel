@@ -37,6 +37,7 @@ const SupportLogin = () => {
       localStorage.removeItem("employee_id");
       localStorage.setItem("employee_name", user.name || "");
       localStorage.setItem("role", "support");
+      localStorage.setItem("lastActiveTime", Date.now().toString());
 
       navigate("/support");
     } catch (err) {

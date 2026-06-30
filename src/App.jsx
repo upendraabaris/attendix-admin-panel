@@ -20,6 +20,7 @@ import EmpAttendance from "./pages/EmpAttendance";
 import EmpTasks from "./pages/EmpTasks";
 import ChangePassword from "./pages/ChangePassword";
 import Workspace from "./pages/Workspace";
+import MasterTaskBoard from "./pages/MasterTaskBoard";
 import WorkspaceBoard from "./pages/WorkspaceBoard";
 import EmployeeLogin from "./pages/EmployeeLogin";
 import EmployeeWebLogin from "./pages/EmployeeWebLogin";

@@ -18,6 +18,11 @@ import {
   MessageSquare,
   Settings,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../components/ui/tooltip";
 import { cn } from "../lib/utils";
 import { createAppSocket } from "../lib/socketConfig";
 import notificationSound from "../Sound/AttSound.wav";
@@ -275,12 +280,12 @@ const Layout = ({ children }) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             const isChatItem = item.href === "/chat";
-            return (
+            const content = (
               <button
                 key={item.name}
                 onClick={() => navigate(item.href)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 group relative",
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 group",
                   active
                     ? "text-blue-600 font-medium"
                     : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
@@ -308,11 +313,6 @@ const Layout = ({ children }) => {
                     ) : null}
                   </>
                 )}
-                {!sidebarOpen && (
-                  <div className="absolute left-full ml-3 px-2.5 py-1 rounded-lg bg-slate-800 text-white text-xs whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-lg">
-                    {item.name}
-                  </div>
-                )}
                 {!sidebarOpen && isChatItem && chatUnreadTotal > 0 ? (
                   <span
                     className="absolute right-2 top-2 inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white"
@@ -322,6 +322,19 @@ const Layout = ({ children }) => {
                   </span>
                 ) : null}
               </button>
+            );
+
+            return sidebarOpen ? content : (
+              <Tooltip key={item.name} delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <div className="relative">
+                    {content}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-none">
+                  {item.name}
+                </TooltipContent>
+              </Tooltip>
             );
           })}
         </nav>
@@ -351,21 +364,31 @@ const Layout = ({ children }) => {
             </div>
           )}
 
-          <button
-            onClick={handleLogout}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-slate-400 hover:text-red-500 hover:bg-red-50 group",
-              !sidebarOpen && "justify-center relative"
-            )}
-          >
-            <LogOut style={{ width: 17, height: 17, flexShrink: 0 }} />
-            {sidebarOpen && <span className="text-sm font-medium">Logout</span>}
-            {!sidebarOpen && (
-              <div className="absolute left-full ml-3 px-2.5 py-1 rounded-lg bg-slate-800 text-white text-xs whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-lg">
+          {sidebarOpen ? (
+            <button
+              onClick={handleLogout}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-slate-400 hover:text-red-500 hover:bg-red-50 group"
+              )}
+            >
+              <LogOut style={{ width: 17, height: 17, flexShrink: 0 }} />
+              <span className="text-sm font-medium">Logout</span>
+            </button>
+          ) : (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex justify-center items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-slate-400 hover:text-red-500 hover:bg-red-50 group relative"
+                >
+                  <LogOut style={{ width: 17, height: 17, flexShrink: 0 }} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="bg-slate-800 text-white text-xs border-none">
                 Logout
-              </div>
-            )}
-          </button>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </aside>
 

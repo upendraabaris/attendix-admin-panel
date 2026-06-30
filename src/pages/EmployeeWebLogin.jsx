@@ -37,6 +37,7 @@ const EmployeeWebLogin = () => {
       localStorage.setItem("employee_id", user.employee_id);
       localStorage.setItem("employee_name", user.employee_name || "");
       localStorage.setItem("role", "employee");
+      localStorage.setItem("lastActiveTime", Date.now().toString());
 
       navigate("/employee-attendance");
     } catch (err) {

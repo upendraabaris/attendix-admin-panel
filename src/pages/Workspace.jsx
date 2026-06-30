@@ -81,17 +81,7 @@ const Workspace = () => {
     ws.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getRandomColor = () => {
-    const colors = [
-      "bg-gradient-to-br from-blue-500 to-blue-600",
-      "bg-gradient-to-br from-green-500 to-green-600",
-      "bg-gradient-to-br from-purple-500 to-purple-600",
-      "bg-gradient-to-br from-orange-500 to-orange-600",
-      "bg-gradient-to-br from-pink-500 to-pink-600",
-      "bg-gradient-to-br from-indigo-500 to-indigo-600"
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
+
 
   return (
     <Layout>
@@ -167,7 +157,7 @@ const Workspace = () => {
               className="cursor-pointer group bg-white border border-gray-200 rounded-2xl hover:shadow-2xl hover:scale-105 transition-all duration-300 overflow-hidden"
               onClick={() => navigate(`/workspace/${ws.id}`, { state: { workspaceName: ws.name } })}
             >
-              <div className={`h-3 ${getRandomColor()}`} />
+              <div className="h-2 bg-blue-200" />
               <CardContent className="p-5">
                 <div className="flex items-start justify-between mb-3">
                   <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
@@ -186,8 +176,8 @@ const Workspace = () => {
                     Updated {ws.lastUpdated || 'recently'}
                   </span> */}
                   <div className="flex -space-x-2">
-                    <div className="w-6 h-6 bg-blue-500 rounded-full border-2 border-white"></div>
-                    <div className="w-6 h-6 bg-green-500 rounded-full border-2 border-white"></div>
+                    <div className="w-6 h-6 bg-blue-300 rounded-full border-2 border-white"></div>
+                    <div className="w-6 h-6 bg-green-300 rounded-full border-2 border-white"></div>
                   </div>
                 </div>
               </CardContent>

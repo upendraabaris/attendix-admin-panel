@@ -11,6 +11,7 @@ import {
   X,
   ChevronRight,
   Clock,
+  ArrowLeft,
 } from "lucide-react";
 
 import Layout from "../components/Layout";
@@ -459,6 +460,29 @@ export default function Chat() {
         .badge-admin { background: #fef3c7; color: #92400e; }
         .online-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid #fff; position: absolute; bottom: 1px; right: 1px; }
 
+        .back-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: none;
+          border: none;
+          padding: 8px;
+          margin-left: -8px;
+          cursor: pointer;
+          color: #475569;
+          border-radius: 50%;
+        }
+        .back-btn:hover { background: #f1f5f9; color: #0f172a; }
+
+        @media (max-width: 768px) {
+          .chat-root { height: calc(100vh - 70px); border-radius: 0; border: none; box-shadow: none; }
+          .sidebar { width: 100%; display: var(--show-sidebar, flex); }
+          .msg-area { width: 100%; display: var(--show-msg-area, none); }
+          .chat-header { padding: 12px 16px; }
+          .messages-wrap { padding: 16px 12px; }
+          .msg-bubble { max-width: 85%; }
+        }
+
         /* Welcome Screen */
         .welcome-wrap {
           flex: 1;
@@ -554,7 +578,13 @@ export default function Chat() {
         }
       `}</style>
 
-      <div className="chat-root">
+      <div 
+        className="chat-root" 
+        style={{ 
+          "--show-sidebar": selectedConversation ? "none" : "flex",
+          "--show-msg-area": selectedConversation ? "flex" : "none"
+        }}
+      >
         {/* ── SIDEBAR ── */}
         <aside className="sidebar">
           <div className="sidebar-header">
@@ -696,7 +726,14 @@ export default function Chat() {
             <>
               {/* Header */}
               <div className="chat-header">
-                <Avatar name={selectedConversation.other_employee_name || "?"} size={46} isAdmin={isAdmin(selectedConversation.other_employee_role)} />
+                <button 
+                  className="back-btn" 
+                  onClick={() => setSelectedConversation(null)}
+                  title="Close Chat"
+                >
+                  <ArrowLeft size={22} />
+                </button>
+                <Avatar name={selectedConversation.other_employee_name || "?"} size={42} isAdmin={isAdmin(selectedConversation.other_employee_role)} />
                 <div className="chat-header-info">
                   <div className="chat-header-name">{selectedConversation.other_employee_name || "Direct chat"}</div>
                   <div className="chat-header-role">{selectedConversation.other_employee_role || "employee"}</div>
