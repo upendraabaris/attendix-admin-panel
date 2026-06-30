@@ -464,6 +464,34 @@ const LeavePolicyPage = () => {
   const [editingPolicy, setEditingPolicy] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // ── Organization Leave Renewal Setting ──
+  const [renewalType, setRenewalType] = useState("date_of_joining");
+  const [renewalSaving, setRenewalSaving] = useState(false);
+  const [renewalLoaded, setRenewalLoaded] = useState(false);
+
+  const fetchOrgSettings = async () => {
+    try {
+      const res = await api.get("/auth/organization-settings");
+      setRenewalType(res?.data?.data?.leave_renewal_type || "date_of_joining");
+      setRenewalLoaded(true);
+    } catch (error) {
+      console.error("Failed to fetch org settings:", error);
+      setRenewalLoaded(true);
+    }
+  };
+
+  const handleRenewalSave = async () => {
+    try {
+      setRenewalSaving(true);
+      await api.put("/auth/organization-settings", { leave_renewal_type: renewalType });
+      toast.success("Leave renewal setting saved");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to save setting");
+    } finally {
+      setRenewalSaving(false);
+    }
+  };
+
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
 
   const isRuleBased = isRuleBasedLeave(formData.leave_type);
@@ -482,6 +510,7 @@ const LeavePolicyPage = () => {
 
   useEffect(() => {
     fetchPolicies();
+    fetchOrgSettings();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -507,6 +536,93 @@ const LeavePolicyPage = () => {
           <h1 className="text-2xl font-bold">Leave Policy</h1>
           <p className="text-gray-600">Configure yearly leave limits and leave rules</p>
         </div>
+
+        {/* ─── Leave Renewal Setting Card ─── */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Leave Renewal Setting</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-gray-500">
+              Choose when employee leaves reset every year for your organization.
+            </p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {/* Option 1: Date of Joining */}
+              <button
+                type="button"
+                onClick={() => setRenewalType("date_of_joining")}
+                className={`flex items-start gap-3 rounded-lg border-2 p-4 text-left transition-all ${
+                  renewalType === "date_of_joining"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <span
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    renewalType === "date_of_joining"
+                      ? "border-blue-500 bg-blue-500"
+                      : "border-gray-300 bg-white"
+                  }`}
+                >
+                  {renewalType === "date_of_joining" && (
+                    <span className="h-2 w-2 rounded-full bg-white" />
+                  )}
+                </span>
+                <div>
+                  <p className="font-semibold text-gray-800">Date of Joining</p>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Leaves renew on each employee’s joining anniversary (e.g., joined 15 Mar → resets every 15 Mar).
+                  </p>
+                </div>
+              </button>
+
+              {/* Option 2: Calendar Year */}
+              <button
+                type="button"
+                onClick={() => setRenewalType("calendar_year")}
+                className={`flex items-start gap-3 rounded-lg border-2 p-4 text-left transition-all ${
+                  renewalType === "calendar_year"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <span
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    renewalType === "calendar_year"
+                      ? "border-blue-500 bg-blue-500"
+                      : "border-gray-300 bg-white"
+                  }`}
+                >
+                  {renewalType === "calendar_year" && (
+                    <span className="h-2 w-2 rounded-full bg-white" />
+                  )}
+                </span>
+                <div>
+                  <p className="font-semibold text-gray-800">Calendar Year (Jan 1 – Dec 31)</p>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Leaves renew for all employees on January 1st every year.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-4 flex items-center gap-3">
+              <Button
+                onClick={handleRenewalSave}
+                disabled={renewalSaving || !renewalLoaded}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                {renewalSaving ? "Saving..." : "Save Setting"}
+              </Button>
+              <p className="text-xs text-gray-400">
+                Current:{" "}
+                <span className="font-medium capitalize text-gray-600">
+                  {renewalType === "calendar_year" ? "Calendar Year (Jan 1 – Dec 31)" : "Date of Joining"}
+                </span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
