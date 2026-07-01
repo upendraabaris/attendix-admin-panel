@@ -49,7 +49,7 @@ const AddTaskModal = ({
   const [loading, setLoading] = useState(false);
   const keepOpenRef = React.useRef(false);
   const titleInputRef = React.useRef(null);
-  
+
   const getOrgIdFromItem = (item) =>
     item?.organization_id ??
     item?.organizationId ??
@@ -69,13 +69,13 @@ const AddTaskModal = ({
 
   useEffect(() => {
     if (employees.length > 0 && isOpen && !formData.employee_id) {
-       const currentUserName = localStorage.getItem("employee_name");
-       if (currentUserName) {
-           const myEmp = employees.find(e => String(e.name).toLowerCase() === String(currentUserName).toLowerCase());
-           if (myEmp) {
-               setFormData(prev => ({ ...prev, employee_id: myEmp.id }));
-           }
-       }
+      const currentUserName = localStorage.getItem("employee_name");
+      if (currentUserName) {
+        const myEmp = employees.find(e => String(e.name).toLowerCase() === String(currentUserName).toLowerCase());
+        if (myEmp) {
+          setFormData(prev => ({ ...prev, employee_id: myEmp.id }));
+        }
+      }
     }
   }, [employees, isOpen]);
 
@@ -188,7 +188,7 @@ const AddTaskModal = ({
 
       console.log("🟢 RESPONSE:", res.data);
       toast.success(`${res?.data?.count || 1} task(s) added successfully!`);
-      
+
       onTaskAdded();
 
       if (keepOpenRef.current) {
@@ -200,7 +200,7 @@ const AddTaskModal = ({
         }));
         // Refocus the title input
         setTimeout(() => {
-           if (titleInputRef.current) titleInputRef.current.focus();
+          if (titleInputRef.current) titleInputRef.current.focus();
         }, 10);
       } else {
         // Normal submit, clear all and close
@@ -377,22 +377,22 @@ const AddTaskModal = ({
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button 
-               type="button" 
-               disabled={loading} 
-               onClick={(e) => { 
-                   keepOpenRef.current = true; 
-                   handleSubmit(e); 
-               }}
-               className="bg-blue-100 text-blue-700 hover:bg-blue-200"
+            <Button
+              type="button"
+              disabled={loading}
+              onClick={(e) => {
+                keepOpenRef.current = true;
+                handleSubmit(e);
+              }}
+              className="bg-blue-100 text-blue-700 hover:bg-blue-200"
             >
               Save & Add Another
             </Button>
-            <Button 
-               type="submit" 
-               disabled={loading} 
-               onClick={() => { keepOpenRef.current = false; }}
-               className="bg-blue-600 hover:bg-blue-700"
+            <Button
+              type="submit"
+              disabled={loading}
+              onClick={() => { keepOpenRef.current = false; }}
+              className="bg-blue-600 hover:bg-blue-700"
             >
               {loading ? "Saving..." : "Add Task"}
             </Button>
@@ -403,16 +403,30 @@ const AddTaskModal = ({
   );
 };
 
-const InlineInput = ({ value, placeholder, onSave, className, type = "text", step }) => {
+const InlineInput = ({ value, placeholder, onSave, className, type = "text", step, disabled }) => {
   const [val, setVal] = useState(value || "");
   useEffect(() => setVal(value || ""), [value]);
   return (
-    <input 
+    <input
+      disabled={disabled}
       type={type}
       step={step}
+      min={type === "number" ? "0" : undefined}
       value={val}
-      onChange={e => setVal(e.target.value)}
-      onBlur={() => { if(String(val).trim() !== String(value || "").trim()) onSave(val); }}
+      onChange={e => {
+        if (type === "number" && Number(e.target.value) < 0) return;
+        setVal(e.target.value);
+      }}
+      onBlur={() => {
+        let finalVal = val;
+        if (type === "number" && Number(val) < 0) {
+          finalVal = 0;
+          setVal(0);
+        }
+        if (String(finalVal).trim() !== String(value || "").trim()) {
+          onSave(finalVal);
+        }
+      }}
       placeholder={placeholder}
       className={className}
     />
@@ -444,14 +458,16 @@ const WorkspaceBoard = () => {
   const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("daily"); // "daily", "weekly", or "master"
-  
+
   // Filters & Sorting
   const [showFilters, setShowFilters] = useState(false);
   const [filterEmployeeId, setFilterEmployeeId] = useState("all");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterMasterTaskId, setFilterMasterTaskId] = useState("all");
   const [sortBy, setSortBy] = useState("newest"); // "newest", "oldest", "hours_high", "hours_low"
-  
+
   // Quick Log Fields
   const [quickTitle, setQuickTitle] = useState("");
   const [quickHours, setQuickHours] = useState("");
@@ -459,9 +475,10 @@ const WorkspaceBoard = () => {
   const [quickTarget, setQuickTarget] = useState("");
   const [quickActual, setQuickActual] = useState("");
   const [quickRemark, setQuickRemark] = useState("");
+  const [quickStatus, setQuickStatus] = useState("open");
   const [quickMasterTaskId, setQuickMasterTaskId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Master Task Modal Fields
   const [mtTitle, setMtTitle] = useState("");
   const [mtDescription, setMtDescription] = useState("");
@@ -487,6 +504,8 @@ const WorkspaceBoard = () => {
         sort_by: sortBy,
       });
       if (filterEmployeeId !== "all") queryParams.append("employee_id", filterEmployeeId);
+      if (filterStatus !== "all") queryParams.append("status", filterStatus);
+      if (filterMasterTaskId !== "all") queryParams.append("master_task_id", filterMasterTaskId);
       if (filterDateFrom) queryParams.append("start_date", filterDateFrom);
       if (filterDateTo) queryParams.append("end_date", filterDateTo);
 
@@ -522,7 +541,7 @@ const WorkspaceBoard = () => {
   useEffect(() => {
     fetchTasks();
     fetchMasterTasks();
-    
+
     // Fetch employees for assignment
     const fetchEmployees = async () => {
       try {
@@ -544,7 +563,7 @@ const WorkspaceBoard = () => {
       }
     };
     fetchEmployees();
-  }, [id, filterEmployeeId, filterDateFrom, filterDateTo, sortBy]);
+  }, [id, filterEmployeeId, filterStatus, filterMasterTaskId, filterDateFrom, filterDateTo, sortBy]);
 
   const handleQuickAdd = async (e) => {
     e.preventDefault();
@@ -563,9 +582,10 @@ const WorkspaceBoard = () => {
         kpi: quickKpi,
         target_val: quickTarget,
         actual_result: quickActual,
-        remark: quickRemark
+        remark: quickRemark,
+        status: quickStatus
       }, { headers: { Authorization: `Bearer ${token}` } });
-      
+
       toast.success("Task logged successfully!");
       setQuickTitle("");
       setQuickHours("");
@@ -573,6 +593,7 @@ const WorkspaceBoard = () => {
       setQuickTarget("");
       setQuickActual("");
       setQuickRemark("");
+      setQuickStatus("open");
       setQuickMasterTaskId("");
       fetchTasks();
     } catch (err) {
@@ -586,6 +607,11 @@ const WorkspaceBoard = () => {
   const handleCreateMasterTask = async (e) => {
     e.preventDefault();
     if (!mtTitle.trim()) return toast.error("Title is required");
+    
+    if (mtStartDate && mtEndDate && new Date(mtEndDate) < new Date(mtStartDate)) {
+      return toast.error("End Date cannot be earlier than Start Date");
+    }
+
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
@@ -597,7 +623,7 @@ const WorkspaceBoard = () => {
         end_date: mtEndDate,
         assignees: mtAssignees
       }, { headers: { Authorization: `Bearer ${token}` } });
-      
+
       toast.success("Master task created successfully");
       setMtTitle("");
       setMtDescription("");
@@ -621,7 +647,7 @@ const WorkspaceBoard = () => {
         taskId,
         [field]: field === 'hours_worked' ? (parseFloat(newValue) || 0) : newValue
       }, { headers: { Authorization: `Bearer ${token}` } });
-      
+
       // Optimistic local update
       setTasksList(prev => prev.map(t => t.task_id === taskId ? { ...t, [field]: newValue } : t));
     } catch (err) {
@@ -679,16 +705,16 @@ const WorkspaceBoard = () => {
 
   const filteredMasterTasks = masterTasks.filter(t => {
     const matchesSearch = [t.title, t.description].some(v => v?.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+
     let isAuthorized = isUserAdmin;
     if (!isUserAdmin) {
       if (t.assignees && t.assignees.length > 0) {
-         isAuthorized = t.assignees.includes(myEmpId);
+        isAuthorized = t.assignees.includes(myEmpId);
       } else {
-         isAuthorized = true; // Unassigned master tasks are visible to all
+        isAuthorized = true; // Unassigned master tasks are visible to all
       }
     }
-    
+
     return matchesSearch && isAuthorized;
   });
 
@@ -703,7 +729,7 @@ const WorkspaceBoard = () => {
             <h1 className="text-xl font-bold text-gray-800">{workspaceName}</h1>
             <p className="text-gray-600 text-xs">Manage your project tasks and milestones</p>
           </div>
-          
+
           {/* 
           <div className="flex bg-white rounded-lg p-1 border shadow-sm">
              <button 
@@ -731,7 +757,7 @@ const WorkspaceBoard = () => {
                 className="w-full pl-7 pr-3 py-1.5 text-xs border rounded-md focus:ring-1 focus:ring-blue-500"
               />
             </div>
-            
+
             <Button
               variant="outline"
               size="sm"
@@ -761,7 +787,7 @@ const WorkspaceBoard = () => {
             {isUserAdmin && (
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Employee</label>
-                <select 
+                <select
                   value={filterEmployeeId}
                   onChange={e => setFilterEmployeeId(e.target.value)}
                   className="w-full md:w-40 text-xs border border-gray-200 rounded-md p-1.5 focus:ring-1 focus:ring-blue-500 outline-none"
@@ -773,21 +799,21 @@ const WorkspaceBoard = () => {
                 </select>
               </div>
             )}
-            
+
             <div>
               <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Date From</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={filterDateFrom}
                 onChange={e => setFilterDateFrom(e.target.value)}
                 className="w-full md:w-36 text-xs border border-gray-200 rounded-md p-1.5 focus:ring-1 focus:ring-blue-500 outline-none"
               />
             </div>
-            
+
             <div>
               <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Date To</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={filterDateTo}
                 onChange={e => setFilterDateTo(e.target.value)}
                 className="w-full md:w-36 text-xs border border-gray-200 rounded-md p-1.5 focus:ring-1 focus:ring-blue-500 outline-none"
@@ -795,8 +821,37 @@ const WorkspaceBoard = () => {
             </div>
 
             <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Status</label>
+              <select
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value)}
+                className="w-full md:w-32 text-xs border border-gray-200 rounded-md p-1.5 focus:ring-1 focus:ring-blue-500 outline-none"
+              >
+                <option value="all">All Status</option>
+                <option value="open">Open</option>
+                <option value="in progress">In Progress</option>
+                <option value="waiting">Waiting</option>
+                <option value="closed">Closed</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Master Task</label>
+              <select
+                value={filterMasterTaskId}
+                onChange={e => setFilterMasterTaskId(e.target.value)}
+                className="w-full md:w-40 text-xs border border-gray-200 rounded-md p-1.5 focus:ring-1 focus:ring-blue-500 outline-none"
+              >
+                <option value="all">All Master Tasks</option>
+                {masterTasks.map(mt => (
+                  <option key={mt.id} value={mt.id}>{mt.title}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Sort By</label>
-              <select 
+              <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value)}
                 className="w-full md:w-40 text-xs border border-gray-200 rounded-md p-1.5 focus:ring-1 focus:ring-blue-500 outline-none"
@@ -808,11 +863,13 @@ const WorkspaceBoard = () => {
               </select>
             </div>
 
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 setFilterEmployeeId("all");
+                setFilterStatus("all");
+                setFilterMasterTaskId("all");
                 setFilterDateFrom("");
                 setFilterDateTo("");
                 setSortBy("newest");
@@ -826,85 +883,119 @@ const WorkspaceBoard = () => {
 
         {/* ✅ Tabs for Daily/Weekly/Master */}
         <div className="flex gap-6 border-b border-gray-200 mb-4 px-2">
-           <button 
-             onClick={() => setActiveTab('daily')}
-             className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'daily' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-           >
-             ☀️ Daily Log
-           </button>
-           <button 
-             onClick={() => setActiveTab('weekly')}
-             className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'weekly' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-           >
-             📅 Weekly Log
-           </button>
-           <button 
-             onClick={() => setActiveTab('master')}
-             className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'master' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-           >
-             🗂️ Master Tasks
-           </button>
+          <button
+            onClick={() => setActiveTab('daily')}
+            className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'daily' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            ☀️ Daily Log
+          </button>
+          <button
+            onClick={() => setActiveTab('weekly')}
+            className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'weekly' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            📅 Weekly Log
+          </button>
+          <button
+            onClick={() => setActiveTab('master')}
+            className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'master' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            🗂️ Master Tasks
+          </button>
         </div>
+
+        {filterMasterTaskId !== 'all' && activeTab !== 'master' && (
+          <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-3 flex justify-between items-center shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🗂️</span>
+              <div>
+                <p className="text-xs text-purple-600 font-bold uppercase tracking-wider">Filtered by Master Task</p>
+                <p className="text-sm font-semibold text-purple-900">
+                  {masterTasks.find(m => String(m.id) === String(filterMasterTaskId))?.title || 'Unknown Task'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setTasksList([]); // Clear stale data
+                setFilterMasterTaskId('all');
+                setQuickMasterTaskId(""); // Reset quick add selection
+              }}
+              className="text-xs bg-white text-purple-600 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded-md font-bold transition-colors"
+            >
+              Clear Filter ✖
+            </button>
+          </div>
+        )}
 
         {activeTab !== 'master' && (
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4 flex flex-col gap-3">
-             <div className="flex flex-col md:flex-row gap-3">
-                <input 
-                  type="text" 
-                  value={quickTitle}
-                  onChange={(e) => setQuickTitle(e.target.value)}
+            <div className="flex flex-col md:flex-row gap-3">
+              <input
+                type="text"
+                value={quickTitle}
+                onChange={(e) => setQuickTitle(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd(e)}
+                placeholder={activeTab === 'daily' ? "Task (with KPI & Impact)" : "Task"}
+                className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+
+              <select
+                value={quickMasterTaskId}
+                onChange={(e) => setQuickMasterTaskId(e.target.value)}
+                className="w-full md:w-48 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600"
+              >
+                <option value="">No Master Task (Direct)</option>
+                {filteredMasterTasks.map(mt => (
+                  <option key={mt.id} value={mt.id}>{mt.title}</option>
+                ))}
+              </select>
+
+              {/* Status Dropdown */}
+              <select
+                value={quickStatus}
+                onChange={(e) => setQuickStatus(e.target.value)}
+                className="w-full md:w-32 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600 font-semibold"
+              >
+                <option value="open">🟢 Open</option>
+                <option value="in progress">🟡 In Progress</option>
+                <option value="waiting">🟠 Waiting</option>
+                <option value="closed">🔴 Closed</option>
+              </select>
+
+              {activeTab === 'daily' && (
+                <input
+                  type="number"
+                  value={quickHours}
+                  onChange={(e) => setQuickHours(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd(e)}
-                  placeholder={activeTab === 'daily' ? "Task (with KPI & Impact)" : "Task"} 
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Hours (e.g. 1.5)"
+                  step="0.5"
+                  min="0"
+                  className="w-full md:w-32 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 />
-                
-                {/* Master Task Dropdown */}
-                <select 
-                  value={quickMasterTaskId}
-                  onChange={(e) => setQuickMasterTaskId(e.target.value)}
-                  className="w-full md:w-48 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600"
-                >
-                  <option value="">No Master Task (Direct)</option>
-                  {filteredMasterTasks.map(mt => (
-                    <option key={mt.id} value={mt.id}>{mt.title}</option>
-                  ))}
-                </select>
+              )}
+            </div>
 
-                {activeTab === 'daily' && (
-                  <input 
-                    type="number" 
-                    value={quickHours}
-                    onChange={(e) => setQuickHours(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd(e)}
-                    placeholder="Hours (e.g. 1.5)" 
-                    step="0.5"
-                    min="0"
-                    className="w-full md:w-32 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                )}
-             </div>
-
-           {activeTab === 'daily' ? (
-             <div className="flex flex-col md:flex-row gap-3">
-                <input type="text" value={quickKpi} onChange={e => setQuickKpi(e.target.value)} placeholder="KPI" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
-                <input type="text" value={quickTarget} onChange={e => setQuickTarget(e.target.value)} placeholder="Target" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
+            {activeTab === 'daily' ? (
+              <div className="flex flex-col md:flex-row gap-3">
+                <input type="text" value={quickKpi} onChange={e => setQuickKpi(e.target.value)} placeholder="KPI / Target" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
                 <input type="text" value={quickActual} onChange={e => setQuickActual(e.target.value)} placeholder="Actual Result" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
                 <input type="text" value={quickRemark} onChange={e => setQuickRemark(e.target.value)} placeholder="Remark" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
-             </div>
-           ) : (
-             <div className="flex flex-col md:flex-row gap-3">
+              </div>
+            ) : (
+              <div className="flex flex-col md:flex-row gap-3">
                 <input type="text" value={quickKpi} onChange={e => setQuickKpi(e.target.value)} placeholder="KPI / Expected Outcome" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
                 <input type="text" value={quickRemark} onChange={e => setQuickRemark(e.target.value)} placeholder="Remark" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
-             </div>
-           )}
+              </div>
+            )}
 
-             <Button 
-                onClick={handleQuickAdd} 
-                disabled={isSubmitting || !quickTitle.trim()} 
-                className="self-end w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white mt-1"
-             >
-                {isSubmitting ? "Logging..." : "Log Task"}
-             </Button>
+            <Button
+              onClick={handleQuickAdd}
+              disabled={isSubmitting || !quickTitle.trim()}
+              className="self-end w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white mt-1"
+            >
+              {isSubmitting ? "Logging..." : "Log Task"}
+            </Button>
           </div>
         )}
 
@@ -917,142 +1008,192 @@ const WorkspaceBoard = () => {
               </div>
             ) : (
               filteredMasterTasks.map((task) => (
-                <div 
-                  key={task.id} 
-                  className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all group relative flex flex-col justify-between"
+                <div
+                  key={task.id}
+                  onClick={() => {
+                    setTasksList([]); // Clear stale data instantly
+                    setFilterMasterTaskId(String(task.id));
+                    setQuickMasterTaskId(String(task.id)); // Auto-select for quick add
+                    setActiveTab('daily');
+                  }}
+                  className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-400 hover:ring-2 hover:ring-blue-100 transition-all cursor-pointer group relative flex flex-col justify-between"
                 >
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">{task.title}</h3>
+                    <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-blue-700 transition-colors">{task.title}</h3>
                     <p className="text-sm text-gray-500 line-clamp-3 mb-3">{task.description || "No description provided."}</p>
                   </div>
-                  
-                  {task.assignees && task.assignees.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {task.assignees.map(empId => {
-                        const emp = workspaceEmployees.find(e => String(e.id) === String(empId));
-                        return emp ? (
-                          <span key={empId} className="text-[10px] bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-100 font-medium" title={emp.name}>
-                            👤 {emp.name.split(' ')[0]}
-                          </span>
-                        ) : null;
-                      })}
-                    </div>
-                  )}
 
-                  {(task.start_date || task.end_date) && (
-                    <div className="text-xs font-semibold text-gray-500 bg-gray-50 px-2 py-1 rounded inline-block self-start mt-auto">
-                      📅 {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'N/A'} - {task.end_date ? new Date(task.end_date).toLocaleDateString() : 'N/A'}
+                  <div className="flex flex-col gap-2 mb-3">
+                    {/* Created By Badge (Placeholder if backend doesn't send it yet) */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Created By:</span>
+                      <span className="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md border border-purple-100 font-bold">
+                        {task.created_by_name || "Admin"}
+                      </span>
                     </div>
-                  )}
+
+                    {/* Assigned To Badges */}
+                    {task.assignees && task.assignees.length > 0 && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Assigned To:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {task.assignees.map(empId => {
+                            const emp = workspaceEmployees.find(e => String(e.id) === String(empId));
+                            return emp ? (
+                              <span key={empId} className="text-[10px] bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-100 font-medium" title={emp.name}>
+                                {emp.name.split(' ')[0]}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-end mt-auto pt-2 border-t border-gray-50">
+                    {(task.start_date || task.end_date) ? (
+                      <div className="text-[10px] font-semibold text-gray-500 bg-gray-50 px-2 py-1 rounded inline-block">
+                        📅 {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'N/A'} - {task.end_date ? new Date(task.end_date).toLocaleDateString() : 'N/A'}
+                      </div>
+                    ) : <div />}
+                    <span className="text-blue-600 text-[11px] font-bold group-hover:underline">
+                      View Tasks ➔
+                    </span>
+                  </div>
                 </div>
               ))
             )}
           </div>
         ) : (
           <>
-          <div className="flex justify-between items-end mb-2">
-             <h2 className="text-lg font-semibold text-gray-800">{activeTab === 'daily' ? 'Daily Timeline' : 'Weekly Outcomes'}</h2>
-           {activeTab === 'daily' && (
-             <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold shadow-sm border border-blue-200">
-                Total Hours: {totalHours.toFixed(2)} Hrs
-             </div>
-           )}
-        </div>
+            <div className="flex justify-between items-end mb-2">
+              <h2 className="text-lg font-semibold text-gray-800">{activeTab === 'daily' ? 'Daily Timeline' : 'Weekly Outcomes'}</h2>
+              {activeTab === 'daily' && (
+                <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold shadow-sm border border-blue-200">
+                  Total Hours: {totalHours.toFixed(2)} Hrs
+                </div>
+              )}
+            </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-           {filteredTasks.length === 0 ? (
-              <div className="p-8 text-center text-gray-500 text-sm">No {activeTab} tasks logged yet. Add one above!</div>
-           ) : (
-              <ul className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
-                 {filteredTasks.map((t) => {
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              {filteredTasks.length === 0 ? (
+                <div className="p-8 text-center text-gray-500 text-sm">No {activeTab} tasks logged yet. Add one above!</div>
+              ) : (
+                <ul className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+                  {filteredTasks.map((t) => {
                     const currentUser = localStorage.getItem("employee_name");
                     const role = localStorage.getItem("role");
                     const isAdmin = role?.toLowerCase().includes("admin");
                     const isMyTask = t.employee_name === currentUser;
+                    const canEdit = isAdmin || isMyTask;
                     const canDelete = isAdmin || isMyTask;
 
                     return (
-                       <li key={t.task_id} className="p-4 hover:bg-gray-50 transition flex flex-col sm:flex-row sm:items-start justify-between gap-4 group">
-                          <div className="flex-1 space-y-2">
-                             <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="font-semibold text-gray-800">{t.title}</h3>
-                                {t.master_task_id && (
-                                  <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200 shadow-sm font-medium">
-                                    🗂️ {masterTasks.find(m => String(m.id) === String(t.master_task_id))?.title || "Master Task"}
-                                  </span>
-                                )}
-                             </div>
-                             <p className="text-xs text-gray-500 flex items-center gap-2">
-                                <span>👤 {t.employee_name}</span>
-                                <span>•</span>
-                                <span>📅 {t.due_date}</span>
-                             </p>
-                             
-                             <div className="flex flex-wrap gap-2 mt-2 items-center">
-                               {activeTab === 'daily' && (
-                                 <>
-                                   <div className="text-[11px] bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100 flex items-center">
-                                     <b>KPI:</b>
-                                     <InlineInput value={t.kpi} placeholder="Add KPI" onSave={(val) => handleInlineUpdate(t.task_id, 'kpi', val)} className="ml-1 bg-transparent border-none outline-none w-24 text-indigo-700 placeholder-indigo-300" />
-                                   </div>
-                                   <div className="text-[11px] bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-100 flex items-center">
-                                     <b>Target:</b>
-                                     <InlineInput value={t.target_val} placeholder="Add Target" onSave={(val) => handleInlineUpdate(t.task_id, 'target_val', val)} className="ml-1 bg-transparent border-none outline-none w-24 text-amber-700 placeholder-amber-300" />
-                                   </div>
-                                 </>
-                               )}
-                               
-                               {(activeTab === 'weekly' || activeTab === 'daily') && (
-                                 <div className="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded border border-emerald-100 flex items-center">
-                                   <b>{activeTab === 'daily' ? 'Actual:' : 'KPI/Outcome:'}</b>
-                                   <InlineInput 
-                                     value={activeTab === 'daily' ? t.actual_result : t.kpi} 
-                                     placeholder="Add result" 
-                                     onSave={(val) => handleInlineUpdate(t.task_id, activeTab === 'daily' ? 'actual_result' : 'kpi', val)} 
-                                     className="ml-1 bg-transparent border-none outline-none w-32 text-emerald-700 placeholder-emerald-300" 
-                                   />
-                                 </div>
-                               )}
-                             </div>
-                             
-                             <div className="flex items-center text-xs text-gray-600 mt-2 bg-gray-50 p-1 rounded border border-gray-100">
-                               <span className="mr-1 italic text-gray-400">Remark:</span>
-                               <InlineInput value={t.remark} placeholder="Add a remark..." onSave={(val) => handleInlineUpdate(t.task_id, 'remark', val)} className="bg-transparent border-none outline-none flex-1 italic text-gray-700" />
-                             </div>
+                      <li key={t.task_id} className="p-4 hover:bg-blue-50/30 transition border-b border-gray-100 flex flex-col sm:flex-row sm:items-start justify-between gap-4 group">
+                        {/* Left Side: Info */}
+                        <div className="flex-1 flex flex-col gap-1.5">
+                          {/* 1. Date & Employee */}
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                            <span className="flex items-center gap-1">
+                              <span className="text-gray-400">📅</span>
+                              {t.due_date ? new Date(t.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                            </span>
+                            <span className="text-gray-300">|</span>
+                            <span className="flex items-center gap-1 text-blue-600"><span className="text-blue-400">👤</span> {t.employee_name}</span>
                           </div>
-                          
-                          <div className="flex items-center gap-4 mt-2 sm:mt-0">
-                             {activeTab === 'daily' && (
-                               <div className="bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-md text-sm font-semibold whitespace-nowrap flex items-center group/time hover:bg-green-100 transition">
-                                  ⏱ 
-                                  <InlineInput 
-                                    type="number" 
-                                    step="0.5" 
-                                    value={t.hours_worked} 
-                                    placeholder="0" 
-                                    onSave={(val) => handleInlineUpdate(t.task_id, 'hours_worked', val)} 
-                                    className="ml-1 bg-transparent border-none outline-none w-10 text-center text-green-700 font-bold" 
-                                  /> 
-                                  <span className="ml-1">Hrs</span>
-                               </div>
-                             )}
-                             
-                             {canDelete && isCurrentOrFutureTask(t) && (
-                                <button
-                                   onClick={() => handleDeleteTask(t.task_id)}
-                                   className="text-red-400 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition"
-                                   title="Delete Task"
-                                >
-                                   ❌
-                                </button>
-                             )}
+
+                          {/* 2. Title & Master Task */}
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-gray-900 text-[15px]">{t.title}</h3>
+                            {t.master_task_id && (
+                              <span className="text-[9px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200 font-bold uppercase tracking-wide">
+                                🗂️ {masterTasks.find(m => String(m.id) === String(t.master_task_id))?.title || "Master Task"}
+                              </span>
+                            )}
                           </div>
-                       </li>
+
+                          {/* 3. KPI, Target, Actual, Remark */}
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {activeTab === 'daily' && (
+                              <div className={`flex items-center text-[11px] bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100 shadow-sm flex-1 min-w-[120px] ${!canEdit ? 'opacity-70' : ''}`}>
+                                <span className="font-bold mr-1 opacity-70 whitespace-nowrap">KPI / Target:</span>
+                                <InlineInput disabled={!canEdit} value={t.kpi} placeholder="..." onSave={(val) => handleInlineUpdate(t.task_id, 'kpi', val)} className="bg-transparent border-none outline-none w-full text-indigo-700 placeholder-indigo-300 font-medium disabled:cursor-not-allowed" />
+                              </div>
+                            )}
+
+                            {(activeTab === 'weekly' || activeTab === 'daily') && (
+                              <div className={`flex items-center text-[11px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded border border-emerald-100 shadow-sm flex-1 min-w-[120px] ${!canEdit ? 'opacity-70' : ''}`}>
+                                <span className="font-bold mr-1 opacity-70 whitespace-nowrap">{activeTab === 'daily' ? 'Actual:' : 'KPI:'}</span>
+                                <InlineInput
+                                  disabled={!canEdit}
+                                  value={activeTab === 'daily' ? t.actual_result : t.kpi}
+                                  placeholder="..."
+                                  onSave={(val) => handleInlineUpdate(t.task_id, activeTab === 'daily' ? 'actual_result' : 'kpi', val)}
+                                  className="bg-transparent border-none outline-none w-full text-emerald-700 placeholder-emerald-300 font-medium disabled:cursor-not-allowed"
+                                />
+                              </div>
+                            )}
+
+                            <div className={`flex items-center text-[11px] bg-gray-50 text-gray-700 px-2 py-1 rounded border border-gray-200 flex-1 min-w-[150px] shadow-sm ${!canEdit ? 'opacity-70' : ''}`}>
+                              <span className="font-bold mr-1 text-gray-400">Remark:</span>
+                              <InlineInput disabled={!canEdit} value={t.remark} placeholder="..." onSave={(val) => handleInlineUpdate(t.task_id, 'remark', val)} className="bg-transparent border-none outline-none w-full italic text-gray-700 placeholder-gray-300 disabled:cursor-not-allowed" />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right Side: Status, Time, Delete */}
+                        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 sm:gap-2 border-t sm:border-t-0 pt-3 sm:pt-0 border-gray-100 w-full sm:w-auto">
+                          {/* Status Dropdown */}
+                          <select
+                            disabled={!canEdit}
+                            value={t.status || 'open'}
+                            onChange={(e) => handleInlineUpdate(t.task_id || t.id, 'status', e.target.value)}
+                            className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1.5 rounded-md border outline-none text-center w-[100px] shadow-sm ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed opacity-80'} ${t.status === 'closed' ? 'bg-green-100 text-green-700 border-green-200' :
+                              t.status === 'in progress' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                                t.status === 'waiting' ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                                  'bg-blue-100 text-blue-700 border-blue-200'
+                              }`}
+                          >
+                            <option value="open">Open</option>
+                            <option value="in progress">In Progress</option>
+                            <option value="waiting">Waiting</option>
+                            <option value="closed">Closed</option>
+                          </select>
+
+                          <div className="flex items-center gap-2">
+                            {activeTab === 'daily' && (
+                              <div className={`bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-md flex items-center shadow-sm justify-center transition ${canEdit ? 'group-hover:bg-green-100' : 'opacity-70'}`}>
+                                <span className="text-[12px] opacity-80 mr-1">⏱</span>
+                                <InlineInput
+                                  disabled={!canEdit}
+                                  type="number"
+                                  step="0.5"
+                                  value={t.hours_worked}
+                                  placeholder="0"
+                                  onSave={(val) => handleInlineUpdate(t.task_id, 'hours_worked', val)}
+                                  className="bg-transparent border-none outline-none w-8 text-center text-green-800 font-bold text-[13px] p-0 leading-none focus:ring-1 focus:ring-green-400 rounded-sm disabled:cursor-not-allowed"
+                                />
+                                <span className="ml-1 text-[10px] uppercase tracking-wide font-bold text-green-600 opacity-90">Hrs</span>
+                              </div>
+                            )}
+
+                            {canDelete && isCurrentOrFutureTask(t) && (
+                              <button
+                                onClick={() => handleDeleteTask(t.task_id)}
+                                className="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 p-1.5 rounded-md transition opacity-0 group-hover:opacity-100 shadow-sm"
+                                title="Delete Task"
+                              >
+                                ❌
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </li>
                     );
-                 })}
-              </ul>
-           )}
-        </div>
+                  })}
+                </ul>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -1068,7 +1209,7 @@ const WorkspaceBoard = () => {
             <form onSubmit={handleCreateMasterTask} className="p-6">
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
-                <input 
+                <input
                   autoFocus
                   value={mtTitle}
                   onChange={(e) => setMtTitle(e.target.value)}
@@ -1079,7 +1220,7 @@ const WorkspaceBoard = () => {
               <div className="mb-4 grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Start Date</label>
-                  <input 
+                  <input
                     type="date"
                     value={mtStartDate}
                     onChange={(e) => setMtStartDate(e.target.value)}
@@ -1088,9 +1229,10 @@ const WorkspaceBoard = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">End Date</label>
-                  <input 
+                  <input
                     type="date"
                     value={mtEndDate}
+                    min={mtStartDate || undefined}
                     onChange={(e) => setMtEndDate(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
@@ -1098,7 +1240,7 @@ const WorkspaceBoard = () => {
               </div>
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-                <textarea 
+                <textarea
                   value={mtDescription}
                   onChange={(e) => setMtDescription(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
@@ -1113,8 +1255,8 @@ const WorkspaceBoard = () => {
                   ) : (
                     workspaceEmployees.map(emp => (
                       <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           className="rounded text-blue-600 focus:ring-blue-500"
                           checked={mtAssignees.includes(emp.id)}
                           onChange={(e) => {
