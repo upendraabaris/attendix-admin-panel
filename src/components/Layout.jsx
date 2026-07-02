@@ -158,16 +158,16 @@ const Layout = ({ children }) => {
     //   }
     // });
     socket.on("chat:message:new", ({ message }) => {
-  const isOwnMessage =
-    Number(message?.sender_employee_id) === Number(employeeId);
+      const isOwnMessage =
+        Number(message?.sender_employee_id) === Number(employeeId);
 
-  const isChatRoute =
-    locationRef.current === "/chat";
+      const isChatRoute =
+        locationRef.current === "/chat";
 
-  if (!isOwnMessage && !isChatRoute) {
-    playNotificationSound();
-  }
-});
+      if (!isOwnMessage && !isChatRoute) {
+        playNotificationSound();
+      }
+    });
 
     return () => {
       socket.disconnect();
@@ -184,7 +184,7 @@ const Layout = ({ children }) => {
       { name: "Leave Policy", href: "/leave-policy", icon: KeyRound },
       { name: "Work Week Policy", href: "/work-week-policy", icon: Scale },
       { name: "Attendance", href: "/attendance", icon: Clock },
-      { name: "Employee Task", href: "/tasks", icon: CheckSquare },
+      //{ name: "Employee Task", href: "/tasks", icon: CheckSquare },
       { name: "Workspace", href: "/workspace", icon: Briefcase },
       { name: "Reports", href: "/reports", icon: FileBarChart },
       { name: "Chat", href: "/chat", icon: MessageSquare },
@@ -201,9 +201,7 @@ const Layout = ({ children }) => {
       { name: "Work Week Policy", href: "/employee-work-week-policy", icon: Scale },
       { name: "Leave Policy", href: "/employee-leave-policy", icon: KeyRound },
       { name: "Holiday", href: "/employee-holidays", icon: CalendarDays },
-      ...(orgID !== "13"
-        ? [{ name: "Workspace", href: "/workspace", icon: Briefcase }]
-        : []),
+      { name: "Workspace", href: "/workspace", icon: Briefcase },
       { name: "Chat", href: "/chat", icon: MessageSquare },
       { name: "Support", href: "/support", icon: LifeBuoy },
     ];

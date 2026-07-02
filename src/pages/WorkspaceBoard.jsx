@@ -485,7 +485,32 @@ const WorkspaceBoard = () => {
   const [mtStartDate, setMtStartDate] = useState("");
   const [mtEndDate, setMtEndDate] = useState("");
   const [mtAssignees, setMtAssignees] = useState([]);
+  const [editMasterTaskId, setEditMasterTaskId] = useState(null);
   const [workspaceEmployees, setWorkspaceEmployees] = useState([]);
+
+  const openMasterTaskModal = (task = null) => {
+    if (task) {
+      setEditMasterTaskId(task.id);
+      setMtTitle(task.title || "");
+      setMtDescription(task.description || "");
+      setMtStartDate(task.start_date ? new Date(task.start_date).toISOString().split("T")[0] : "");
+      setMtEndDate(task.end_date ? new Date(task.end_date).toISOString().split("T")[0] : "");
+      setMtAssignees(task.assignees || []);
+    } else {
+      setEditMasterTaskId(null);
+      setMtTitle("");
+      setMtDescription("");
+      
+      const today = new Date();
+      const nextWeek = new Date();
+      nextWeek.setDate(today.getDate() + 7);
+      
+      setMtStartDate(today.toISOString().split("T")[0]);
+      setMtEndDate(nextWeek.toISOString().split("T")[0]);
+      setMtAssignees([]);
+    }
+    setIsMasterModalOpen(true);
+  };
 
   const handleAuthFailure = () => {
     localStorage.removeItem("token");
@@ -615,26 +640,34 @@ const WorkspaceBoard = () => {
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
-      await api.post("/master-task/create", {
+      const payload = {
         workspace_id: id,
         title: mtTitle,
         description: mtDescription,
         start_date: mtStartDate,
         end_date: mtEndDate,
         assignees: mtAssignees
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      };
 
-      toast.success("Master task created successfully");
+      if (editMasterTaskId) {
+        await api.put(`/master-task/update/${editMasterTaskId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+        toast.success("Master task updated successfully");
+      } else {
+        await api.post("/master-task/create", payload, { headers: { Authorization: `Bearer ${token}` } });
+        toast.success("Master task created successfully");
+      }
+
       setMtTitle("");
       setMtDescription("");
       setMtStartDate("");
       setMtEndDate("");
       setMtAssignees([]);
+      setEditMasterTaskId(null);
       setIsMasterModalOpen(false);
       fetchMasterTasks();
     } catch (err) {
       console.error(err);
-      toast.error("Failed to create master task");
+      toast.error(editMasterTaskId ? "Failed to update master task" : "Failed to create master task");
     } finally {
       setIsSubmitting(false);
     }
@@ -771,7 +804,7 @@ const WorkspaceBoard = () => {
             {activeTab === "master" && (
               <Button
                 size="sm"
-                onClick={() => setIsMasterModalOpen(true)}
+                onClick={() => openMasterTaskModal()}
                 className="h-8 px-3 bg-blue-600 hover:bg-blue-700"
               >
                 <PlusCircle className="w-3 h-3 mr-1" />
@@ -968,10 +1001,10 @@ const WorkspaceBoard = () => {
                   value={quickHours}
                   onChange={(e) => setQuickHours(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd(e)}
-                  placeholder="Hours (e.g. 1.5)"
+                  placeholder="Est. Hours (e.g. 1.5)"
                   step="0.5"
                   min="0"
-                  className="w-full md:w-32 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full md:w-40 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               )}
             </div>
@@ -1019,7 +1052,19 @@ const WorkspaceBoard = () => {
                   className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-400 hover:ring-2 hover:ring-blue-100 transition-all cursor-pointer group relative flex flex-col justify-between"
                 >
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-blue-700 transition-colors">{task.title}</h3>
+                    <div className="flex justify-between items-start mb-2 relative">
+                      <h3 className="text-lg font-bold text-gray-800 group-hover:text-blue-700 transition-colors pr-6">{task.title}</h3>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openMasterTaskModal(task);
+                        }}
+                        className="text-gray-400 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 p-1.5 rounded-md transition opacity-0 group-hover:opacity-100 absolute top-0 right-0 z-10"
+                        title="Edit Master Task"
+                      >
+                        ✏️
+                      </button>
+                    </div>
                     <p className="text-sm text-gray-500 line-clamp-3 mb-3">{task.description || "No description provided."}</p>
                   </div>
 
@@ -1163,7 +1208,7 @@ const WorkspaceBoard = () => {
                           <div className="flex items-center gap-2">
                             {activeTab === 'daily' && (
                               <div className={`bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-md flex items-center shadow-sm justify-center transition ${canEdit ? 'group-hover:bg-green-100' : 'opacity-70'}`}>
-                                <span className="text-[12px] opacity-80 mr-1">⏱</span>
+                                <span className="font-bold mr-1 opacity-70 whitespace-nowrap text-[10px] uppercase tracking-wide">Est. Hours:</span>
                                 <InlineInput
                                   disabled={!canEdit}
                                   type="number"
@@ -1171,9 +1216,8 @@ const WorkspaceBoard = () => {
                                   value={t.hours_worked}
                                   placeholder="0"
                                   onSave={(val) => handleInlineUpdate(t.task_id, 'hours_worked', val)}
-                                  className="bg-transparent border-none outline-none w-8 text-center text-green-800 font-bold text-[13px] p-0 leading-none focus:ring-1 focus:ring-green-400 rounded-sm disabled:cursor-not-allowed"
+                                  className="bg-transparent border-none outline-none w-10 text-center text-green-800 font-bold text-[13px] p-0 leading-none focus:ring-1 focus:ring-green-400 rounded-sm disabled:cursor-not-allowed"
                                 />
-                                <span className="ml-1 text-[10px] uppercase tracking-wide font-bold text-green-600 opacity-90">Hrs</span>
                               </div>
                             )}
 
@@ -1203,7 +1247,7 @@ const WorkspaceBoard = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800">Add Master Task</h3>
+              <h3 className="font-bold text-gray-800">{editMasterTaskId ? "Edit Master Task" : "Add Master Task"}</h3>
               <button onClick={() => setIsMasterModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
             </div>
             <form onSubmit={handleCreateMasterTask} className="p-6">
@@ -1274,9 +1318,11 @@ const WorkspaceBoard = () => {
                 </div>
               </div>
               <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => setIsMasterModalOpen(false)}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => setIsMasterModalOpen(false)} disabled={isSubmitting}>
+                  Cancel
+                </Button>
                 <Button type="submit" disabled={isSubmitting || !mtTitle.trim()} className="bg-blue-600 hover:bg-blue-700 text-white">
-                  {isSubmitting ? "Saving..." : "Create Task"}
+                  {isSubmitting ? "Saving..." : (editMasterTaskId ? "Save Changes" : "Create Task")}
                 </Button>
               </div>
             </form>
