@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { PlusCircle, Search, Filter, ArrowUpDown } from "lucide-react";
+import { PlusCircle, Search, Filter, ArrowUpDown, Mic } from "lucide-react";
 import Layout from "../components/Layout";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -501,12 +501,19 @@ const WorkspaceBoard = () => {
       setMtTitle("");
       setMtDescription("");
       
+      const formatLocal = (d) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      };
+
       const today = new Date();
       const nextWeek = new Date();
       nextWeek.setDate(today.getDate() + 7);
       
-      setMtStartDate(today.toISOString().split("T")[0]);
-      setMtEndDate(nextWeek.toISOString().split("T")[0]);
+      setMtStartDate(formatLocal(today));
+      setMtEndDate(formatLocal(nextWeek));
       setMtAssignees([]);
     }
     setIsMasterModalOpen(true);
@@ -589,6 +596,24 @@ const WorkspaceBoard = () => {
     };
     fetchEmployees();
   }, [id, filterEmployeeId, filterStatus, filterMasterTaskId, filterDateFrom, filterDateTo, sortBy]);
+
+  const startListening = (setter, currentValue) => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Voice recognition is not supported in this browser");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-IN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.start();
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setter(currentValue ? `${currentValue} ${transcript}` : transcript);
+    };
+    recognition.onerror = (event) => console.error("Speech recognition error:", event.error);
+  };
 
   const handleQuickAdd = async (e) => {
     e.preventDefault();
@@ -963,14 +988,26 @@ const WorkspaceBoard = () => {
         {activeTab !== 'master' && (
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4 flex flex-col gap-3">
             <div className="flex flex-col md:flex-row gap-3">
-              <input
-                type="text"
-                value={quickTitle}
-                onChange={(e) => setQuickTitle(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd(e)}
-                placeholder={activeTab === 'daily' ? "Task (with KPI & Impact)" : "Task"}
-                className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="text"
+                  value={quickTitle}
+                  onChange={(e) => setQuickTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd(e)}
+                  placeholder={activeTab === 'daily' ? "Task (with KPI & Impact)" : "Task"}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-md px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 text-blue-500 border-blue-200 hover:bg-blue-50"
+                  onClick={() => startListening(setQuickTitle, quickTitle)}
+                  title="Voice input"
+                >
+                  <Mic className="w-4 h-4" />
+                </Button>
+              </div>
 
               <select
                 value={quickMasterTaskId}
@@ -1253,13 +1290,25 @@ const WorkspaceBoard = () => {
             <form onSubmit={handleCreateMasterTask} className="p-6">
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
-                <input
-                  autoFocus
-                  value={mtTitle}
-                  onChange={(e) => setMtTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="E.g., Quarterly Review"
-                />
+                <div className="flex gap-2 items-center">
+                  <input
+                    autoFocus
+                    value={mtTitle}
+                    onChange={(e) => setMtTitle(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="E.g., Quarterly Review"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10 shrink-0 text-blue-500 border-blue-200 hover:bg-blue-50"
+                    onClick={() => startListening(setMtTitle, mtTitle)}
+                    title="Voice input"
+                  >
+                    <Mic className="w-5 h-5" />
+                  </Button>
+                </div>
               </div>
               <div className="mb-4 grid grid-cols-2 gap-3">
                 <div>
@@ -1267,7 +1316,21 @@ const WorkspaceBoard = () => {
                   <input
                     type="date"
                     value={mtStartDate}
-                    onChange={(e) => setMtStartDate(e.target.value)}
+                    onChange={(e) => {
+                      const newStartDate = e.target.value;
+                      setMtStartDate(newStartDate);
+                      if (newStartDate) {
+                        const d = new Date(newStartDate);
+                        d.setDate(d.getDate() + 7);
+                        const formatLocal = (dateObj) => {
+                          const y = dateObj.getFullYear();
+                          const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                          const day = String(dateObj.getDate()).padStart(2, '0');
+                          return `${y}-${m}-${day}`;
+                        };
+                        setMtEndDate(formatLocal(d));
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
@@ -1284,12 +1347,24 @@ const WorkspaceBoard = () => {
               </div>
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={mtDescription}
-                  onChange={(e) => setMtDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
-                  placeholder="What is this master task about?"
-                />
+                <div className="flex gap-2 items-start">
+                  <textarea
+                    value={mtDescription}
+                    onChange={(e) => setMtDescription(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                    placeholder="What is this master task about?"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10 shrink-0 text-blue-500 border-blue-200 hover:bg-blue-50 mt-1"
+                    onClick={() => startListening(setMtDescription, mtDescription)}
+                    title="Voice input"
+                  >
+                    <Mic className="w-5 h-5" />
+                  </Button>
+                </div>
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Assign To (Optional)</label>
