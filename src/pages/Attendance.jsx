@@ -1440,6 +1440,51 @@ const parseWorkedHours = (workedTime) => {
   return h + m / 60;
 };
 
+const HOUR_12_OPTIONS = Array.from({ length: 12 }, (_, index) =>
+  String(index + 1).padStart(2, "0"),
+);
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, index) =>
+  String(index).padStart(2, "0"),
+);
+
+const getTwelveHourParts = (timeValue = "18:00") => {
+  const [hourRaw = "18", minute = "00"] = String(timeValue).split(":");
+  const parsedHour = Number.parseInt(hourRaw, 10);
+
+  if (Number.isNaN(parsedHour)) {
+    return { hour12: "06", minute: "00", meridiem: "PM" };
+  }
+
+  const meridiem = parsedHour >= 12 ? "PM" : "AM";
+  const normalizedHour = parsedHour % 12 || 12;
+
+  return {
+    hour12: String(normalizedHour).padStart(2, "0"),
+    minute: String(minute).padStart(2, "0"),
+    meridiem,
+  };
+};
+
+const build24HourTime = (hour12, minute, meridiem) => {
+  const parsedHour = Number.parseInt(hour12, 10);
+  if (Number.isNaN(parsedHour)) {
+    return "18:00";
+  }
+
+  let hour24 = parsedHour % 12;
+  if (meridiem === "PM") {
+    hour24 += 12;
+  }
+
+  return `${String(hour24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+};
+
+const formatTime12Hour = (timeValue) => {
+  if (!timeValue) return "";
+  const { hour12, minute, meridiem } = getTwelveHourParts(timeValue);
+  return `${hour12}:${minute} ${meridiem}`;
+};
+
 const getStatusCell = (workedTime) => {
   if (workedTime === "Missing Clock Out") {
     return (
@@ -1533,6 +1578,20 @@ function ClockOutEditModal({ open, onClose, record, employeeId, employeeName, on
         year: "numeric",
       })
     : "—";
+
+  const { hour12, minute, meridiem } = getTwelveHourParts(clockOutTime);
+
+  const handleClockOutTimePartChange = (part, value) => {
+    const nextParts = {
+      hour12,
+      minute,
+      meridiem,
+      [part]: value,
+    };
+    setClockOutTime(
+      build24HourTime(nextParts.hour12, nextParts.minute, nextParts.meridiem),
+    );
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1630,14 +1689,51 @@ function ClockOutEditModal({ open, onClose, record, employeeId, employeeName, on
                   <Clock className="w-3.5 h-3.5 text-orange-500" />
                   Clock-Out Time <span className="text-red-500">*</span>
                 </label>
-                <input
-                  ref={inputRef}
-                  type="time"
-                  value={clockOutTime}
-                  onChange={(e) => setClockOutTime(e.target.value)}
-                  required
-                  className="w-full h-11 px-4 rounded-xl border border-slate-200 text-slate-700 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all bg-white"
-                />
+                <div className="grid grid-cols-3 gap-2">
+                  <select
+                    ref={inputRef}
+                    value={hour12}
+                    onChange={(e) =>
+                      handleClockOutTimePartChange("hour12", e.target.value)
+                    }
+                    className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                  >
+                    {HOUR_12_OPTIONS.map((hourOption) => (
+                      <option key={hourOption} value={hourOption}>
+                        {hourOption}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={minute}
+                    onChange={(e) =>
+                      handleClockOutTimePartChange("minute", e.target.value)
+                    }
+                    className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                  >
+                    {MINUTE_OPTIONS.map((minuteOption) => (
+                      <option key={minuteOption} value={minuteOption}>
+                        {minuteOption}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={meridiem}
+                    onChange={(e) =>
+                      handleClockOutTimePartChange("meridiem", e.target.value)
+                    }
+                    className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Selected time:{" "}
+                  <span className="font-semibold text-slate-600">
+                    {formatTime12Hour(clockOutTime)}
+                  </span>
+                </p>
               </div>
 
               {/* Remark input */}
