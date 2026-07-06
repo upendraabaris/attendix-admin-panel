@@ -483,6 +483,8 @@ import {
   ArrowLeft,
   User,
   Wallet,
+  History,
+  AlertTriangle,
 } from "lucide-react";
 
 const HIDDEN_BALANCE_TYPES = ["unpaid", "other"];
@@ -585,6 +587,7 @@ function Empleave() {
   const navigate = useNavigate();
   const [leaves, setLeaves] = useState([]);
   const [leaveBalances, setLeaveBalances] = useState([]);
+  const [leaveHistory, setLeaveHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [employeeName, setEmployeeName] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -643,6 +646,24 @@ function Empleave() {
           (a, b) => getLeaveTypeRank(a.leave_type) - getLeaveTypeRank(b.leave_type),
         ),
       );
+
+      // Fetch expired leave history for this employee (admin API)
+      try {
+        const historyRes = await api.get("/leave/balance-history");
+        const allHistory = historyRes?.data?.data || [];
+        const empHistory = allHistory.filter(
+          (h) => String(h.employee_id) === String(id),
+        );
+        // Sort by leave_type then cycle_start descending
+        empHistory.sort((a, b) => {
+          if (a.leave_type !== b.leave_type)
+            return a.leave_type.localeCompare(b.leave_type);
+          return new Date(b.cycle_start) - new Date(a.cycle_start);
+        });
+        setLeaveHistory(empHistory);
+      } catch (histErr) {
+        console.warn("Could not fetch leave expiry history:", histErr.message);
+      }
     } catch (err) {
       console.error("Error fetching leaves", err);
     } finally {
@@ -729,6 +750,80 @@ function Empleave() {
             )}
           </div>
         </div>
+
+        {/* ── Expired Leave History Section ─────────────────────────────────── */}
+        {leaveHistory.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <History className="w-5 h-5 text-rose-500" />
+              <h2 className="text-lg font-semibold text-gray-900">
+                Previous Years — Expired Leave
+              </h2>
+            </div>
+
+            <div className="bg-white rounded-xl border border-rose-100 shadow-sm overflow-hidden">
+              {/* Table header */}
+              <div className="grid grid-cols-5 gap-2 px-5 py-3 bg-rose-50 border-b border-rose-100 text-xs font-semibold uppercase tracking-wider text-rose-600">
+                <span>Leave Type</span>
+                <span>Cycle</span>
+                <span className="text-right">Earned</span>
+                <span className="text-right">Used</span>
+                <span className="text-right">Expired</span>
+              </div>
+
+              {/* Rows */}
+              <div className="divide-y divide-gray-50">
+                {leaveHistory.map((h, idx) => {
+                  const cycleLabel = `${new Date(h.cycle_start).getFullYear()}`;
+                  const expiredDays = Number(h.expired_days || 0);
+                  return (
+                    <div
+                      key={idx}
+                      className="grid grid-cols-5 gap-2 px-5 py-3.5 items-center hover:bg-rose-50/40 transition-colors"
+                    >
+                      {/* Leave Type */}
+                      <span className="inline-flex items-center">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          {formatLeaveTypeLabel(h.leave_type)}
+                        </span>
+                      </span>
+
+                      {/* Cycle year */}
+                      <span className="text-sm text-gray-500">{cycleLabel}</span>
+
+                      {/* Earned */}
+                      <span className="text-sm font-medium text-gray-700 text-right">
+                        {formatLeaveValue(h.earned_days)}
+                      </span>
+
+                      {/* Used */}
+                      <span className="text-sm text-gray-600 text-right">
+                        {formatLeaveValue(h.used_days)}
+                      </span>
+
+                      {/* Expired */}
+                      <span className="text-right">
+                        {expiredDays > 0 ? (
+                          <span className="inline-flex items-center justify-end gap-1 font-semibold text-rose-600">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            {formatLeaveValue(expiredDays)}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer note */}
+              <div className="px-5 py-2.5 bg-gray-50 border-t border-gray-100 text-xs text-gray-400">
+                Expired days are unused leaves that lapsed at the end of each cycle and cannot be used.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
