@@ -142,7 +142,7 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
     max_consecutive_days: Number(
       policy.max_consecutive_days ?? DEFAULT_FORM_DATA.max_consecutive_days,
     ),
-    expire_limit: Number(policy.expire_limit ?? DEFAULT_FORM_DATA.expire_limit),
+    expire_limit: policy.expire_limit === null ? null : Number(policy.expire_limit ?? DEFAULT_FORM_DATA.expire_limit),
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -251,20 +251,49 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
             )}
 
             {formData.leave_type === "compensation" && (
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">Expire Limit (days)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={formData.expire_limit}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      expire_limit: e.target.value,
-                    }))
-                  }
-                  required
-                />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between rounded-lg border bg-gray-50 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Set Expiry Limit</p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Toggle whether compensation leaves expire.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: formData.expire_limit !== null ? "#16a34a" : "#9ca3af" }}
+                    >
+                      {formData.expire_limit !== null ? "Expires" : "Never Expires"}
+                    </span>
+                    <Toggle
+                      checked={formData.expire_limit !== null}
+                      onChange={(checked) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          expire_limit: checked ? 30 : null,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+                {formData.expire_limit !== null && (
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Expire Limit (days)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={formData.expire_limit ?? ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          expire_limit: e.target.value === "" ? null : Number(e.target.value),
+                        }))
+                      }
+                      required
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -401,7 +430,9 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
               <div className="space-y-2 rounded-lg border border-amber-100 bg-amber-50 p-4">
                 <p className="text-sm font-semibold text-amber-700">Compensation Leave</p>
                 <p className="text-sm text-amber-900">
-                  Compensation leave expires after {formData.expire_limit || "?"} day(s).
+                  {formData.expire_limit !== null
+                    ? `Compensation leave expires after ${formData.expire_limit} day(s).`
+                    : "Compensation leave never expires."}
                 </p>
               </div>
             ) : null}
@@ -701,19 +732,49 @@ const LeavePolicyPage = () => {
               )}
 
               {formData.leave_type === "compensation" && (
-                <div>
-                  <Label>Expire Limit (days)</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={formData.expire_limit}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        expire_limit: e.target.value,
-                      }))
-                    }
-                  />
+                <div className="md:col-span-2 space-y-3">
+                  <div className="flex items-center justify-between rounded-lg border bg-gray-50 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Set Expiry Limit</p>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        Toggle whether compensation leaves expire.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="text-xs font-semibold"
+                        style={{ color: formData.expire_limit !== null ? "#16a34a" : "#9ca3af" }}
+                      >
+                        {formData.expire_limit !== null ? "Expires" : "Never Expires"}
+                      </span>
+                      <Toggle
+                        checked={formData.expire_limit !== null}
+                        onChange={(checked) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            expire_limit: checked ? 30 : null,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                  {formData.expire_limit !== null && (
+                    <div className="space-y-1.5">
+                      <Label>Expire Limit (days)</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={formData.expire_limit ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            expire_limit: e.target.value === "" ? null : Number(e.target.value),
+                          }))
+                        }
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -783,7 +844,9 @@ const LeavePolicyPage = () => {
                 <div className="md:col-span-2 space-y-2 rounded-lg border border-amber-100 bg-amber-50 p-4">
                   <p className="text-sm font-semibold text-amber-700">Compensation Leave</p>
                   <p className="text-sm text-amber-900">
-                    Compensation leave expires after {formData.expire_limit || "?"} day(s).
+                    {formData.expire_limit !== null
+                      ? `Compensation leave expires after ${formData.expire_limit} day(s).`
+                      : "Compensation leave never expires."}
                   </p>
                 </div>
               ) : null}
@@ -836,7 +899,7 @@ const LeavePolicyPage = () => {
                         {policy.leave_type === "sick"
                           ? getSickDocumentRuleText(policy.document_days_required)
                           : policy.leave_type === "compensation"
-                            ? `Expires in ${policy.expire_limit || "?"} day(s)`
+                            ? (policy.expire_limit ? `Expires in ${policy.expire_limit} day(s)` : "Never expires")
                             : policy.leave_type === "vacation"
                               ? "Vacation leave will be deducted from earned leave balance"
                               : policyIsRuleBased

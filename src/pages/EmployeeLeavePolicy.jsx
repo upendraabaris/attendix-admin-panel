@@ -112,7 +112,7 @@ const EmployeeLeavePolicy = () => {
                             policy.leave_type === "sick"
                               ? getSickDocumentRuleText(policy.document_days_required)
                               : policy.leave_type === "compensation"
-                                ? `Expires in ${policy.expire_limit || "?"} day(s)`
+                                ? (policy.expire_limit ? `Expires in ${policy.expire_limit} day(s)` : "Never expires")
                                 : policy.leave_type === "vacation"
                                   ? "Vacation leave will be deducted from earned leave balance"
                                   : isRuleBased
