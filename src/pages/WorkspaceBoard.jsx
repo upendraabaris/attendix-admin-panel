@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { PlusCircle, Search, Filter, ArrowUpDown, Mic } from "lucide-react";
+import { PlusCircle, Search, Filter, ArrowUpDown, Mic, Sparkles } from "lucide-react";
 import Layout from "../components/Layout";
+import MeetingAiModal from "../components/MeetingAiModal";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import api from "../hooks/useApi";
@@ -456,6 +457,7 @@ const WorkspaceBoard = () => {
   const [tasksList, setTasksList] = useState([]);
   const [masterTasks, setMasterTasks] = useState([]);
   const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
+  const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("daily"); // "daily", "weekly", or "master"
 
@@ -477,6 +479,7 @@ const WorkspaceBoard = () => {
   const [quickRemark, setQuickRemark] = useState("");
   const [quickStatus, setQuickStatus] = useState("open");
   const [quickMasterTaskId, setQuickMasterTaskId] = useState("");
+  const [quickDate, setQuickDate] = useState(new Date().toISOString().split("T")[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Master Task Modal Fields
@@ -500,7 +503,7 @@ const WorkspaceBoard = () => {
       setEditMasterTaskId(null);
       setMtTitle("");
       setMtDescription("");
-      
+
       const formatLocal = (d) => {
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -511,7 +514,7 @@ const WorkspaceBoard = () => {
       const today = new Date();
       const nextWeek = new Date();
       nextWeek.setDate(today.getDate() + 7);
-      
+
       setMtStartDate(formatLocal(today));
       setMtEndDate(formatLocal(nextWeek));
       setMtAssignees([]);
@@ -624,7 +627,7 @@ const WorkspaceBoard = () => {
       await api.post("/task/quick-add", {
         title: quickTitle,
         hours_worked: activeTab === "daily" && quickHours ? parseFloat(quickHours) : 0,
-        date: new Date().toISOString().split("T")[0],
+        date: quickDate || new Date().toISOString().split("T")[0],
         workspace_id: id,
         master_task_id: quickMasterTaskId || null,
         employee_id: null,
@@ -645,6 +648,7 @@ const WorkspaceBoard = () => {
       setQuickRemark("");
       setQuickStatus("open");
       setQuickMasterTaskId("");
+      setQuickDate(new Date().toISOString().split("T")[0]);
       fetchTasks();
     } catch (err) {
       console.error(err);
@@ -657,7 +661,7 @@ const WorkspaceBoard = () => {
   const handleCreateMasterTask = async (e) => {
     e.preventDefault();
     if (!mtTitle.trim()) return toast.error("Title is required");
-    
+
     if (mtStartDate && mtEndDate && new Date(mtEndDate) < new Date(mtStartDate)) {
       return toast.error("End Date cannot be earlier than Start Date");
     }
@@ -755,7 +759,7 @@ const WorkspaceBoard = () => {
   // Filter tasks based on search term
   const filteredTasks = tasksList.filter((t) => {
     const matchesTab = (t.task_type || "daily") === activeTab;
-    const matchesSearch = [t.title, t.description, t.remark, t.kpi].some((v) =>
+    const matchesSearch = [t.title, t.description, t.remark, t.kpi, t.employee_name].some((v) =>
       (v || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
     return matchesTab && matchesSearch;
@@ -836,13 +840,21 @@ const WorkspaceBoard = () => {
                 <span className="text-xs">Add Master Task</span>
               </Button>
             )}
+
+            <Button
+              size="sm"
+              onClick={() => setIsMeetingModalOpen(true)}
+              className="h-8 px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white border-0 shadow-sm transition-all"
+            >
+              <Sparkles className="w-3 h-3 mr-1 text-purple-200" />
+              <span className="text-xs font-semibold">Process Meeting</span>
+            </Button>
           </div>
         </div>
 
         {/* Filters Drawer */}
         {showFilters && (
           <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 mb-4 flex flex-wrap gap-4 items-end animate-in fade-in duration-200">
-            {isUserAdmin && (
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Employee</label>
                 <select
@@ -856,7 +868,6 @@ const WorkspaceBoard = () => {
                   ))}
                 </select>
               </div>
-            )}
 
             <div>
               <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Date From</label>
@@ -1031,6 +1042,14 @@ const WorkspaceBoard = () => {
                 <option value="waiting">🟠 Waiting</option>
                 <option value="closed">🔴 Closed</option>
               </select>
+
+              <input
+                type="date"
+                value={quickDate}
+                onChange={(e) => setQuickDate(e.target.value)}
+                className="w-full md:w-36 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600 font-semibold"
+                title="Task Date"
+              />
 
               {activeTab === 'daily' && (
                 <input
@@ -1406,6 +1425,17 @@ const WorkspaceBoard = () => {
       )}
 
       {/* Popup Modal (Removed) */}
+
+      <MeetingAiModal
+        isOpen={isMeetingModalOpen}
+        onClose={() => setIsMeetingModalOpen(false)}
+        workspaceId={id}
+        workspaceEmployees={workspaceEmployees}
+        onSuccess={() => {
+          fetchTasks();
+          fetchMasterTasks();
+        }}
+      />
     </Layout>
   );
 };
