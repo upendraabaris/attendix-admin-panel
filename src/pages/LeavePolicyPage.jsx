@@ -45,6 +45,7 @@ const DEFAULT_FORM_DATA = {
   document_days_required: null,
   max_consecutive_days: 2,
   expire_limit: 30,
+  carry_forward_enabled: false,
 };
 
 const RULE_BASED_TYPES = ["earned", "casual"];
@@ -73,6 +74,7 @@ const parseOptionalNumber = (value) => {
 
 const buildPolicyPayload = (formData) => {
   const isRuleBased = isRuleBasedLeave(formData.leave_type);
+  const isCompensation = formData.leave_type === "compensation";
 
   return {
     leave_type: formData.leave_type,
@@ -86,6 +88,7 @@ const buildPolicyPayload = (formData) => {
       formData.leave_type === "casual" ? parseOptionalNumber(formData.max_consecutive_days) : null,
     expire_limit:
       formData.leave_type === "compensation" ? parseOptionalNumber(formData.expire_limit) : null,
+    carry_forward_enabled: isCompensation ? false : Boolean(formData.carry_forward_enabled),
   };
 };
 
@@ -143,6 +146,7 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
       policy.max_consecutive_days ?? DEFAULT_FORM_DATA.max_consecutive_days,
     ),
     expire_limit: policy.expire_limit === null ? null : Number(policy.expire_limit ?? DEFAULT_FORM_DATA.expire_limit),
+    carry_forward_enabled: Boolean(policy.carry_forward_enabled),
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -294,6 +298,32 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
                     />
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ── Carry Forward Toggle (all types except compensation) ── */}
+            {formData.leave_type !== "compensation" && (
+              <div className="flex items-center justify-between rounded-lg border bg-indigo-50 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Carry Forward Unused Leave</p>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Unused balance transfers to the next cycle instead of expiring.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: formData.carry_forward_enabled ? "#4f46e5" : "#9ca3af" }}
+                  >
+                    {formData.carry_forward_enabled ? "Enabled" : "Disabled"}
+                  </span>
+                  <Toggle
+                    checked={formData.carry_forward_enabled}
+                    onChange={(value) =>
+                      setFormData((prev) => ({ ...prev, carry_forward_enabled: value }))
+                    }
+                  />
+                </div>
               </div>
             )}
 
@@ -778,6 +808,32 @@ const LeavePolicyPage = () => {
                 </div>
               )}
 
+              {/* ── Carry Forward Toggle (all types except compensation) ── */}
+              {formData.leave_type !== "compensation" && (
+                <div className="md:col-span-2 flex items-center justify-between rounded-lg border bg-indigo-50 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Carry Forward Unused Leave</p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Unused balance transfers to the next cycle instead of expiring.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: formData.carry_forward_enabled ? "#4f46e5" : "#9ca3af" }}
+                    >
+                      {formData.carry_forward_enabled ? "Enabled" : "Disabled"}
+                    </span>
+                    <Toggle
+                      checked={formData.carry_forward_enabled}
+                      onChange={(value) =>
+                        setFormData((prev) => ({ ...prev, carry_forward_enabled: value }))
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="md:col-span-2 flex items-center justify-between rounded-lg border bg-gray-50 px-4 py-3">
                 <div>
                   <p className="text-sm font-medium text-gray-700">Policy Status</p>
@@ -903,8 +959,10 @@ const LeavePolicyPage = () => {
                             : policy.leave_type === "vacation"
                               ? "Vacation leave will be deducted from earned leave balance"
                               : policyIsRuleBased
-                                ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave${policy.leave_type === "casual" && policy.max_consecutive_days ? ` | Max ${policy.max_consecutive_days} consecutive days` : ""}`
-                                : "-"}
+                                ? `${policy.earned_days_required} days -> ${policy.earned_leave_award} leave${policy.leave_type === "casual" && policy.max_consecutive_days ? ` | Max ${policy.max_consecutive_days} consecutive days` : ""}${policy.carry_forward_enabled ? " | CF: ON" : ""}`
+                                : policy.carry_forward_enabled
+                                  ? "CF: ON"
+                                  : "-"}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
