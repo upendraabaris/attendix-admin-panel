@@ -22,6 +22,7 @@ import ChangePassword from "./pages/ChangePassword";
 import Workspace from "./pages/Workspace";
 import MasterTaskBoard from "./pages/MasterTaskBoard";
 import WorkspaceBoard from "./pages/WorkspaceBoard";
+import MyWorkspace from "./pages/MyWorkspace";
 import EmployeeLogin from "./pages/EmployeeLogin";
 import EmployeeWebLogin from "./pages/EmployeeWebLogin";
 import SupportLogin from "./pages/SupportLogin";
@@ -263,6 +264,7 @@ const App = () => (
             }
           />
           <Route path="/workspace/:id" element={<WorkspaceBoard />} />
+
           <Route
             path="/tracking-settings"
             element={

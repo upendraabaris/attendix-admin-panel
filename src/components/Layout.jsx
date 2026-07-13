@@ -17,6 +17,7 @@ import {
   LifeBuoy,
   MessageSquare,
   Settings,
+  Layers,
 } from "lucide-react";
 import {
   Tooltip,
@@ -185,6 +186,7 @@ const Layout = ({ children }) => {
       { name: "Work Week Policy", href: "/work-week-policy", icon: Scale },
       { name: "Attendance", href: "/attendance", icon: Clock },
       //{ name: "Employee Task", href: "/tasks", icon: CheckSquare },
+
       { name: "Workspace", href: "/workspace", icon: Briefcase },
       { name: "Reports", href: "/reports", icon: FileBarChart },
       { name: "Chat", href: "/chat", icon: MessageSquare },
@@ -201,6 +203,7 @@ const Layout = ({ children }) => {
       { name: "Work Week Policy", href: "/employee-work-week-policy", icon: Scale },
       { name: "Leave Policy", href: "/employee-leave-policy", icon: KeyRound },
       { name: "Holiday", href: "/employee-holidays", icon: CalendarDays },
+
       { name: "Workspace", href: "/workspace", icon: Briefcase },
       { name: "Chat", href: "/chat", icon: MessageSquare },
       { name: "Support", href: "/support", icon: LifeBuoy },
