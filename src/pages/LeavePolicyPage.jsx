@@ -302,7 +302,7 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
             )}
 
             {/* ── Carry Forward Toggle (all types except compensation) ── */}
-            {formData.leave_type !== "compensation" && (
+            {!["compensation", "paternity", "unpaid"].includes(formData.leave_type) && (
               <div className="flex items-center justify-between rounded-lg border bg-indigo-50 px-4 py-3">
                 <div>
                   <p className="text-sm font-medium text-gray-700">Carry Forward Unused Leave</p>
@@ -809,7 +809,7 @@ const LeavePolicyPage = () => {
               )}
 
               {/* ── Carry Forward Toggle (all types except compensation) ── */}
-              {formData.leave_type !== "compensation" && (
+              {!["compensation", "paternity", "unpaid"].includes(formData.leave_type) && (
                 <div className="md:col-span-2 flex items-center justify-between rounded-lg border bg-indigo-50 px-4 py-3">
                   <div>
                     <p className="text-sm font-medium text-gray-700">Carry Forward Unused Leave</p>

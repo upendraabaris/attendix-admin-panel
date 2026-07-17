@@ -752,7 +752,8 @@ function Empleave() {
         </div>
 
         {/* ── Expired Leave History Section ─────────────────────────────────── */}
-        {leaveHistory.length > 0 && (
+        {/* {leaveHistory.length > 0 && ( */}
+        {false && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <History className="w-5 h-5 text-rose-500" />
