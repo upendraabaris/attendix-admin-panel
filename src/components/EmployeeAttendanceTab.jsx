@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Calendar, Clock, MapPin, LogIn, LogOut } from "lucide-react";
+import { Calendar, Clock, MapPin, LogIn, LogOut, Coffee, Briefcase } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -63,9 +63,24 @@ function EmployeeAttendanceTab() {
     endDate: getToday(),
   });
   const [attendance, setAttendance] = useState([]);
+  const [breakSummaryMap, setBreakSummaryMap] = useState({});
+  const [breaksList, setBreaksList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState("");
   const [locationEnabled, setLocationEnabled] = useState(true);
+
+  const fetchBreakSummary = useCallback(async () => {
+    if (!employeeId) return;
+    try {
+      const res = await api.get(`/break/attendance-summary/${employeeId}`, {
+        params: { startDate: filters.startDate, endDate: filters.endDate },
+      });
+      setBreakSummaryMap(res?.data?.data || {});
+      setBreaksList(res?.data?.breaks || []);
+    } catch (err) {
+      console.error("Error fetching break summary:", err);
+    }
+  }, [employeeId, filters.startDate, filters.endDate]);
 
   const fetchMyAttendance = useCallback(async () => {
     if (!employeeId) { setAttendance([]); return; }
@@ -75,13 +90,14 @@ function EmployeeAttendanceTab() {
         params: { employeeId, startDate: filters.startDate, endDate: filters.endDate },
       });
       setAttendance(res?.data?.data || []);
+      await fetchBreakSummary();
     } catch (error) {
       console.error("Error fetching my attendance:", error);
       toast.error("Unable to fetch attendance");
     } finally {
       setLoading(false);
     }
-  }, [employeeId, filters.startDate, filters.endDate]);
+  }, [employeeId, filters.startDate, filters.endDate, fetchBreakSummary]);
 
   const checkLocationEnabled = useCallback(async () => {
     if (!navigator.geolocation) {
@@ -192,6 +208,70 @@ function EmployeeAttendanceTab() {
   const isClockedIn = attendance.some(
     (r) => r.date === todayStr && r.clock_in && !r.clock_out
   );
+
+  const formatDurationSeconds = (totalSecs) => {
+    const secs = Math.max(0, Math.floor(totalSecs));
+    const hrs = Math.floor(secs / 3600);
+    const mins = Math.floor((secs % 3600) / 60);
+    const remainingSecs = secs % 60;
+
+    const parts = [];
+    if (hrs > 0) parts.push(`${hrs}h`);
+    if (mins > 0 || hrs > 0) parts.push(`${mins}m`);
+    parts.push(`${remainingSecs}s`);
+    return parts.join(" ");
+  };
+
+  const getSessionBreakSeconds = (record) => {
+    if (!record || (!record.raw_clock_in && !record.clock_in)) return 0;
+
+    const sStart = new Date(record.raw_clock_in || record.clock_in).getTime();
+    if (isNaN(sStart)) return 0;
+
+    const sEnd = (record.raw_clock_out || record.clock_out)
+      ? new Date(record.raw_clock_out || record.clock_out).getTime()
+      : Date.now();
+
+    let sessionBreakSecs = 0;
+    breaksList.forEach((b) => {
+      const bStart = new Date(b.break_start).getTime();
+      const bEnd = b.break_end ? new Date(b.break_end).getTime() : Date.now();
+      if (isNaN(bStart) || isNaN(bEnd)) return;
+
+      const overlapStart = Math.max(sStart, bStart);
+      const overlapEnd = Math.min(sEnd, bEnd);
+
+      if (overlapEnd > overlapStart) {
+        sessionBreakSecs += Math.floor((overlapEnd - overlapStart) / 1000);
+      }
+    });
+
+    return sessionBreakSecs;
+  };
+
+  const getBreakForRecord = (record) => {
+    const secs = getSessionBreakSeconds(record);
+    return formatDurationSeconds(secs);
+  };
+
+  const getNetWorkingForRecord = (record) => {
+    if (!record || !record.worked_time || record.worked_time === "Missing Clock Out" || record.worked_time.includes("Invalid")) {
+      return "—";
+    }
+
+    const sStart = new Date(record.raw_clock_in || record.clock_in).getTime();
+    if (isNaN(sStart)) return "—";
+
+    const sEnd = (record.raw_clock_out || record.clock_out)
+      ? new Date(record.raw_clock_out || record.clock_out).getTime()
+      : Date.now();
+
+    const totalWorkedSecs = Math.floor((sEnd - sStart) / 1000);
+    const breakSecs = getSessionBreakSeconds(record);
+
+    const netSecs = Math.max(0, totalWorkedSecs - breakSecs);
+    return formatDurationSeconds(netSecs);
+  };
 
   return (
     <Layout>
@@ -310,10 +390,22 @@ function EmployeeAttendanceTab() {
                 </div>
 
                 {record.worked_time && (
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Clock className="w-3.5 h-3.5 text-blue-400" />
-                    <span className="text-xs text-gray-500">Worked:</span>
-                    <span className="text-xs font-medium text-blue-600">{record.worked_time}</span>
+                  <div className="flex items-center justify-between gap-4 my-2.5 pt-1">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-blue-400" />
+                      <span className="text-xs text-gray-500 font-medium">Worked:</span>
+                      <span className="text-xs font-semibold text-blue-600">{record.worked_time}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Coffee className="w-3.5 h-3.5 text-amber-500" />
+                      <span className="text-xs text-gray-500 font-medium">Break:</span>
+                      <span className="text-xs font-semibold text-amber-600">{getBreakForRecord(record)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Briefcase className="w-3.5 h-3.5 text-emerald-500" />
+                      <span className="text-xs text-gray-500 font-medium">Actual Working:</span>
+                      <span className="text-xs font-semibold text-emerald-600">{getNetWorkingForRecord(record)}</span>
+                    </div>
                   </div>
                 )}
 
