@@ -228,15 +228,23 @@ function EmployeeAttendanceTab() {
     const sStart = new Date(record.raw_clock_in || record.clock_in).getTime();
     if (isNaN(sStart)) return 0;
 
-    const sEnd = (record.raw_clock_out || record.clock_out)
+    const hasClockOut = !!(record.raw_clock_out || record.clock_out);
+    const sEnd = hasClockOut
       ? new Date(record.raw_clock_out || record.clock_out).getTime()
-      : Date.now();
+      : (Date.now() + 330 * 60 * 1000);
+
+    if (isNaN(sEnd) || sEnd <= sStart) return 0;
 
     let sessionBreakSecs = 0;
     breaksList.forEach((b) => {
-      const bStart = new Date(b.break_start).getTime();
-      const bEnd = b.break_end ? new Date(b.break_end).getTime() : Date.now();
-      if (isNaN(bStart) || isNaN(bEnd)) return;
+      const bStart = b.break_start ? new Date(b.break_start).getTime() : null;
+      if (!bStart || isNaN(bStart)) return;
+
+      const bEnd = b.break_end
+        ? new Date(b.break_end).getTime()
+        : Math.min(Date.now() + 330 * 60 * 1000, sEnd);
+
+      if (isNaN(bEnd)) return;
 
       const overlapStart = Math.max(sStart, bStart);
       const overlapEnd = Math.min(sEnd, bEnd);
@@ -246,7 +254,8 @@ function EmployeeAttendanceTab() {
       }
     });
 
-    return sessionBreakSecs;
+    const totalSessionSecs = Math.max(0, Math.floor((sEnd - sStart) / 1000));
+    return Math.min(sessionBreakSecs, totalSessionSecs);
   };
 
   const getBreakForRecord = (record) => {
@@ -262,11 +271,12 @@ function EmployeeAttendanceTab() {
     const sStart = new Date(record.raw_clock_in || record.clock_in).getTime();
     if (isNaN(sStart)) return "—";
 
-    const sEnd = (record.raw_clock_out || record.clock_out)
+    const hasClockOut = !!(record.raw_clock_out || record.clock_out);
+    const sEnd = hasClockOut
       ? new Date(record.raw_clock_out || record.clock_out).getTime()
-      : Date.now();
+      : (Date.now() + 330 * 60 * 1000);
 
-    const totalWorkedSecs = Math.floor((sEnd - sStart) / 1000);
+    const totalWorkedSecs = Math.max(0, Math.floor((sEnd - sStart) / 1000));
     const breakSecs = getSessionBreakSeconds(record);
 
     const netSecs = Math.max(0, totalWorkedSecs - breakSecs);
