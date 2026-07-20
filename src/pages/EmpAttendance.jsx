@@ -28,6 +28,8 @@ import {
   CheckCircle2,
   Loader2,
   MessageSquare,
+  Coffee,
+  Briefcase,
 } from "lucide-react";
 import api from "../hooks/useApi";
 import { toast } from "sonner";

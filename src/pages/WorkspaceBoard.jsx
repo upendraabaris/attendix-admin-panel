@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { PlusCircle, Search, Filter, ArrowUpDown, Mic, Sparkles } from "lucide-react";
+import { PlusCircle, Search, Filter, ArrowUpDown, Mic, Sparkles, ArrowLeft } from "lucide-react";
 import Layout from "../components/Layout";
 import MeetingAiModal from "../components/MeetingAiModal";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
@@ -481,6 +481,7 @@ const WorkspaceBoard = () => {
   const [quickMasterTaskId, setQuickMasterTaskId] = useState("");
   const [quickDate, setQuickDate] = useState(new Date().toISOString().split("T")[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quickAttachment, setQuickAttachment] = useState(null);
 
   // Master Task Modal Fields
   const [mtTitle, setMtTitle] = useState("");
@@ -667,7 +668,8 @@ const WorkspaceBoard = () => {
         actual_result: quickActual,
         remark: quickRemark,
         status: quickStatus,
-        priority: quickPriority
+        priority: quickPriority,
+        attachment: quickAttachment
       }, { headers: { Authorization: `Bearer ${token}` } });
 
       toast.success("Task logged successfully!");
@@ -680,6 +682,7 @@ const WorkspaceBoard = () => {
       setQuickPriority("medium");
       setQuickMasterTaskId("");
       setQuickDate(new Date().toISOString().split("T")[0]);
+      setQuickAttachment(null);
       fetchTasks();
     } catch (err) {
       console.error(err);
@@ -831,9 +834,18 @@ const WorkspaceBoard = () => {
       <div className="flex flex-col h-full bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen p-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          <div>
-            <h1 className="text-xl font-bold text-gray-800">{workspaceName}</h1>
-            <p className="text-gray-600 text-xs">Manage your project tasks and milestones</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/workspace")}
+              className="p-2 bg-white hover:bg-gray-100 rounded-xl shadow-sm border text-gray-600 hover:text-blue-600 transition-all duration-200 flex items-center justify-center"
+              title="Back to Workspaces"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">{workspaceName}</h1>
+              <p className="text-gray-600 text-xs">Manage your project tasks and milestones</p>
+            </div>
           </div>
 
           {/* 
@@ -1122,6 +1134,53 @@ const WorkspaceBoard = () => {
               </div>
             )}
 
+            <div className="flex flex-col gap-1 mt-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Attachment</label>
+              <div 
+                onPaste={(e) => {
+                  const items = e.clipboardData?.items;
+                  if (items) {
+                    for (let i = 0; i < items.length; i++) {
+                      if (items[i].type.indexOf("image") !== -1) {
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setQuickAttachment(event.target.result);
+                          toast.success("Image pasted successfully!");
+                        };
+                        reader.readAsDataURL(file);
+                        break;
+                      }
+                    }
+                  }
+                }}
+                onClick={(e) => e.currentTarget.focus()}
+                className="min-h-[56px] border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center bg-gray-50 text-gray-500 hover:bg-gray-100 hover:border-blue-400 transition cursor-pointer relative p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                tabIndex={0}
+                title="Click here and press Ctrl+V to paste an image"
+              >
+                {quickAttachment ? (
+                  <div className="relative flex items-center justify-center">
+                    <img src={quickAttachment} alt="Pasted preview" className="max-h-20 object-contain rounded border bg-white" />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setQuickAttachment(null);
+                      }}
+                      className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] shadow"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-xs text-center text-gray-400 font-medium select-none">
+                    📋 Click here & press <kbd className="bg-white border px-1 py-0.5 rounded text-[10px] font-bold text-gray-600">Ctrl + V</kbd> to paste screenshot/image
+                  </div>
+                )}
+              </div>
+            </div>
+
             <Button
               onClick={handleQuickAdd}
               disabled={isSubmitting || !quickTitle.trim()}
@@ -1235,13 +1294,8 @@ const WorkspaceBoard = () => {
           </div>
         ) : (
           <>
-            <div className="flex justify-between items-end mb-2">
+            <div className="mb-2">
               <h2 className="text-lg font-semibold text-gray-800">{activeTab === 'daily' ? 'Daily Timeline' : 'Weekly Outcomes'}</h2>
-              {activeTab === 'daily' && (
-                <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold shadow-sm border border-blue-200">
-                  Total Active Time: {formatDecimalHoursToTime(totalHoursDec)}
-                </div>
-              )}
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -1321,6 +1375,61 @@ const WorkspaceBoard = () => {
                               <span className="font-bold mr-1 text-gray-400">Remark:</span>
                               <InlineInput disabled={!canEdit} value={t.remark} placeholder="..." onSave={(val) => handleInlineUpdate(t.task_id, 'remark', val)} className="bg-transparent border-none outline-none w-full italic text-gray-700 placeholder-gray-300 disabled:cursor-not-allowed" />
                             </div>
+                          </div>
+
+                          {/* Image Attachment Preview / Inline Paste Area */}
+                          <div className="mt-3 flex flex-wrap gap-2 items-center">
+                            {t.attachment ? (
+                              <div className="relative group/image rounded-xl overflow-hidden border border-gray-200 bg-white p-1 hover:shadow-md transition duration-200">
+                                <img 
+                                  src={t.attachment} 
+                                  alt="Task attachment" 
+                                  className="max-h-24 w-auto object-contain rounded-lg cursor-zoom-in hover:opacity-90 transition"
+                                  onClick={() => {
+                                    const newTab = window.open();
+                                    newTab.document.write(`<img src="${t.attachment}" style="max-width: 100vw; max-height: 100vh; object-fit: contain; display: block; margin: auto;" />`);
+                                  }} 
+                                />
+                                {canEdit && (
+                                  <button
+                                    onClick={() => handleInlineUpdate(t.task_id || t.id, 'attachment', null)}
+                                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-md transition duration-200 opacity-0 group-hover/image:opacity-100"
+                                    title="Remove Image"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              canEdit && (
+                                <div 
+                                  onPaste={(e) => {
+                                    const items = e.clipboardData?.items;
+                                    if (items) {
+                                      for (let i = 0; i < items.length; i++) {
+                                        if (items[i].type.indexOf("image") !== -1) {
+                                          const file = items[i].getAsFile();
+                                          const reader = new FileReader();
+                                          reader.onload = (event) => {
+                                            handleInlineUpdate(t.task_id || t.id, 'attachment', event.target.result);
+                                            toast.success("Image pasted successfully to task!");
+                                          };
+                                          reader.readAsDataURL(file);
+                                          break;
+                                        }
+                                      }
+                                    }
+                                  }}
+                                  onClick={(e) => e.currentTarget.focus()}
+                                  className="flex items-center gap-1.5 text-[10px] bg-slate-50 text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded border border-dashed border-slate-200 cursor-pointer transition shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  tabIndex={0}
+                                  title="Click and press Ctrl+V to paste an image for this task"
+                                >
+                                  <span>📋</span>
+                                  <span className="font-semibold">Paste Screenshot</span>
+                                </div>
+                              )
+                            )}
                           </div>
                         </div>
 

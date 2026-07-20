@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Sparkles, X, FileText, CheckCircle2, Save, Trash2, Edit2, UploadCloud } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Sparkles, X, FileText, CheckCircle2, Save, Trash2, Edit2, UploadCloud, Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
 import api from "../hooks/useApi";
 import { Button } from "./ui/button";
@@ -13,20 +13,94 @@ const MeetingAiModal = ({ isOpen, onClose, workspaceId, workspaceEmployees = [],
   const [isProcessing, setIsProcessing] = useState(false);
   const [tasksPreview, setTasksPreview] = useState(null); // Array of extracted tasks
   const [isSaving, setIsSaving] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   const [isDragOver, setIsDragOver] = useState(false);
-  const fileInputRef = React.useRef(null);
+  const fileInputRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) {
+      if (recognitionRef.current && isListening) {
+        recognitionRef.current.stop();
+      }
       setTranscript("");
       setTasksPreview(null);
       setIsProcessing(false);
       setIsSaving(false);
+      setIsListening(false);
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const toggleListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      return toast.error("Voice recognition is not supported in this browser.");
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-IN";
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      let baseText = transcript;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        toast.info("🎙️ Listening... Speak out all meeting tasks and assignees!");
+      };
+
+      recognition.onresult = (event) => {
+        let finalChunk = "";
+        let interimChunk = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const trans = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalChunk += (finalChunk ? " " : "") + trans;
+          } else {
+            interimChunk += trans;
+          }
+        }
+
+        if (finalChunk) {
+          baseText = (baseText ? baseText.trim() + " " : "") + finalChunk;
+        }
+
+        setTranscript((baseText ? baseText.trim() + " " : "") + interimChunk);
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        if (event.error !== 'no-speech') {
+          toast.error("Speech recognition error: " + event.error);
+        }
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to start voice input.");
+      setIsListening(false);
+    }
+  };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0] || e.dataTransfer?.files?.[0];
@@ -86,14 +160,21 @@ const MeetingAiModal = ({ isOpen, onClose, workspaceId, workspaceEmployees = [],
 
   const handleProcessText = async () => {
     if (!transcript.trim()) {
-      return toast.error("Please paste meeting transcript first.");
+      return toast.error("Please record voice or paste meeting transcript first.");
+    }
+
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
     }
     
     setIsProcessing(true);
     try {
       const token = localStorage.getItem("token");
+      const employee_names = workspaceEmployees.map(e => e.name);
+
       const res = await api.post("/ai/extract-tasks", 
-        { transcript }, 
+        { transcript, employee_names }, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -112,7 +193,7 @@ const MeetingAiModal = ({ isOpen, onClose, workspaceId, workspaceEmployees = [],
       });
 
       setTasksPreview(mappedTasks);
-      toast.success("Tasks extracted successfully! Please review.");
+      toast.success("Tasks extracted & assigned successfully! Please review.");
     } catch (err) {
       console.error(err);
       toast.error(err?.response?.data?.message || "Failed to analyze transcript.");
@@ -199,28 +280,58 @@ const MeetingAiModal = ({ isOpen, onClose, workspaceId, workspaceEmployees = [],
         <div className="p-6 overflow-y-auto flex-1 bg-gray-50/30">
           {!tasksPreview ? (
             <div className="flex flex-col gap-4">
-              <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm text-blue-800 flex justify-between items-center gap-3">
-                <div className="flex gap-3 items-start">
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm text-blue-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                <div className="flex gap-3 items-start flex-1">
                   <FileText className="w-5 h-5 shrink-0 text-blue-500 mt-0.5" />
-                  <p>Paste your Google Meet / Zoom transcript below, or upload a <b>.txt / .pdf / .rtf</b> file. Our AI will automatically identify Action Items, Assignees, Deadlines, and KPIs.</p>
+                  <p>Speak out your meeting tasks using the mic, paste your transcript, or upload a <b>.txt / .pdf / .rtf</b> file. Our AI will automatically extract all action items and assign them to respective people.</p>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="shrink-0 bg-white border-blue-200 text-blue-600 hover:bg-blue-50 hidden sm:flex"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <UploadCloud className="w-4 h-4 mr-1.5" />
-                  Upload File
-                </Button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  accept=".pdf,.txt,.rtf" 
-                  onChange={handleFileUpload} 
-                  className="hidden" 
-                />
+                <div className="flex gap-2 items-center shrink-0 w-full md:w-auto justify-end">
+                  <Button
+                    type="button"
+                    onClick={toggleListening}
+                    className={`font-semibold shadow-sm flex items-center gap-2 transition-all ${
+                      isListening 
+                        ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse ring-4 ring-red-100' 
+                        : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    }`}
+                  >
+                    {isListening ? (
+                      <>
+                        <MicOff className="w-4 h-4" />
+                        <span>Stop Mic</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-4 h-4" />
+                        <span>Speak Tasks (Mic)</span>
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="bg-white border-blue-200 text-blue-600 hover:bg-blue-50"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <UploadCloud className="w-4 h-4 mr-1.5" />
+                    Upload File
+                  </Button>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    accept=".pdf,.txt,.rtf" 
+                    onChange={handleFileUpload} 
+                    className="hidden" 
+                  />
+                </div>
               </div>
+
+              {isListening && (
+                <div className="flex items-center gap-2.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl animate-pulse">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping"></span>
+                  🎙️ Recording live voice... Speak all tasks and assignees clearly (e.g., "Assign homepage design to Rahul by Friday").
+                </div>
+              )}
               <div 
                 className={`relative w-full rounded-xl border-2 transition-all ${isDragOver ? 'border-purple-400 bg-purple-50/50 scale-[1.01]' : 'border-gray-200 bg-white'}`}
                 onDragOver={handleDragOver}
