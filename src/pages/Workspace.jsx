@@ -8,6 +8,7 @@ import { PlusCircle, Users, ArrowRight, Search, FolderOpen, Sparkles, Mic, X } f
 import api from "../hooks/useApi";
 import { toast } from "sonner";
 import MyWorkspace from "./MyWorkspace";
+import AdminTaskFilters from "./AdminTaskFilters";
 
 
 const Workspace = () => {
@@ -39,6 +40,7 @@ const Workspace = () => {
   const [mtPriority, setMtPriority] = useState("medium");
   const [mtWorkspaces, setMtWorkspaces] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
 
   // Fetch employees
   useEffect(() => {
@@ -261,10 +263,22 @@ const Workspace = () => {
           >
             My Workspace
           </button>
+          {isAdminRole && (
+            <button
+              onClick={() => setActiveTab('team')}
+              className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
+                activeTab === 'team' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+              }`}
+            >
+              Team Tasks
+            </button>
+          )}
         </div>
 
         {activeTab === "my" ? (
           <MyWorkspace />
+        ) : activeTab === "team" ? (
+          <AdminTaskFilters />
         ) : (
           <>
             {/* Empty State */}
