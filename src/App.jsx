@@ -40,7 +40,7 @@ import TrackingSettings from "./pages/TrackingSettings";
 import BreakHistoryPage from "./components/BreakHistoryPage";
 import Chat from "./pages/Chat";
 import LeaveReport from "./pages/LeaveReport";
-import MeetingAssistant from "./pages/MeetingAssistant";
+// import MeetingAssistant from "./pages/MeetingAssistant";
 import WFH from "./pages/WFH";
 import WFHRequest from "./pages/WFHRequest";
 
@@ -277,14 +277,14 @@ const App = () => (
             }
           />
 
-          <Route
+          {/* <Route
             path="/meeting-assistant"
             element={
               <ProtectedRoute>
                 <MeetingAssistant />
               </ProtectedRoute>
             }
-          />
+          /> */}
 
           <Route
   path="/wfh-requests"
