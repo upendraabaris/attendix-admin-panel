@@ -9,6 +9,8 @@ import {
   MapPin,
   Hourglass,
   LayoutDashboard,
+  Home,
+  XCircle,
 } from "lucide-react";
 
 const getInitials = (name) =>
@@ -30,10 +32,13 @@ const formatToday = () =>
 const Dashboard = () => {
   const [todayClockIns, setTodayClockIns] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
+  const [wfhRequests, setWfhRequests] = useState([]);
+  const [wfhActioningId, setWfhActioningId] = useState(null);
   const [stats, setStats] = useState({
     totalEmployees: 0,
     todayClockIns: 0,
     pendingLeaveRequests: 0,
+    pendingWFHRequests: 0,
     onlineEmployees: 0,
   });
 
@@ -120,6 +125,55 @@ const Dashboard = () => {
     fetchPendingLeaves();
   }, [orgID]);
 
+  const fetchPendingWFH = async () => {
+    try {
+      const response = await api.get("/wfh/admin/wfh-requests/pending");
+      const data = response.data;
+      if (response.status === 200 && data.success) {
+        const formatted = data.data.map((item) => {
+          const start = new Date(item.start_date);
+          const end = new Date(item.end_date);
+          const days = item.is_half_day
+            ? 0.5
+            : Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+          const opts = { month: "short", day: "numeric" };
+          const dates =
+            start.toDateString() === end.toDateString()
+              ? start.toLocaleDateString("en-US", opts)
+              : `${start.toLocaleDateString("en-US", opts)} – ${end.toLocaleDateString("en-US", opts)}`;
+          return {
+            id: item.id,
+            name: item.employee_name,
+            dates,
+            days,
+            organizationID: item.organization_id,
+          };
+        });
+        const filtered = formatted.filter((r) => r.organizationID == orgID);
+        setWfhRequests(filtered);
+        setStats((prev) => ({ ...prev, pendingWFHRequests: filtered.length }));
+      }
+    } catch (err) {
+      console.error("Error fetching WFH requests:", err.message || err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPendingWFH();
+  }, [orgID]);
+
+  const handleWfhAction = async (id, action) => {
+    setWfhActioningId(id);
+    try {
+      await api.put(`/wfh/update/${id}`, { status: action });
+      fetchPendingWFH();
+    } catch (err) {
+      console.error("Failed to update WFH request", err);
+    } finally {
+      setWfhActioningId(null);
+    }
+  };
+
   const STAT_CARDS = [
     {
       label: "Total Employees",
@@ -140,6 +194,13 @@ const Dashboard = () => {
       value: stats.pendingLeaveRequests ?? 0,
       icon: <Hourglass className="w-5 h-5 text-yellow-600" />,
       bg: "bg-yellow-50",
+      sub: "Awaiting approval",
+    },
+    {
+      label: "Pending WFH",
+      value: stats.pendingWFHRequests ?? 0,
+      icon: <Home className="w-5 h-5 text-purple-600" />,
+      bg: "bg-purple-50",
       sub: "Awaiting approval",
     },
     {
@@ -167,7 +228,7 @@ const Dashboard = () => {
         </div>
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {STAT_CARDS.map(({ label, value, icon, bg, sub }) => (
             <div
               key={label}
@@ -183,8 +244,8 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Two-panel activity section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Three-panel activity section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* Recent Clock-ins */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -276,6 +337,72 @@ const Dashboard = () => {
                     </span>
                   </div>
                 ))
+              )}
+            </div>
+          </div>
+
+          {/* Pending Work From Home Requests */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Home className="w-4 h-4 text-purple-500" />
+                <h2 className="text-sm font-semibold text-gray-800">Pending Work From Home</h2>
+              </div>
+              <span className="text-xs font-medium text-gray-400">
+                {wfhRequests.length} pending
+              </span>
+            </div>
+
+            <div className="divide-y divide-gray-50 max-h-96 overflow-y-auto">
+              {wfhRequests.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <Home className="w-8 h-8 mb-2 opacity-25" />
+                  <p className="text-sm font-medium">No pending requests</p>
+                  <p className="text-xs mt-1">All WFH requests are handled.</p>
+                </div>
+              ) : (
+                wfhRequests.map((item, index) => {
+                  const isActioning = wfhActioningId === item.id;
+                  return (
+                    <div
+                      key={index}
+                      className="px-5 py-3.5 hover:bg-purple-50/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold shrink-0">
+                          {getInitials(item.name)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {item.name}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">{item.dates}</p>
+                        </div>
+                        <span className="text-xs font-semibold text-purple-700 bg-purple-100 border border-purple-200 rounded-full px-2.5 py-0.5 whitespace-nowrap shrink-0">
+                          {item.days}d
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2.5 pl-11">
+                        <button
+                          type="button"
+                          disabled={isActioning}
+                          onClick={() => handleWfhAction(item.id, "approved")}
+                          className="inline-flex items-center gap-1 rounded-md bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-xs font-medium px-2.5 py-1 transition-colors"
+                        >
+                          <CheckCircle className="w-3 h-3" /> Approve
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isActioning}
+                          onClick={() => handleWfhAction(item.id, "rejected")}
+                          className="inline-flex items-center gap-1 rounded-md bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-xs font-medium px-2.5 py-1 transition-colors"
+                        >
+                          <XCircle className="w-3 h-3" /> Deny
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

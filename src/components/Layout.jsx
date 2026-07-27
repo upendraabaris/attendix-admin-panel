@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Settings,
   Layers,
+    Home,   
 } from "lucide-react";
 import {
   Tooltip,
@@ -180,6 +181,7 @@ const Layout = ({ children }) => {
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Employees", href: "/employees", icon: Users },
       { name: "Leave Requests", href: "/leaves", icon: Calendar },
+      { name: "Work From Home", href: "/wfh-requests", icon: Home },
       { name: "Leave Report", href: "/leave-report", icon: FileBarChart },
       { name: "Leave Policy", href: "/leave-policy", icon: KeyRound },
       { name: "Work Week Policy", href: "/work-week-policy", icon: Scale },
@@ -187,6 +189,11 @@ const Layout = ({ children }) => {
       //{ name: "Employee Task", href: "/tasks", icon: CheckSquare },
 
       { name: "Workspace", href: "/workspace", icon: Briefcase },
+      // {
+      //   name: "AI Meeting",
+      //   href: "/meeting-assistant",
+      //   icon: Layers,
+      // },
       { name: "Reports", href: "/reports", icon: FileBarChart },
       { name: "Chat", href: "/chat", icon: MessageSquare },
       { name: "Support", href: "/support", icon: LifeBuoy },
@@ -198,12 +205,19 @@ const Layout = ({ children }) => {
     navigation = [
       { name: "Attendance", href: "/employee-attendance", icon: Clock },
       { name: "Leave Request", href: "/employee-leaves", icon: Calendar },
+      { name: "Work From Home", href: "/employee-wfh", icon: Home },
       { name: "Leave Report", href: "/leave-report", icon: FileBarChart },
       { name: "Work Week Policy", href: "/employee-work-week-policy", icon: Scale },
       { name: "Leave Policy", href: "/employee-leave-policy", icon: KeyRound },
       { name: "Holiday", href: "/employee-holidays", icon: CalendarDays },
 
       { name: "Workspace", href: "/workspace", icon: Briefcase },
+      
+//       {
+//   name: "AI Meeting",
+//   href: "/meeting-assistant",
+//   icon: Layers,
+// },
       { name: "Chat", href: "/chat", icon: MessageSquare },
       { name: "Support", href: "/support", icon: LifeBuoy },
     ];
