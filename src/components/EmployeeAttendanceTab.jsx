@@ -229,10 +229,17 @@ function EmployeeAttendanceTab() {
     if (isNaN(sStart)) return 0;
 
     const hasClockOut = !!(record.raw_clock_out || record.clock_out);
-    const sEnd = hasClockOut
-      ? new Date(record.raw_clock_out || record.clock_out).getTime()
-      : (Date.now() + 330 * 60 * 1000);
-
+    let sEnd;
+    if (hasClockOut) {
+      sEnd = new Date(record.raw_clock_out || record.clock_out).getTime();
+    } else {
+      // No clock-out: cap to end of the clock-in day (23:59:59 IST)
+      // This prevents breaks from future days leaking into this session
+      const clockInDate = new Date(record.raw_clock_in || record.clock_in);
+      const endOfDay = new Date(clockInDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      sEnd = Math.min(Date.now(), endOfDay.getTime());
+    }
     if (isNaN(sEnd) || sEnd <= sStart) return 0;
 
     let sessionBreakSecs = 0;
@@ -242,7 +249,7 @@ function EmployeeAttendanceTab() {
 
       const bEnd = b.break_end
         ? new Date(b.break_end).getTime()
-        : Math.min(Date.now() + 330 * 60 * 1000, sEnd);
+        : Math.min(Date.now(), sEnd);
 
       if (isNaN(bEnd)) return;
 
@@ -263,6 +270,67 @@ function EmployeeAttendanceTab() {
     return formatDurationSeconds(secs);
   };
 
+  const hasMultipleSessionsOnDate = (recordDate) => {
+    return attendance.filter((r) => r.date === recordDate).length > 1;
+  };
+
+  const getBreaksDetailForRecord = (record) => {
+    if (!record || (!record.raw_clock_in && !record.clock_in)) return [];
+
+    const sStart = new Date(record.raw_clock_in || record.clock_in).getTime();
+    if (isNaN(sStart)) return [];
+
+    const hasClockOut = !!(record.raw_clock_out || record.clock_out);
+    let sEnd;
+    if (hasClockOut) {
+      sEnd = new Date(record.raw_clock_out || record.clock_out).getTime();
+    } else {
+      // No clock-out: cap to end of the clock-in day (23:59:59 IST)
+      const clockInDate = new Date(record.raw_clock_in || record.clock_in);
+      const endOfDay = new Date(clockInDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      sEnd = Math.min(Date.now(), endOfDay.getTime());
+    }
+
+    if (isNaN(sEnd) || sEnd <= sStart) return [];
+
+    const sessionBreaks = [];
+    breaksList.forEach((b) => {
+      const bStart = b.break_start ? new Date(b.break_start).getTime() : null;
+      if (!bStart || isNaN(bStart)) return;
+
+      const bEnd = b.break_end
+        ? new Date(b.break_end).getTime()
+        : Math.min(Date.now(), sEnd);
+
+      if (isNaN(bEnd)) return;
+
+      const overlapStart = Math.max(sStart, bStart);
+      const overlapEnd = Math.min(sEnd, bEnd);
+
+      if (overlapEnd > overlapStart) {
+        const durationSecs = Math.floor((overlapEnd - overlapStart) / 1000);
+        sessionBreaks.push({
+          start: new Date(overlapStart).toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          }),
+          end: b.break_end 
+            ? new Date(overlapEnd).toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              })
+            : "Active",
+          duration: formatDurationSeconds(durationSecs)
+        });
+      }
+    });
+
+    return sessionBreaks;
+  };
+
   const getNetWorkingForRecord = (record) => {
     if (!record || !record.worked_time || record.worked_time === "Missing Clock Out" || record.worked_time.includes("Invalid")) {
       return "—";
@@ -272,9 +340,9 @@ function EmployeeAttendanceTab() {
     if (isNaN(sStart)) return "—";
 
     const hasClockOut = !!(record.raw_clock_out || record.clock_out);
-    const sEnd = hasClockOut
-      ? new Date(record.raw_clock_out || record.clock_out).getTime()
-      : (Date.now() + 330 * 60 * 1000);
+    if (!hasClockOut) return "—"; // Can't calculate without clock-out
+
+    const sEnd = new Date(record.raw_clock_out || record.clock_out).getTime();
 
     const totalWorkedSecs = Math.max(0, Math.floor((sEnd - sStart) / 1000));
     const breakSecs = getSessionBreakSeconds(record);
@@ -413,7 +481,7 @@ function EmployeeAttendanceTab() {
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Briefcase className="w-3.5 h-3.5 text-emerald-500" />
-                      <span className="text-xs text-gray-500 font-medium">Actual Working:</span>
+                      <span className="text-xs text-gray-500 font-medium">Actual:</span>
                       <span className="text-xs font-semibold text-emerald-600">{getNetWorkingForRecord(record)}</span>
                     </div>
                   </div>
