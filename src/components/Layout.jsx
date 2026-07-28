@@ -214,7 +214,7 @@ const Layout = ({ children }) => {
 
       { name: "Workspace", href: "/workspace", icon: Briefcase },
       
-//       {
+      // {
 //   name: "AI Meeting",
 //   href: "/meeting-assistant",
 //   icon: Layers,
