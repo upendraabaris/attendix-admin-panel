@@ -29,6 +29,41 @@ const getTrackedDuration = (startedAt, endedAt) => {
   return `${hrs}h ${mins}m ${secs}s ${!endedAt ? "(Live)" : ""}`;
 };
 
+// Returns raw duration in ms for a task -> used to sum up total tracked time
+const getTrackedMs = (startedAt, endedAt) => {
+  if (!startedAt) return 0;
+  const start = new Date(startedAt).getTime();
+  const end = endedAt ? new Date(endedAt).getTime() : Date.now();
+  return Math.max(0, end - start);
+};
+
+// Formats a total ms duration as "Xh Ym Zs"
+const formatTotalDuration = (ms) => {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hrs = Math.floor(totalSeconds / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+  return `${hrs}h ${mins}m ${secs}s`;
+};
+
+// Checks whether an employee record is "active" in the system (not disabled/inactive).
+// NOTE: adjust the field name(s) below to match your actual API response shape.
+// Handles the common conventions: status: "active"/"inactive", is_active: bool, isActive: bool
+const isEmployeeActive = (emp) => {
+  if (!emp) return false;
+  if (emp.status !== undefined && emp.status !== null) {
+    return String(emp.status).toLowerCase() === "active";
+  }
+  if (emp.is_active !== undefined && emp.is_active !== null) {
+    return !!emp.is_active;
+  }
+  if (emp.isActive !== undefined && emp.isActive !== null) {
+    return !!emp.isActive;
+  }
+  // Fallback: if no status field exists on the record, don't hide it
+  return true;
+};
+
 // Admin-only view: filter any employee's tasks by User, Date, Status.
 // Default (no filters applied) -> last 7 days, all employees, desc order.
 const AdminTaskFilters = () => {
@@ -37,7 +72,8 @@ const AdminTaskFilters = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const [selectedEmployee, setSelectedEmployee] = useState("all");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -74,7 +110,8 @@ const AdminTaskFilters = () => {
       const params = {};
 
       if (selectedEmployee !== "all") params.employee_id = selectedEmployee;
-      if (selectedDate) params.date = selectedDate;
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
       if (selectedStatus !== "all") params.status = selectedStatus;
 
       const res = await api.get("/task/admin/tasks/last-7-days", {
@@ -92,7 +129,7 @@ const AdminTaskFilters = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedEmployee, selectedDate, selectedStatus]);
+  }, [selectedEmployee, fromDate, toDate, selectedStatus]);
 
   useEffect(() => {
     fetchTasks();
@@ -101,7 +138,8 @@ const AdminTaskFilters = () => {
 
   const resetFilters = () => {
     setSelectedEmployee("all");
-    setSelectedDate("");
+    setFromDate("");
+    setToDate("");
     setSelectedStatus("all");
   };
 
@@ -114,16 +152,46 @@ const AdminTaskFilters = () => {
     [employees]
   );
 
+  // Employees list used for the dropdown: active only, sorted alphabetically by name (A-Z)
+  const visibleEmployees = useMemo(() => {
+    const list = employees.filter(isEmployeeActive);
+    return [...list].sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+    );
+  }, [employees]);
+
+  // If the currently selected employee becomes inactive/hidden by the toggle, reset selection
+  useEffect(() => {
+    if (
+      selectedEmployee !== "all" &&
+      !visibleEmployees.some((e) => String(e.id) === String(selectedEmployee))
+    ) {
+      setSelectedEmployee("all");
+    }
+  }, [visibleEmployees, selectedEmployee]);
+
   const filteredTasks = useMemo(() => {
-    if (!searchTerm.trim()) return tasks;
+    // Always hide tasks belonging to inactive employees
+    let result = tasks.filter((t) => {
+      const emp = employees.find((e) => String(e.id) === String(t.employee_id));
+      return isEmployeeActive(emp);
+    });
+
+    if (!searchTerm.trim()) return result;
     const term = searchTerm.toLowerCase();
-    return tasks.filter(
+    return result.filter(
       (t) =>
         t.title?.toLowerCase().includes(term) ||
         getEmployeeName(t.employee_id).toLowerCase().includes(term) ||
         t.workspace_name?.toLowerCase().includes(term)
     );
-  }, [tasks, searchTerm, getEmployeeName]);
+  }, [tasks, searchTerm, getEmployeeName, employees]);
+
+  // Total tracked time across all currently visible (filtered) tasks
+  const totalTrackedMs = useMemo(
+    () => filteredTasks.reduce((sum, t) => sum + getTrackedMs(t.started_at, t.ended_at), 0),
+    [filteredTasks]
+  );
 
   return (
     <div className="bg-transparent h-full">
@@ -163,20 +231,31 @@ const AdminTaskFilters = () => {
             className="px-3 py-1.5 border-0 border-b-2 border-gray-200 bg-transparent text-sm text-gray-700 font-medium focus:outline-none focus:border-blue-500 transition-colors cursor-pointer min-w-[150px]"
           >
             <option value="all">All Employees</option>
-            {employees.map((emp) => (
+            {visibleEmployees.map((emp) => (
               <option key={emp.id} value={emp.id}>
                 {emp.name}
               </option>
             ))}
           </select>
 
-          {/* Date Filter */}
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-3 py-1.5 border-0 border-b-2 border-gray-200 bg-transparent text-sm text-gray-700 font-medium focus:outline-none focus:border-blue-500 transition-colors"
-          />
+          {/* Date Range Filter */}
+          <div className="flex items-center gap-1.5">
+            <input
+              type="date"
+              value={fromDate}
+              max={toDate || undefined}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="px-3 py-1.5 border-0 border-b-2 border-gray-200 bg-transparent text-sm text-gray-700 font-medium focus:outline-none focus:border-blue-500 transition-colors"
+            />
+            <span className="text-gray-400 text-xs font-medium">to</span>
+            <input
+              type="date"
+              value={toDate}
+              min={fromDate || undefined}
+              onChange={(e) => setToDate(e.target.value)}
+              className="px-3 py-1.5 border-0 border-b-2 border-gray-200 bg-transparent text-sm text-gray-700 font-medium focus:outline-none focus:border-blue-500 transition-colors"
+            />
+          </div>
 
           {/* Status Filter */}
           <select
@@ -190,7 +269,7 @@ const AdminTaskFilters = () => {
             <option value="closed">Closed</option>
           </select>
 
-          {(selectedEmployee !== "all" || selectedDate || selectedStatus !== "all") && (
+          {(selectedEmployee !== "all" || fromDate || toDate || selectedStatus !== "all") && (
             <button
               onClick={resetFilters}
               className="flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
@@ -200,6 +279,20 @@ const AdminTaskFilters = () => {
             </button>
           )}
         </div>
+
+        {/* Total Tracked Summary */}
+        {!isLoading && filteredTasks.length > 0 && (
+          <div className="flex justify-end mb-4">
+            <div className="inline-flex items-center gap-3 bg-purple-50 border border-purple-100 rounded-lg px-3 py-1.5">
+              <span className="text-xs text-purple-800 font-medium">
+                Total Tracked ({filteredTasks.length} task{filteredTasks.length !== 1 ? "s" : ""})
+              </span>
+              <span className="text-xs font-bold text-purple-900">
+                {formatTotalDuration(totalTrackedMs)}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         {isLoading ? (
