@@ -291,8 +291,8 @@ const MeetingAiModal = ({ isOpen, onClose, workspaceId, workspaceEmployees = [],
                     onClick={toggleListening}
                     className={`font-semibold shadow-sm flex items-center gap-2 transition-all ${
                       isListening 
-                        ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse ring-4 ring-red-100' 
-                        : 'bg-purple-600 hover:bg-purple-700 text-white'
+                        ? ' text-red-700 animate-pulse ring-4 ring-red-100' 
+                        : ' text-green-700'
                     }`}
                   >
                     {isListening ? (
@@ -339,7 +339,7 @@ const MeetingAiModal = ({ isOpen, onClose, workspaceId, workspaceEmployees = [],
                 onDrop={handleDrop}
               >
                 {isDragOver && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-purple-500/10 rounded-xl rounded-xl backdrop-blur-sm pointer-events-none">
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-purple-500/10 rounded-xl  backdrop-blur-sm pointer-events-none">
                     <p className="font-bold text-purple-600 flex items-center gap-2 text-lg">
                       <UploadCloud className="w-6 h-6 animate-bounce" /> Drop file here
                     </p>
@@ -403,10 +403,12 @@ const MeetingAiModal = ({ isOpen, onClose, workspaceId, workspaceEmployees = [],
                             <input 
                               type="text" 
                               value={task.title} 
+                              title={task.title}
                               onChange={e => handleUpdateTask(idx, 'title', e.target.value)}
-                              className="w-full bg-transparent border-b border-transparent focus:border-purple-300 outline-none px-1 py-0.5"
+                              className="w-full bg-transparent border-b border-transparent focus:border-purple-300 outline-none px-1 py-0.5 truncate"
                             />
                           </td>
+                          
                           <td className="px-4 py-3">
                             <select 
                               value={task.employee_id}

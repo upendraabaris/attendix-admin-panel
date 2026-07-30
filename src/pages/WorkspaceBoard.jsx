@@ -482,6 +482,9 @@ const WorkspaceBoard = () => {
   const [quickDate, setQuickDate] = useState(new Date().toISOString().split("T")[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quickAttachment, setQuickAttachment] = useState(null);
+  const [editingDurationTaskId, setEditingDurationTaskId] = useState(null);
+const [durationHours, setDurationHours] = useState(0);
+const [durationMinutes, setDurationMinutes] = useState(0);
 
   // Master Task Modal Fields
   const [mtTitle, setMtTitle] = useState("");
@@ -751,6 +754,24 @@ const WorkspaceBoard = () => {
     } catch (err) {
       console.error(err);
       toast.error("Failed to update task");
+    }
+  };
+
+
+ const handleDurationSave = async (taskId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await api.post(
+        "/task/update-duration",
+        { taskId, hours: durationHours, minutes: durationMinutes },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Tracked time updated successfully!");
+      setEditingDurationTaskId(null);
+      fetchTasks();
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || "Failed to update tracked time");
     }
   };
 
@@ -1476,21 +1497,80 @@ const WorkspaceBoard = () => {
                             {activeTab === 'daily' && (
                               <>
                                 {t.started_at && (
-                                  <div className="bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-md flex items-center shadow-sm justify-center transition">
-                                    <span className="font-bold mr-1 opacity-70 whitespace-nowrap text-[10px] uppercase tracking-wide">
-                                      Tracked:
-                                    </span>
-                                    <span className="text-purple-800 font-bold text-[12px] p-0 leading-none">
-                                      {(() => {
-                                        const start = new Date(t.started_at).getTime();
-                                        const end = t.ended_at ? new Date(t.ended_at).getTime() : new Date().getTime();
-                                        const diffMs = Math.max(0, end - start);
-                                        const diffHrs = Math.floor(diffMs / 3600000);
-                                        const diffMins = Math.floor((diffMs % 3600000) / 60000);
-                                        return `${diffHrs}h ${diffMins}m ${!t.ended_at ? '(Live)' : ''}`;
-                                      })()}
-                                    </span>
-                                  </div>
+                                  editingDurationTaskId === (t.task_id || t.id) ? (
+                                    <div className="bg-purple-50 border border-purple-200 px-2 py-1 rounded-md flex items-center gap-1 shadow-sm">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={durationHours}
+                                        onChange={(e) => setDurationHours(Math.max(0, Number(e.target.value)))}
+                                        className="w-10 text-[11px] text-center border border-purple-200 rounded px-1 py-0.5 outline-none"
+                                      />
+                                      <span className="text-[10px] text-purple-700 font-bold">h</span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="59"
+                                        value={durationMinutes}
+                                        onChange={(e) => setDurationMinutes(Math.min(59, Math.max(0, Number(e.target.value))))}
+                                        className="w-10 text-[11px] text-center border border-purple-200 rounded px-1 py-0.5 outline-none"
+                                      />
+                                      <span className="text-[10px] text-purple-700 font-bold">m</span>
+                                      <button
+                                        onClick={() => handleDurationSave(t.task_id || t.id)}
+                                        className="text-[10px] bg-purple-600 text-white px-1.5 py-0.5 rounded hover:bg-purple-700 ml-1"
+                                      >
+                                        ✓
+                                      </button>
+                                      <button
+                                        onClick={() => setEditingDurationTaskId(null)}
+                                        className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded hover:bg-gray-300"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  ) : (
+                                  <div
+                                            onClick={() => {
+                                              if (!canEdit) {
+                                                toast.error("You are not authorized to edit this task");
+                                                return;
+                                              }
+                                              if (String(t.status).toLowerCase() !== "closed") {
+                                                toast.error("Only closed tasks can have their tracked time edited");
+                                                return;
+                                              }
+                                              const hrs = parseFloat(t.hours_worked) || 0;
+                                              setDurationHours(Math.floor(hrs));
+                                              setDurationMinutes(Math.round((hrs % 1) * 60));
+                                              setEditingDurationTaskId(t.task_id || t.id);
+                                            }}
+                                            className={`bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-md flex items-center shadow-sm justify-center transition ${canEdit ? 'cursor-pointer hover:bg-purple-100' : 'cursor-not-allowed opacity-70'}`}
+                                            title={canEdit ? "Click to manually edit tracked time (closed tasks only)" : "You can only edit your own tasks"}
+                                      >
+                                      <span className="font-bold mr-1 opacity-70 whitespace-nowrap text-[10px] uppercase tracking-wide">
+                                        Tracked:
+                                      </span>
+                                      <span className="text-purple-800 font-bold text-[12px] p-0 leading-none">
+                                          {(() => {
+                                            // Agar task closed hai (ended_at set hai) -> hamesha hours_worked dikhao (manually edited value)
+                                            if (t.ended_at) {
+                                              const hrs = parseFloat(t.hours_worked) || 0;
+                                              const h = Math.floor(hrs);
+                                              const m = Math.round((hrs % 1) * 60);
+                                              return `${h}h ${m}m`;
+                                            }
+                                            // Agar task abhi live hai -> real time calculate karo
+                                            const start = new Date(t.started_at).getTime();
+                                            const end = new Date().getTime();
+                                            const diffMs = Math.max(0, end - start);
+                                            const diffHrs = Math.floor(diffMs / 3600000);
+                                            const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                                            return `${diffHrs}h ${diffMins}m (Live)`;
+                                          })()}
+                                      </span>
+                                    </div>
+                                  )
                                 )}
                               </>
                             )}
