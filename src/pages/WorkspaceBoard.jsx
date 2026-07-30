@@ -1531,28 +1531,28 @@ const [durationMinutes, setDurationMinutes] = useState(0);
                                     </div>
                                   ) : (
                                   <div
-                                            onClick={() => {
-                                              if (!canEdit) {
-                                                toast.error("You are not authorized to edit this task");
-                                                return;
-                                              }
-                                              if (String(t.status).toLowerCase() !== "closed") {
-                                                toast.error("Only closed tasks can have their tracked time edited");
-                                                return;
-                                              }
-                                              const hrs = parseFloat(t.hours_worked) || 0;
-                                              setDurationHours(Math.floor(hrs));
-                                              setDurationMinutes(Math.round((hrs % 1) * 60));
-                                              setEditingDurationTaskId(t.task_id || t.id);
-                                            }}
-                                            className={`bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-md flex items-center shadow-sm justify-center transition ${canEdit ? 'cursor-pointer hover:bg-purple-100' : 'cursor-not-allowed opacity-70'}`}
-                                            title={canEdit ? "Click to manually edit tracked time (closed tasks only)" : "You can only edit your own tasks"}
-                                      >
+                                    onClick={() => {
+                                      if (!canEdit) {
+                                        toast.error("You are not authorized to edit this task");
+                                        return;
+                                      }
+                                      if (String(t.status).toLowerCase() !== "closed") {
+                                        toast.error("Only closed tasks can have their tracked time edited");
+                                        return;
+                                      }
+                                      const hrs = parseFloat(t.hours_worked) || 0;
+                                      setDurationHours(Math.floor(hrs));
+                                      setDurationMinutes(Math.round((hrs % 1) * 60));
+                                      setEditingDurationTaskId(t.task_id || t.id);
+                                    }}
+                                    className={`bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-md flex items-center shadow-sm justify-center transition ${canEdit ? 'cursor-pointer hover:bg-purple-100' : 'cursor-not-allowed opacity-70'}`}
+                                    title={canEdit ? "Click to manually edit tracked time (closed tasks only)" : "You can only edit your own tasks"}
+                              >
                                       <span className="font-bold mr-1 opacity-70 whitespace-nowrap text-[10px] uppercase tracking-wide">
                                         Tracked:
                                       </span>
                                       <span className="text-purple-800 font-bold text-[12px] p-0 leading-none">
-                                          {(() => {
+                                          {/* {(() => {
                                             // Agar task closed hai (ended_at set hai) -> hamesha hours_worked dikhao (manually edited value)
                                             if (t.ended_at) {
                                               const hrs = parseFloat(t.hours_worked) || 0;
@@ -1567,7 +1567,16 @@ const [durationMinutes, setDurationMinutes] = useState(0);
                                             const diffHrs = Math.floor(diffMs / 3600000);
                                             const diffMins = Math.floor((diffMs % 3600000) / 60000);
                                             return `${diffHrs}h ${diffMins}m (Live)`;
-                                          })()}
+                                          })()} */}
+
+                                          {(() => {
+                                        const start = new Date(t.started_at).getTime();
+                                        const end = t.ended_at ? new Date(t.ended_at).getTime() : new Date().getTime();
+                                        const diffMs = Math.max(0, end - start);
+                                        const diffHrs = Math.floor(diffMs / 3600000);
+                                        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                                        return `${diffHrs}h ${diffMins}m ${!t.ended_at ? '(Live)' : ''}`;
+                                      })()}
                                       </span>
                                     </div>
                                   )
