@@ -30,4 +30,6 @@ dist-ssr
 .env.production
 src/components/Meeting/
 src/pages/MeetingAssistant.jsx
-src/components/MeetingAiModal.jsx
+
+
+
