@@ -21,6 +21,9 @@ const STATUS = {
 
 const WFHRequest = () => {
   const [requests, setRequests] = useState([]);
+  const [teamRequests, setTeamRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState("my");
+  const [processingId, setProcessingId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -34,6 +37,7 @@ const WFHRequest = () => {
     try {
       const res = await api.get(`/wfh/my`);
       setRequests(res.data.data);
+      setTeamRequests(res.data.teamRequests || []);
     } catch (err) {
       console.error("Error fetching WFH requests", err);
     } finally {
@@ -45,7 +49,6 @@ const WFHRequest = () => {
 
   const duration = half ? 0.5 : countDays(startDate, endDate);
 
-  // Group total WFH days month-wise (based on start_date)
   const monthlyTotals = requests.reduce((acc, r) => {
     if (!r.start_date) return acc;
     const d = new Date(r.start_date);
@@ -77,6 +80,19 @@ const WFHRequest = () => {
       setError(err?.response?.data?.message || "Failed to submit request");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleTeamWfhAction = async (wfhId, status) => {
+    try {
+      setProcessingId(wfhId);
+      await api.put(`/wfh/update/${wfhId}`, { status });
+      fetchMyWFH();
+    } catch (err) {
+      console.error("Error updating WFH status:", err);
+      alert(err?.response?.data?.message || "Failed to update WFH request");
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -177,51 +193,143 @@ const WFHRequest = () => {
           </Card>
         )}
 
-        <div>
-          <h2 className="text-base font-semibold text-gray-900 mb-3">My Work From Home Requests</h2>
+        {teamRequests.length > 0 && (
+          <div className="flex gap-2 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab("my")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "my"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              My WFH Requests
+            </button>
+            <button
+              onClick={() => setActiveTab("team")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                activeTab === "team"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Team WFH Requests
+              {teamRequests.filter((r) => r.status === "pending").length > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                  {teamRequests.filter((r) => r.status === "pending").length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
 
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-              <div className="w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mb-3" />
-              <p className="text-sm">Loading requests...</p>
-            </div>
-          ) : requests.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
-              <Home className="w-9 h-9 mb-2 opacity-30" />
-              <p className="text-sm font-medium">No requests yet</p>
-              <p className="text-xs mt-1">Submit one above to get started.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {requests.map((r) => {
-                const cfg = STATUS[r.status] || STATUS.pending;
-                const h = isHalfDay(r);
-                return (
-                  <div key={r.id} className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm p-5`}>
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
+        {teamRequests.length > 0 && activeTab === "team" && (
+          <div className="space-y-3">
+            {teamRequests.map((r) => {
+              const cfg = STATUS[r.status] || STATUS.pending;
+              const h = isHalfDay(r);
+              return (
+                <div key={r.id} className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm p-5`}>
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-xs font-bold text-indigo-600 uppercase tracking-wide">
+                          {r.employee_name}
+                        </span>
+                        {h && <Badge className="border border-amber-200 bg-amber-50 text-amber-800">Half Day</Badge>}
+                        <Badge className={`inline-flex items-center gap-1 border text-xs font-medium ${cfg.badge}`}>{cfg.icon}{cfg.label}</Badge>
+                      </div>
                       <div className="flex items-center gap-1.5 text-sm text-gray-700">
                         <Home className="w-4 h-4 text-gray-400 shrink-0" />
                         <span className="font-medium">{formatDate(r.start_date)}</span>
                         <ArrowRight className="w-3.5 h-3.5 text-gray-400" />
                         <span className="font-medium">{formatDate(r.end_date)}</span>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {h && <Badge className="border border-amber-200 bg-amber-50 text-amber-800">Half Day</Badge>}
-                        <Badge className={`inline-flex items-center gap-1 border text-xs font-medium ${cfg.badge}`}>{cfg.icon}{cfg.label}</Badge>
-                      </div>
+                      {r.reason && (
+                        <div className="mt-3 rounded-lg bg-gray-50 border border-gray-100 px-3.5 py-2.5">
+                          <p className="text-xs font-medium text-gray-500 mb-0.5">Reason</p>
+                          <p className="text-sm text-gray-700">{r.reason}</p>
+                        </div>
+                      )}
                     </div>
-                    {r.reason && (
-                      <div className="mt-3 rounded-lg bg-gray-50 border border-gray-100 px-3.5 py-2.5">
-                        <p className="text-xs font-medium text-gray-500 mb-0.5">Reason</p>
-                        <p className="text-sm text-gray-700">{r.reason}</p>
+
+                    {r.status === "pending" && (
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          disabled={processingId === r.id}
+                          onClick={() => handleTeamWfhAction(r.id, "approved")}
+                          className="bg-green-600 hover:bg-green-700 text-white h-8 px-3 text-xs"
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={processingId === r.id}
+                          onClick={() => handleTeamWfhAction(r.id, "rejected")}
+                          className="border-red-200 text-red-600 hover:bg-red-50 h-8 px-3 text-xs"
+                        >
+                          Reject
+                        </Button>
                       </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {(teamRequests.length === 0 || activeTab === "my") && (
+          <div>
+            {teamRequests.length === 0 && (
+              <h2 className="text-base font-semibold text-gray-900 mb-3">My Work From Home Requests</h2>
+            )}
+
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                <div className="w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mb-3" />
+                <p className="text-sm">Loading requests...</p>
+              </div>
+            ) : requests.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
+                <Home className="w-9 h-9 mb-2 opacity-30" />
+                <p className="text-sm font-medium">No requests yet</p>
+                <p className="text-xs mt-1">Submit one above to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {requests.map((r) => {
+                  const cfg = STATUS[r.status] || STATUS.pending;
+                  const h = isHalfDay(r);
+                  return (
+                    <div key={r.id} className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm p-5`}>
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                          <Home className="w-4 h-4 text-gray-400 shrink-0" />
+                          <span className="font-medium">{formatDate(r.start_date)}</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-gray-400" />
+                          <span className="font-medium">{formatDate(r.end_date)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {h && <Badge className="border border-amber-200 bg-amber-50 text-amber-800">Half Day</Badge>}
+                          <Badge className={`inline-flex items-center gap-1 border text-xs font-medium ${cfg.badge}`}>{cfg.icon}{cfg.label}</Badge>
+                        </div>
+                      </div>
+                      {r.reason && (
+                        <div className="mt-3 rounded-lg bg-gray-50 border border-gray-100 px-3.5 py-2.5">
+                          <p className="text-xs font-medium text-gray-500 mb-0.5">Reason</p>
+                          <p className="text-sm text-gray-700">{r.reason}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   );

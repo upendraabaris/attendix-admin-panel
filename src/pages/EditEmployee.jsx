@@ -33,14 +33,16 @@ const EditEmployee = () => {
     address: "",
     startDate: "",
     status: "active",
+    manager_id: "",
   });
+
+  const [allEmployees, setAllEmployees] = useState([]);
 
   useEffect(() => {
     const fetchEmployee = async () => {
       try {
         const res = await api.get(`/employee/getEmployeeById/${id}`);
         const employee = res.data;
-        //console.log("Fetched employee:", employee); // 🔍 Check this
 
         setFormData({
           name: employee.name || "",
@@ -51,13 +53,25 @@ const EditEmployee = () => {
           address: employee.address || "",
           startDate: employee.created_at?.split("T")[0] || "",
           status: employee.status || "active",
+          manager_id: employee.manager_id ? String(employee.manager_id) : "",
         });
       } catch (err) {
         console.error("Error fetching employee:", err);
       }
     };
 
+    const fetchAllEmployees = async () => {
+      try {
+        const res = await api.get("/employee/getEmployees");
+        const employees = res.data?.data || [];
+        setAllEmployees(employees.filter(emp => String(emp.id) !== String(id)));
+      } catch (err) {
+        console.error("Error fetching employees list:", err);
+      }
+    };
+
     fetchEmployee();
+    fetchAllEmployees();
   }, [id]);
 
   const handleSubmit = async (e) => {
@@ -72,6 +86,7 @@ const EditEmployee = () => {
         phone: formData.phone,
         address: formData.address,
         status: formData.status,
+        manager_id: formData.manager_id ? Number(formData.manager_id) : null,
       });
 
       navigate("/employees");
@@ -88,7 +103,6 @@ const EditEmployee = () => {
       )
     ) {
       console.log("Deleting employee:", id);
-      // Optional: add API call here for delete
       navigate("/employees");
     }
   };
@@ -107,10 +121,6 @@ const EditEmployee = () => {
               Back to Employees
             </Button>
           </div>
-          {/* <Button variant="destructive" onClick={handleDelete}>
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete Employee
-          </Button> */}
         </div>
 
         <Card>
@@ -155,15 +165,7 @@ const EditEmployee = () => {
                       <SelectItem value="manager">Manager</SelectItem>
                       <SelectItem value="developer">Developer</SelectItem>
                       <SelectItem value="designer">Designer</SelectItem>
-                      <SelectItem value="hr-specialist">
-                        HR Specialist
-                      </SelectItem>
-
-                      {/* <SelectItem value="sales-rep">
-                        Sales Representative
-                      </SelectItem>
-                      <SelectItem value="analyst">Analyst</SelectItem> */}
-                      {/* 👇 New roles */}
+                      <SelectItem value="hr-specialist">HR Specialist</SelectItem>
                       <SelectItem value="Ecommerce Executive">Ecommerce Executive</SelectItem>
                       <SelectItem value="Content Creator">Content Creator</SelectItem>
                       <SelectItem value="Catalog Manager">Catalog Manager</SelectItem>
@@ -183,13 +185,12 @@ const EditEmployee = () => {
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="status">Status *</Label>
                   <Select
                     value={formData.status}
-                    onValueChange={(value) =>
-                      handleInputChange("status", value)
-                    }
+                    onValueChange={(value) => handleInputChange("status", value)}
                     required
                   >
                     <SelectTrigger>
@@ -201,17 +202,29 @@ const EditEmployee = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              {/* <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
-                  placeholder="Street address, city, state, zip code"
-                />
-              </div> */}
+                <div className="space-y-2">
+                  <Label htmlFor="manager">Reports To (Manager)</Label>
+                  <Select
+                    value={formData.manager_id || "none"}
+                    onValueChange={(value) =>
+                      handleInputChange("manager_id", value === "none" ? "" : value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select manager (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Manager</SelectItem>
+                      {allEmployees.map((emp) => (
+                        <SelectItem key={emp.id} value={String(emp.id)}>
+                          {emp.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
               <div className="flex justify-end space-x-4">
                 <Button
@@ -221,11 +234,7 @@ const EditEmployee = () => {
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  variant="outline"
-                  onClick={() => navigate("/employees")}
-                >
+                <Button type="submit" variant="outline">
                   Update Employee
                 </Button>
               </div>
