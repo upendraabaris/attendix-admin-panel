@@ -27,6 +27,16 @@ const formatIST = (dateString) => {
     };
 };
 
+const formatDuration = (minutes) => {
+    const mins = Number(minutes) || 0;
+    if (mins < 60) {
+        return `${mins}m`;
+    }
+    const hours = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`;
+};
+
 const BreakHistoryPage = () => {
     const { employeeId } = useParams();
     const [searchParams] = useSearchParams();
@@ -91,7 +101,7 @@ const BreakHistoryPage = () => {
                                                 {b.is_active ? "Ongoing" : b.break_end_time ?? "-"}
                                             </TableCell>
                                             <TableCell className="text-right font-bold">
-                                                {b.duration_minutes || 0}m
+                                                {formatDuration(b.duration_minutes)}
                                             </TableCell>
                                         </TableRow>
                                     ))

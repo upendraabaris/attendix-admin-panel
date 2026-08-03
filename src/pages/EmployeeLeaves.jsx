@@ -144,6 +144,9 @@ function EmployeeLeaves() {
   const [submitting, setSubmitting] = useState(false);
   const [leaveList, setLeaveList] = useState([]);
   const [leaveBalances, setLeaveBalances] = useState([]);
+  const [teamRequests, setTeamRequests] = useState([]);
+  const [processingId, setProcessingId] = useState(null);
+  const [activeLeaveTab, setActiveLeaveTab] = useState("my");
   const [formData, setFormData] = useState({
     type: "",
     startDate: "",
@@ -206,6 +209,7 @@ function EmployeeLeaves() {
 
       const [leaveRes, balanceRes, compOffRes] = await Promise.all(requests);
       setLeaveList(leaveRes?.data?.data || []);
+      setTeamRequests(leaveRes?.data?.teamRequests || []);
       const baseBalances = (balanceRes?.data?.data || []).filter(
         (balance) => !HIDDEN_BALANCE_TYPES.includes(balance.leave_type),
       );
@@ -294,6 +298,21 @@ function EmployeeLeaves() {
     }
   };
 
+
+const handleTeamLeaveAction = async (leaveId, status) => {
+    try {
+      setProcessingId(leaveId);
+      await api.put(`/leave/update/${leaveId}`, { status });
+      toast.success(`Leave request ${status}`);
+      fetchMyLeaves();
+    } catch (error) {
+      console.error("Error updating leave status:", error);
+      toast.error(error?.response?.data?.message || "Failed to update leave request");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const today = new Date().toISOString().split("T")[0];
 
 
@@ -320,7 +339,10 @@ function EmployeeLeaves() {
             </Card>
           ) : (
             leaveBalances.map((item) => (
-              <Card key={`${item.leave_type}-${item.id || "balance"}`} className="border-gray-200 shadow-sm">
+              <Card
+                key={`${item.leave_type}-${item.id || "balance"}`}
+                className="border-gray-200 shadow-sm"
+              >
                 <CardContent className="p-5">
                   <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
                     {String(item.leave_type || "other")}
@@ -370,17 +392,6 @@ function EmployeeLeaves() {
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="Select leave type" />
                   </SelectTrigger>
-                  {/* <SelectContent>
-                    {availableLeaveTypes.map((type) => (
-                      <SelectItem
-                        key={type}
-                        value={type}
-                        className="cursor-pointer"
-                      >
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent> */}
                   <SelectContent>
                     {availableLeaveTypes
                       .filter((type) => type !== "other")
@@ -400,10 +411,6 @@ function EmployeeLeaves() {
                     No enabled leave policies are configured yet.
                   </p>
                 )}
-                {/* {getLeaveTypeHelpText(formData.type) && (
-                  <p className="text-xs text-amber-700 mt-1">
-                    {getLeaveTypeHelpText(formData.type)}
-                  </p> */}
                 {getLeaveTypeHelpText(formData.type, proofDays) && (
                   <p className="text-xs text-amber-700 mt-1">
                     {getLeaveTypeHelpText(formData.type, proofDays)}
@@ -412,7 +419,6 @@ function EmployeeLeaves() {
 
                 {formData.type === "sick" && (
                   <p className="text-xs text-gray-500 mt-1">
-                    {/* Medical proof becomes mandatory if the leave is more than 2 consecutive days. */}
                     {proofDays > 0
                       ? `Medical proof becomes mandatory if the leave is more than ${proofDays} consecutive day${proofDays > 1 ? "s" : ""}.`
                       : "No document is required for sick leave."}
@@ -424,19 +430,6 @@ function EmployeeLeaves() {
                 <Label className="text-xs text-gray-500 font-medium">
                   Start Date
                 </Label>
-                {/* <Input
-                  type="date"
-                  min={today}
-                  value={formData.startDate}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      startDate: e.target.value,
-                    }))
-                  }
-                  className="h-9 text-sm"
-                  required
-                /> */}
                 <Input
                   type="date"
                   value={formData.startDate}
@@ -460,19 +453,6 @@ function EmployeeLeaves() {
                 <Label className="text-xs text-gray-500 font-medium">
                   End Date
                 </Label>
-                {/* <Input
-                  type="date"
-                  min={formData.startDate || today}
-                  value={formData.endDate}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      endDate: e.target.value,
-                    }))
-                  }
-                  className="h-9 text-sm"
-                  required
-                /> */}
                 <Input
                   type="date"
                   min={formData.startDate || undefined}
@@ -489,7 +469,8 @@ function EmployeeLeaves() {
                 />
                 {formData.isHalfDay && (
                   <p className="text-xs text-amber-700 mt-1">
-                    For half-day leave, the start date and end date will be the same.
+                    For half-day leave, the start date and end date will be
+                    the same.
                   </p>
                 )}
               </div>
@@ -503,7 +484,8 @@ function EmployeeLeaves() {
                       setFormData((prev) => ({
                         ...prev,
                         isHalfDay: checked === true,
-                        endDate: checked === true ? prev.startDate : prev.endDate,
+                        endDate:
+                          checked === true ? prev.startDate : prev.endDate,
                       }))
                     }
                     className="mt-0.5"
@@ -516,7 +498,8 @@ function EmployeeLeaves() {
                       Apply as half day
                     </Label>
                     <p className="text-xs text-amber-800">
-                      Half-day leave can only be applied for a single date and is counted as 0.5 day.
+                      Half-day leave can only be applied for a single date
+                      and is counted as 0.5 day.
                     </p>
                   </div>
                 </div>
@@ -530,7 +513,10 @@ function EmployeeLeaves() {
                   rows={3}
                   value={formData.reason}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, reason: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      reason: e.target.value,
+                    }))
                   }
                   placeholder="Briefly describe your reason for leave..."
                   className="text-sm resize-none"
@@ -591,28 +577,43 @@ function EmployeeLeaves() {
           </CardContent>
         </Card>
 
-        {/* My Leave Requests */}
-        <div>
-          <h2 className="text-base font-semibold text-gray-800 mb-3">
-            My Leave Requests
-          </h2>
+        {/* Toggle Tabs (only show if user has team requests) */}
+        {teamRequests.length > 0 && (
+          <div className="flex gap-2 border-b border-gray-200">
+            <button
+              onClick={() => setActiveLeaveTab("my")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeLeaveTab === "my"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              My Leave Requests
+            </button>
+            <button
+              onClick={() => setActiveLeaveTab("team")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                activeLeaveTab === "team"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Team Leave Requests
+              {teamRequests.filter((l) => l.status === "pending").length >
+                0 && (
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                  {teamRequests.filter((l) => l.status === "pending").length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
 
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
-              <div className="w-7 h-7 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mb-3" />
-              <p className="text-sm">Loading your requests...</p>
-            </div>
-          ) : leaveList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
-              <ClipboardList className="w-9 h-9 mb-2 opacity-30" />
-              <p className="text-sm font-medium">No leave requests yet</p>
-              <p className="text-xs mt-1">
-                Submit a request using the form above.
-              </p>
-            </div>
-          ) : (
+        {/* Team Leave Requests */}
+        {teamRequests.length > 0 && activeLeaveTab === "team" && (
+          <div>
             <div className="space-y-3">
-              {leaveList.map((leave) => {
+              {teamRequests.map((leave) => {
                 const cfg =
                   STATUS_CONFIG[leave.status] || STATUS_CONFIG.pending;
                 const halfDay = isHalfDayLeave(leave);
@@ -621,9 +622,12 @@ function EmployeeLeaves() {
                     key={leave.leave_id || leave.id}
                     className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm p-4`}
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-indigo-600 uppercase tracking-wide">
+                            {leave.employee_name}
+                          </span>
                           <p className="font-semibold text-gray-900 text-sm">
                             {String(leave.type || "")
                               .charAt(0)
@@ -651,22 +655,6 @@ function EmployeeLeaves() {
                           <span>{formatDate(leave.start_date)}</span>
                           <ArrowRight className="w-3 h-3 text-gray-400" />
                           <span>{formatDate(leave.end_date)}</span>
-                          <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                            {getLeaveDuration(
-                              leave.start_date,
-                              leave.end_date,
-                              halfDay,
-                            )}{" "}
-                            {halfDay
-                              ? "day"
-                              : getLeaveDuration(
-                                  leave.start_date,
-                                  leave.end_date,
-                                  halfDay,
-                                ) === 1
-                                ? "day"
-                                : "days"}
-                          </span>
                         </div>
                         {leave.reason && (
                           <p className="text-xs text-gray-500 mt-1.5">
@@ -674,6 +662,7 @@ function EmployeeLeaves() {
                           </p>
                         )}
                         {leave.medical_proof_url && (
+                          
                           <a
                             href={leave.medical_proof_url}
                             target="_blank"
@@ -684,13 +673,154 @@ function EmployeeLeaves() {
                           </a>
                         )}
                       </div>
+
+                      {leave.status === "pending" && (
+                        <div className="flex gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            disabled={
+                              processingId === (leave.leave_id || leave.id)
+                            }
+                            onClick={() =>
+                              handleTeamLeaveAction(
+                                leave.leave_id || leave.id,
+                                "approved",
+                              )
+                            }
+                            className="bg-green-600 hover:bg-green-700 text-white h-8 px-3 text-xs"
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={
+                              processingId === (leave.leave_id || leave.id)
+                            }
+                            onClick={() =>
+                              handleTeamLeaveAction(
+                                leave.leave_id || leave.id,
+                                "rejected",
+                              )
+                            }
+                            className="border-red-200 text-red-600 hover:bg-red-50 h-8 px-3 text-xs"
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* My Leave Requests */}
+        {(teamRequests.length === 0 || activeLeaveTab === "my") && (
+          <div>
+            {teamRequests.length === 0 && (
+              <h2 className="text-base font-semibold text-gray-800 mb-3">
+                My Leave Requests
+              </h2>
+            )}
+
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
+                <div className="w-7 h-7 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mb-3" />
+                <p className="text-sm">Loading your requests...</p>
+              </div>
+            ) : leaveList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
+                <ClipboardList className="w-9 h-9 mb-2 opacity-30" />
+                <p className="text-sm font-medium">No leave requests yet</p>
+                <p className="text-xs mt-1">
+                  Submit a request using the form above.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {leaveList.map((leave) => {
+                  const cfg =
+                    STATUS_CONFIG[leave.status] || STATUS_CONFIG.pending;
+                  const halfDay = isHalfDayLeave(leave);
+                  return (
+                    <div
+                      key={leave.leave_id || leave.id}
+                      className={`bg-white rounded-xl border border-gray-200 border-l-4 ${cfg.border} shadow-sm p-4`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-gray-900 text-sm">
+                              {String(leave.type || "")
+                                .charAt(0)
+                                .toUpperCase() +
+                                String(leave.type || "").slice(1)}{" "}
+                              Leave
+                            </p>
+                            {halfDay && (
+                              <Badge
+                                variant="outline"
+                                className="border-amber-200 bg-amber-50 text-amber-800"
+                              >
+                                Half Day
+                              </Badge>
+                            )}
+                            <Badge
+                              className={`inline-flex items-center gap-1 border text-xs font-medium ${cfg.badge}`}
+                            >
+                              {cfg.icon}
+                              {cfg.label}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1.5 text-sm text-gray-600">
+                            <CalendarRange className="w-3.5 h-3.5 text-gray-400" />
+                            <span>{formatDate(leave.start_date)}</span>
+                            <ArrowRight className="w-3 h-3 text-gray-400" />
+                            <span>{formatDate(leave.end_date)}</span>
+                            <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                              {getLeaveDuration(
+                                leave.start_date,
+                                leave.end_date,
+                                halfDay,
+                              )}{" "}
+                              {halfDay
+                                ? "day"
+                                : getLeaveDuration(
+                                      leave.start_date,
+                                      leave.end_date,
+                                      halfDay,
+                                    ) === 1
+                                  ? "day"
+                                  : "days"}
+                            </span>
+                          </div>
+                          {leave.reason && (
+                            <p className="text-xs text-gray-500 mt-1.5">
+                              {leave.reason}
+                            </p>
+                          )}
+                          {leave.medical_proof_url && (
+                            <a
+                              href={leave.medical_proof_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex mt-2 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                            >
+                              View Medical Proof
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   );
