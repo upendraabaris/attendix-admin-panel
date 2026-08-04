@@ -4,6 +4,7 @@ import Layout from "../components/Layout";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -61,14 +62,18 @@ const EditEmployee = () => {
     };
 
     const fetchAllEmployees = async () => {
-      try {
-        const res = await api.get("/employee/getEmployees");
-        const employees = res.data?.data || [];
-        setAllEmployees(employees.filter(emp => String(emp.id) !== String(id)));
-      } catch (err) {
-        console.error("Error fetching employees list:", err);
-      }
-    };
+    try {
+    const res = await api.get("/employee/getEmployees");
+    const employees = res.data?.data || [];
+    setAllEmployees(
+      employees.filter(
+        (emp) => String(emp.id) !== String(id) && emp.status === "active"
+      )
+    );
+    } catch (err) {
+    console.error("Error fetching employees list:", err);
+    }
+  };
 
     fetchEmployee();
     fetchAllEmployees();
@@ -88,11 +93,11 @@ const EditEmployee = () => {
         status: formData.status,
         manager_id: formData.manager_id ? Number(formData.manager_id) : null,
       });
-
+      toast.success("Employee updated successfully");
       navigate("/employees");
     } catch (error) {
       console.error("Failed to update employee:", error);
-      alert("Failed to update employee. Please try again.");
+      toast.error ("Failed to update employee. Please try again.");
     }
   };
 
