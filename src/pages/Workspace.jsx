@@ -4,7 +4,7 @@ import Layout from "../components/Layout";
 import { Card, CardTitle, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { PlusCircle, Users, ArrowRight, Search, FolderOpen, Sparkles, Mic, X } from "lucide-react";
+import { PlusCircle, Users, ArrowRight, Search, FolderOpen, Sparkles, Mic, X, Pencil, Trash2 } from "lucide-react";
 import api from "../hooks/useApi";
 import { toast } from "sonner";
 import MyWorkspace from "./MyWorkspace";
@@ -40,6 +40,9 @@ const Workspace = () => {
   const [mtPriority, setMtPriority] = useState("medium");
   const [mtWorkspaces, setMtWorkspaces] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingWorkspace, setEditingWorkspace] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
   
 
   // Fetch employees
@@ -181,7 +184,53 @@ const Workspace = () => {
     ws.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const openEditModal = (ws) => {
+    setEditingWorkspace(ws);
+    setEditName(ws.name);
+  };
 
+  const handleUpdateWorkspace = () => {
+    if (!editName.trim() || !editingWorkspace) return;
+    setIsUpdating(true);
+    api
+      .put(`/workspaces/${editingWorkspace.id}`, { name: editName })
+      .then((res) => {
+        const updated = res.data;
+        setWorkspaces((prev) =>
+          prev.map((w) => (w.id === updated.id ? { ...w, name: updated.name } : w))
+        );
+        toast.success("Workspace name updated");
+        setEditingWorkspace(null);
+        setIsUpdating(false);
+      })
+      .catch((error) => {
+        if ([401, 403].includes(error.response?.status)) {
+          handleAuthFailure();
+          return;
+        }
+        toast.error(error.response?.data?.message || "Failed to update workspace");
+        setIsUpdating(false);
+      });
+  };
+
+  const handleDeactivateWorkspace = (ws) => {
+    if (!window.confirm(`Deactivate workspace "${ws.name}"? It will be hidden from the workspace list, but no data will be deleted.`)) {
+      return;
+    }
+    api
+      .patch(`/workspaces/${ws.id}/toggle-status`)
+      .then(() => {
+        setWorkspaces((prev) => prev.filter((w) => w.id !== ws.id));
+        toast.success("Workspace deactivated");
+      })
+      .catch((error) => {
+        if ([401, 403].includes(error.response?.status)) {
+          handleAuthFailure();
+          return;
+        }
+        toast.error("Failed to deactivate workspace");
+      });
+  };
 
   return (
     <Layout>
@@ -308,7 +357,33 @@ const Workspace = () => {
                       <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
                         {ws.name}
                       </CardTitle>
-                      <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transform group-hover:translate-x-1 transition-all" />
+                      <div className="flex items-center gap-1 shrink-0">
+                        {isAdminRole && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditModal(ws);
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition"
+                              title="Edit workspace name"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeactivateWorkspace(ws);
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition"
+                              title="Deactivate workspace"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transform group-hover:translate-x-1 transition-all" />
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-1.5 mt-4 flex-wrap">
@@ -494,6 +569,47 @@ const Workspace = () => {
                     </Button>
                   </div>
                 </form>
+              </div>
+            </div>
+          </div>
+)}
+
+        {/* Edit Workspace Modal */}
+        {editingWorkspace && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                <h2 className="text-lg font-bold text-gray-800">Edit Workspace</h2>
+                <button
+                  onClick={() => setEditingWorkspace(null)}
+                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Workspace Name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleUpdateWorkspace()}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  autoFocus
+                />
+                <div className="flex justify-end gap-3 mt-5">
+                  <Button type="button" variant="outline" onClick={() => setEditingWorkspace(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleUpdateWorkspace}
+                    disabled={isUpdating || !editName.trim()}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isUpdating ? "Saving..." : "Save"}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
