@@ -474,6 +474,7 @@ const WorkspaceBoard = () => {
   const [quickTitle, setQuickTitle] = useState("");
   const [quickKpi, setQuickKpi] = useState("");
   const [quickTarget, setQuickTarget] = useState("");
+  const [quickEmployeeId, setQuickEmployeeId] = useState("");
   const [quickActual, setQuickActual] = useState("");
   const [quickRemark, setQuickRemark] = useState("");
   const [quickStatus, setQuickStatus] = useState("open");
@@ -575,6 +576,33 @@ const [durationMinutes, setDurationMinutes] = useState(0);
     }
   };
 
+  const fetchTasksForMasterTask = async (masterTaskId) => {
+  try {
+    const queryParams = new URLSearchParams({
+      workspace_id: id,
+      sort_by: sortBy,
+      master_task_id: masterTaskId,
+    });
+    if (filterEmployeeId !== "all") queryParams.append("employee_id", filterEmployeeId);
+    if (filterStatus !== "all") queryParams.append("status", filterStatus);
+    if (filterDateFrom) queryParams.append("start_date", filterDateFrom);
+    if (filterDateTo) queryParams.append("end_date", filterDateTo);
+
+    const token = localStorage.getItem("token");
+    const res = await api.get(`/task/filter?${queryParams.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setTasksList(res.data?.data || []);
+  } catch (error) {
+    if ([401, 403].includes(error.response?.status)) {
+      handleAuthFailure();
+      return;
+    }
+    console.error("❌ Error fetching tasks:", error);
+    toast.error("Failed to fetch tasks!");
+  }
+};
+
   const fetchMasterTasks = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -664,7 +692,7 @@ const [durationMinutes, setDurationMinutes] = useState(0);
         date: quickDate || new Date().toISOString().split("T")[0],
         workspace_id: id,
         master_task_id: quickMasterTaskId || null,
-        employee_id: null,
+        employee_id: quickEmployeeId || null,
         task_type: activeTab,
         kpi: quickKpi,
         target_val: quickTarget,
@@ -684,6 +712,7 @@ const [durationMinutes, setDurationMinutes] = useState(0);
       setQuickStatus("open");
       setQuickPriority("medium");
       setQuickMasterTaskId("");
+      setQuickEmployeeId("");
       setQuickDate(new Date().toISOString().split("T")[0]);
       setQuickAttachment(null);
       fetchTasks();
@@ -741,21 +770,48 @@ const [durationMinutes, setDurationMinutes] = useState(0);
     }
   };
 
-  const handleInlineUpdate = async (taskId, field, newValue) => {
-    try {
-      const token = localStorage.getItem("token");
-      await api.post("/task/update-inline", {
-        taskId,
-        [field]: field === 'hours_worked' ? (parseFloat(newValue) || 0) : newValue
-      }, { headers: { Authorization: `Bearer ${token}` } });
+  // const handleInlineUpdate = async (taskId, field, newValue) => {
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     await api.post("/task/update-inline", {
+  //       taskId,
+  //       [field]: field === 'hours_worked' ? (parseFloat(newValue) || 0) : newValue
+  //     }, { headers: { Authorization: `Bearer ${token}` } });
 
-      // Optimistic local update
+  //     // Optimistic local update
+  //     setTasksList(prev => prev.map(t => t.task_id === taskId ? { ...t, [field]: newValue } : t));
+  //   } catch (err) {
+  //     console.error(err);
+  //     toast.error("Failed to update task");
+  //   }
+  // };
+
+const handleInlineUpdate = async (taskId, field, newValue) => {
+  try {
+    const token = localStorage.getItem("token");
+    const res = await api.post("/task/update-inline", {
+      taskId,
+      [field]: field === 'hours_worked' ? (parseFloat(newValue) || 0) : newValue
+    }, { headers: { Authorization: `Bearer ${token}` } });
+
+    const updatedTask = res.data?.data;
+
+    if (updatedTask) {
+      // Backend se poora updated task (ended_at, hours_worked, completed, etc.) merge karo
+      setTasksList(prev =>
+        prev.map(t =>
+          t.task_id === taskId ? { ...t, ...updatedTask, task_id: t.task_id } : t
+        )
+      );
+    } else {
+      // Fallback agar response mein data na aaye
       setTasksList(prev => prev.map(t => t.task_id === taskId ? { ...t, [field]: newValue } : t));
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update task");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to update task");
+  }
+};
 
 
  const handleDurationSave = async (taskId) => {
@@ -1109,6 +1165,17 @@ const [durationMinutes, setDurationMinutes] = useState(0);
                 ))}
               </select>
 
+              <select
+                value={quickEmployeeId}
+                onChange={(e) => setQuickEmployeeId(e.target.value)}
+                className="w-full md:w-40 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600"
+              >
+                <option value="">Assign To (Myself)</option>
+                {workspaceEmployees.map(emp => (
+                  <option key={emp.id} value={emp.id}>{emp.name}</option>
+                ))}
+              </select>
+
               {/* Priority Dropdown */}
               <select
                 value={quickPriority}
@@ -1144,11 +1211,12 @@ const [durationMinutes, setDurationMinutes] = useState(0);
 
             {activeTab === 'daily' ? (
               <div className="flex flex-col md:flex-row gap-3">
-                <input type="text" value={quickKpi} onChange={e => setQuickKpi(e.target.value)} placeholder="KPI / Target" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
+                <input type="text" value={quickKpi} onChange={e => setQuickKpi(e.target.value)} placeholder="KPI" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
+                <input type="text" value={quickTarget} onChange={e => setQuickTarget(e.target.value)} placeholder="Target" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
                 <input type="text" value={quickActual} onChange={e => setQuickActual(e.target.value)} placeholder="Actual Result" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
                 <input type="text" value={quickRemark} onChange={e => setQuickRemark(e.target.value)} placeholder="Remark" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
               </div>
-            ) : (
+              ) : (
               <div className="flex flex-col md:flex-row gap-3">
                 <input type="text" value={quickKpi} onChange={e => setQuickKpi(e.target.value)} placeholder="KPI / Expected Outcome" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
                 <input type="text" value={quickRemark} onChange={e => setQuickRemark(e.target.value)} placeholder="Remark" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
@@ -1244,6 +1312,7 @@ const [durationMinutes, setDurationMinutes] = useState(0);
                       setFilterMasterTaskId(String(task.id));
                       setQuickMasterTaskId(String(task.id)); // Auto-select for quick add
                       setActiveTab('daily');
+                      fetchTasksForMasterTask(task.id);
                     }}
                     className={`p-5 rounded-xl shadow-sm border hover:shadow-md hover:ring-2 transition-all cursor-pointer group relative flex flex-col justify-between ${pStyle}`}
                   >
@@ -1372,12 +1441,18 @@ const [durationMinutes, setDurationMinutes] = useState(0);
 
                           {/* 3. KPI, Target, Actual, Remark */}
                           <div className="flex flex-wrap gap-2 mt-1">
-                            {activeTab === 'daily' && (
-                              <div className={`flex items-center text-[11px] bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100 shadow-sm flex-1 min-w-[120px] ${!canEdit ? 'opacity-70' : ''}`}>
-                                <span className="font-bold mr-1 opacity-70 whitespace-nowrap">KPI / Target:</span>
+                           {activeTab === 'daily' && (
+  <>
+                              <div className={`flex items-center text-[11px] bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100 shadow-sm flex-1 min-w-[100px] ${!canEdit ? 'opacity-70' : ''}`}>
+                                <span className="font-bold mr-1 opacity-70 whitespace-nowrap">KPI:</span>
                                 <InlineInput disabled={!canEdit} value={t.kpi} placeholder="..." onSave={(val) => handleInlineUpdate(t.task_id, 'kpi', val)} className="bg-transparent border-none outline-none w-full text-indigo-700 placeholder-indigo-300 font-medium disabled:cursor-not-allowed" />
                               </div>
-                            )}
+                              <div className={`flex items-center text-[11px] bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100 shadow-sm flex-1 min-w-[100px] ${!canEdit ? 'opacity-70' : ''}`}>
+                                <span className="font-bold mr-1 opacity-70 whitespace-nowrap">Target:</span>
+                                <InlineInput disabled={!canEdit} value={t.target_val} placeholder="..." onSave={(val) => handleInlineUpdate(t.task_id, 'target_val', val)} className="bg-transparent border-none outline-none w-full text-indigo-700 placeholder-indigo-300 font-medium disabled:cursor-not-allowed" />
+                              </div>
+                            </>
+                          )}
 
                             {(activeTab === 'weekly' || activeTab === 'daily') && (
                               <div className={`flex items-center text-[11px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded border border-emerald-100 shadow-sm flex-1 min-w-[120px] ${!canEdit ? 'opacity-70' : ''}`}>
