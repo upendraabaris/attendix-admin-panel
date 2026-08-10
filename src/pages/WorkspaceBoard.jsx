@@ -96,7 +96,9 @@ const AddTaskModal = ({
             )
             : allEmployees;
 
-        setEmployees(orgEmployees);
+        setEmployees(
+          [...orgEmployees].sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+        );
       } catch (err) {
         if ([401, 403].includes(err.response?.status)) {
           onAuthFailure?.();
@@ -635,7 +637,11 @@ const [durationMinutes, setDurationMinutes] = useState(0);
               (emp) => String(getOrgIdFromItem(emp)) === String(orgID)
             )
             : allEmployees;
-        setWorkspaceEmployees(orgEmployees.filter(emp => emp.status === "active"));
+        setWorkspaceEmployees(
+          orgEmployees
+            .filter(emp => emp.status === "active")
+            .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+        );
       } catch (err) {
         console.error("Error fetching employees:", err);
       }
@@ -1414,9 +1420,19 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
                         {/* Left Side: Info */}
                         <div className="flex-1 flex flex-col gap-1.5">
                           {/* 1. Date & Employee */}
+                          {/* <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                            <span className="flex items-center gap-1">
+                              <span className="text-gray-400">📅</span>
+                              {t.due_date ? new Date(t.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                            </span>
+                            <span className="text-gray-300">|</span>
+                            <span className="flex items-center gap-1 text-blue-600"><span className="text-blue-400">👤</span> {t.employee_name}</span>
+                          </div> */}
+
                           <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                             <span className="flex items-center gap-1">
                               <span className="text-gray-400">📅</span>
+                              <span className="opacity-70">Due Date:</span>
                               {t.due_date ? new Date(t.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
                             </span>
                             <span className="text-gray-300">|</span>
