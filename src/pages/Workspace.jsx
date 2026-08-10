@@ -53,7 +53,9 @@ const Workspace = () => {
         const res = await api.get("/employee/getEmployees", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setEmployees(res.data?.data || []);
+       setEmployees(
+  (res.data?.data || []).sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+); 
       } catch (err) {
         console.error("Error fetching employees:", err);
       }
