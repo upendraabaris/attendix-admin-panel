@@ -28,6 +28,7 @@ import { cn } from "../lib/utils";
 import { createAppSocket } from "../lib/socketConfig";
 import notificationSound from "../Sound/AttSound.wav";
 
+
 const CHAT_UNREAD_STORAGE_KEY = "chat_unread_counts";
 const CHAT_ACTIVE_CONVERSATION_KEY = "chat_active_conversation_id";
 const CHAT_UNREAD_EVENT = "chat-unread-updated";
@@ -179,7 +180,7 @@ const Layout = ({ children }) => {
   if (isAdminRole) {
     navigation = [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { name: "Employees", href: "/employees", icon: Users },
+      { name: "Team Members", href: "/employees", icon: Users },
       { name: "Leave Requests", href: "/leaves", icon: Calendar },
       { name: "Work From Home", href: "/wfh-requests", icon: Home },
       { name: "Leave Report", href: "/leave-report", icon: FileBarChart },
@@ -248,7 +249,16 @@ const Layout = ({ children }) => {
       ? "Admin User"
       : isSupportRole
         ? "Support User"
-        : "Employee User");
+        : "Team Member");
+
+        const displayRole = isAdminRole
+    ? "admin"
+    : isSupportRole
+      ? "support"
+      : normalizedRole === "employee"
+        ? "team member"
+        : normalizedRole;
+
   const initials = displayName
     .split(" ")
     .map((w) => w[0])
@@ -282,7 +292,7 @@ const Layout = ({ children }) => {
           {sidebarOpen && (
             <div className="overflow-hidden">
               <p className="font-semibold text-sm text-slate-800 whitespace-nowrap leading-tight">
-                {isAdminRole ? "Admin Panel" : isSupportRole ? "Support Portal" : "Employee Portal"}
+                {isAdminRole ? "Admin Panel" : isSupportRole ? "Support Portal" : "Team Portal"}
               </p>
               <p className="text-[11px] text-slate-400 whitespace-nowrap">Management Suite</p>
             </div>
@@ -373,7 +383,7 @@ const Layout = ({ children }) => {
                 >
                   {displayName}
                 </button>
-                <p className="text-[11px] text-slate-400 capitalize">{normalizedRole}</p>
+                    <p className="text-[11px] text-slate-400 capitalize">{displayRole}</p>  
               </div>
             </div>
           )}
@@ -450,7 +460,7 @@ const Layout = ({ children }) => {
                 <p className="text-sm font-semibold text-slate-700 group-hover:text-blue-600 transition-colors leading-tight">
                   {displayName}
                 </p>
-                <p className="text-[11px] text-slate-400 capitalize">{normalizedRole}</p>
+               <p className="text-[11px] text-slate-400 capitalize">{displayRole}</p>
               </div>
             </button>
           </div>

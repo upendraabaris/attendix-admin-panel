@@ -332,7 +332,7 @@ const EditDrawer = ({ policy, onClose, onSaved }) => {
                 <p className="text-sm font-medium text-gray-700">Policy Status</p>
                 <p className="mt-0.5 text-xs text-gray-500">
                   {formData.is_enabled
-                    ? "Employees can apply for this leave"
+                    ? "Team member can apply for this leave"
                     : "This leave type is disabled"}
                 </p>
               </div>
@@ -605,7 +605,7 @@ const LeavePolicyPage = () => {
           </CardHeader>
           <CardContent>
             <p className="mb-4 text-sm text-gray-500">
-              Choose when employee leaves reset every year for your organization.
+              Choose when team member leaves reset every year for your organization.
             </p>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {/* Option 1: Date of Joining */}
@@ -632,7 +632,7 @@ const LeavePolicyPage = () => {
                 <div>
                   <p className="font-semibold text-gray-800">Date of Joining</p>
                   <p className="mt-0.5 text-xs text-gray-500">
-                    Leaves renew on each employee’s joining anniversary (e.g., joined 15 Mar → resets every 15 Mar).
+                    Leaves renew on each team member's joining anniversary (e.g., joined 15 Mar → resets every 15 Mar).
                   </p>
                 </div>
               </button>
@@ -661,7 +661,7 @@ const LeavePolicyPage = () => {
                 <div>
                   <p className="font-semibold text-gray-800">Calendar Year (Jan 1 – Dec 31)</p>
                   <p className="mt-0.5 text-xs text-gray-500">
-                    Leaves renew for all employees on January 1st every year.
+                    Leaves renew for all team members on January 1st every year.
                   </p>
                 </div>
               </button>
@@ -839,7 +839,7 @@ const LeavePolicyPage = () => {
                   <p className="text-sm font-medium text-gray-700">Policy Status</p>
                   <p className="mt-0.5 text-xs text-gray-500">
                     {formData.is_enabled
-                      ? "Employees can apply for this leave"
+                      ? "Team member can apply for this leave"
                       : "This leave type is disabled"}
                   </p>
                 </div>

@@ -149,12 +149,12 @@ const EmployeeProfile = () => {
           <div className="flex items-center space-x-4">
             <Button variant="ghost" onClick={() => navigate("/employees")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Employees
+              Back to Team Members
             </Button>
           </div>
           <Button onClick={() => navigate(`/employees/edit/${id}`)}>
             <Edit className="w-4 h-4 mr-2" />
-            Edit Employee
+            Edit Team Member
           </Button>
         </div>
 

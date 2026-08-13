@@ -245,7 +245,7 @@ const Support = () => {
           </h1>
           <p className="text-gray-500 mt-1 text-sm">
             {isAdmin
-              ? "Create issues, review all employee issues, and respond from one place."
+              ? "Create issues, review all team member issues, and respond from one place."
               : isSupport
               ? "Review and respond to support issues from all organizations."
               : "Raise an issue with screenshot support and track replies from admin or support."}
@@ -320,7 +320,7 @@ const Support = () => {
                   <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                     <Input
-                      placeholder={isAdmin ? "Search by title or employee..." : "Search your issues..."}
+                      placeholder={isAdmin ? "Search by title or team member..." : "Search your issues..."}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-8 h-9 text-sm"

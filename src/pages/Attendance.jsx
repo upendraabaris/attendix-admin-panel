@@ -3065,7 +3065,7 @@ const Attendance = () => {
               Attendance Records
             </h1>
             <p className="text-gray-500 mt-1 text-sm">
-              Track and review employee check-in and check-out details.
+              Track and review team member check-in and check-out details.
             </p>
           </div>
         </div>
@@ -3125,7 +3125,7 @@ const Attendance = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs text-gray-500 font-medium">
-                  Employee
+                  Teams
                 </Label>
                 <Select
                   value={filters.employee}
@@ -3135,7 +3135,7 @@ const Attendance = () => {
                     <SelectValue placeholder="All employees" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Employees</SelectItem>
+                    <SelectItem value="all">All Team Members</SelectItem>
                     {employees
                       .filter((emp) => emp.status === "active")
                       .map((emp) => (
@@ -3207,7 +3207,7 @@ const Attendance = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50 border-b border-gray-200">
-                    <SortableHead column="employee_name" label="Employee" />
+                    <SortableHead column="employee_name" label="Team Member" />
                     <SortableHead column="date" label="Date" />
                     <SortableHead column="clock_in" label="In" />
                     <SortableHead column="clock_out" label="Out" />

@@ -176,7 +176,7 @@ const Dashboard = () => {
 
   const STAT_CARDS = [
     {
-      label: "Total Employees",
+      label: "Team Members",
       value: stats.totalEmployees,
       icon: <Users className="w-5 h-5 text-indigo-600" />,
       bg: "bg-indigo-50",
@@ -187,7 +187,7 @@ const Dashboard = () => {
       value: stats.todayClockIns,
       icon: <Clock className="w-5 h-5 text-blue-600" />,
       bg: "bg-blue-50",
-      sub: `of ${stats.totalEmployees} employees`,
+      sub: `of ${stats.totalEmployees} team members`,
     },
     {
       label: "Pending Leaves",

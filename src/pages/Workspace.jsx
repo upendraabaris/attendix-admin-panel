@@ -42,9 +42,27 @@ const Workspace = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingWorkspace, setEditingWorkspace] = useState(null);
   const [editName, setEditName] = useState("");
+  const [editEmployeeIds, setEditEmployeeIds] = useState([]);
   const [isUpdating, setIsUpdating] = useState(false);
-  
+  const [isNormalModalOpen, setIsNormalModalOpen] = useState(false);
+    const [ntTitle, setNtTitle] = useState("");
+    const [ntDescription, setNtDescription] = useState("");
+    const [ntStartDate, setNtStartDate] = useState("");
+    const [ntEndDate, setNtEndDate] = useState("");
+    const [ntKpi, setNtKpi] = useState("");
+const [ntTarget, setNtTarget] = useState("");
+const [ntActualResult, setNtActualResult] = useState("");
+const [ntRemark, setNtRemark] = useState("");
+const [ntStatus, setNtStatus] = useState("open");
+    const [ntAssignees, setNtAssignees] = useState([]);
+    const [ntPriority, setNtPriority] = useState("medium");
+    const [ntWorkspace, setNtWorkspace] = useState("");
 
+    const [isNtSubmitting, setIsNtSubmitting] = useState(false);
+
+
+  
+  
   // Fetch employees
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -73,6 +91,61 @@ const Workspace = () => {
     setMtPriority("medium");
     setIsMasterModalOpen(true);
   };
+
+
+  const openNormalTaskModal = () => {
+  setNtTitle("");
+  setNtStartDate("");
+  setNtEndDate("");
+  setNtAssignees([]);
+  setNtWorkspace("");
+  setNtPriority("medium");
+  setNtKpi("");
+  setNtTarget("");
+  setNtActualResult("");
+  setNtRemark("");
+  setNtStatus("open");
+  setIsNormalModalOpen(true);
+};
+
+const handleCreateNormalTask = async (e) => {
+  e.preventDefault();
+  if (!ntTitle.trim()) {
+    toast.error("Task title is required!");
+    return;
+  }
+  if (!ntWorkspace) {
+    toast.error("Please select a workspace!");
+    return;
+  }
+
+  setIsNtSubmitting(true);
+  try {
+    const token = localStorage.getItem("token");
+    await api.post("/task/create", {
+  workspace_id: ntWorkspace,
+  title: ntTitle,
+  start_date: ntStartDate,
+  end_date: ntEndDate,
+  assignees: ntAssignees,
+  priority: ntPriority,
+  status: ntStatus,
+  kpi: ntKpi,
+  target: ntTarget,
+  actual_result: ntActualResult,
+  remark: ntRemark
+}, {
+  headers: { Authorization: `Bearer ${token}` }
+});
+    toast.success("Task created successfully!");
+    setIsNormalModalOpen(false);
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to create task!");
+  } finally {
+    setIsNtSubmitting(false);
+  }
+};
 
   const handleCreateMasterTask = async (e) => {
     e.preventDefault();
@@ -186,34 +259,65 @@ const Workspace = () => {
     ws.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const openEditModal = (ws) => {
-    setEditingWorkspace(ws);
-    setEditName(ws.name);
-  };
+  // const openEditModal = (ws) => {
+  //   setEditingWorkspace(ws);
+  //   setEditName(ws.name);
+  // };
 
-  const handleUpdateWorkspace = () => {
-    if (!editName.trim() || !editingWorkspace) return;
-    setIsUpdating(true);
-    api
-      .put(`/workspaces/${editingWorkspace.id}`, { name: editName })
-      .then((res) => {
-        const updated = res.data;
-        setWorkspaces((prev) =>
-          prev.map((w) => (w.id === updated.id ? { ...w, name: updated.name } : w))
-        );
-        toast.success("Workspace name updated");
-        setEditingWorkspace(null);
-        setIsUpdating(false);
-      })
-      .catch((error) => {
-        if ([401, 403].includes(error.response?.status)) {
-          handleAuthFailure();
-          return;
-        }
-        toast.error(error.response?.data?.message || "Failed to update workspace");
-        setIsUpdating(false);
-      });
-  };
+  // const handleUpdateWorkspace = () => {
+  //   if (!editName.trim() || !editingWorkspace) return;
+  //   setIsUpdating(true);
+  //   api
+  //     .put(`/workspaces/${editingWorkspace.id}`, { name: editName })
+  //     .then((res) => {
+  //       const updated = res.data;
+  //       setWorkspaces((prev) =>
+  //         prev.map((w) => (w.id === updated.id ? { ...w, name: updated.name } : w))
+  //       );
+  //       toast.success("Workspace name updated");
+  //       setEditingWorkspace(null);
+  //       setIsUpdating(false);
+  //     })
+  //     .catch((error) => {
+  //       if ([401, 403].includes(error.response?.status)) {
+  //         handleAuthFailure();
+  //         return;
+  //       }
+  //       toast.error(error.response?.data?.message || "Failed to update workspace");
+  //       setIsUpdating(false);
+  //     });
+  // };
+
+
+  const openEditModal = (ws) => {
+  setEditingWorkspace(ws);
+  setEditName(ws.name);
+  setEditEmployeeIds(Array.isArray(ws.employee_ids) ? ws.employee_ids : []);
+};
+
+const handleUpdateWorkspace = () => {
+  if (!editName.trim() || !editingWorkspace) return;
+  setIsUpdating(true);
+  api
+    .put(`/workspaces/${editingWorkspace.id}`, { name: editName, employee_ids: editEmployeeIds })
+    .then((res) => {
+      const updated = res.data;
+      setWorkspaces((prev) =>
+        prev.map((w) => (w.id === updated.id ? { ...w, name: updated.name, employee_ids: updated.employee_ids } : w))
+      );
+      toast.success("Workspace updated");
+      setEditingWorkspace(null);
+      setIsUpdating(false);
+    })
+    .catch((error) => {
+      if ([401, 403].includes(error.response?.status)) {
+        handleAuthFailure();
+        return;
+      }
+      toast.error(error.response?.data?.message || "Failed to update workspace");
+      setIsUpdating(false);
+    });
+};
 
   const handleDeactivateWorkspace = (ws) => {
     if (!window.confirm(`Deactivate workspace "${ws.name}"? It will be hidden from the workspace list, but no data will be deleted.`)) {
@@ -238,63 +342,80 @@ const Workspace = () => {
     <Layout>
       <div className="flex flex-col h-full min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-6">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white rounded-xl shadow-sm border">
-              <FolderOpen className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Your Workspaces</h1>
-              <p className="text-gray-600 mt-1">Organize your projects and collaborate with your team</p>
-            </div>
-          </div>
+        {/* Header */}
+<div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
+  <div className="flex items-center gap-3">
+    <div className="p-2 bg-white rounded-xl shadow-sm border">
+      <FolderOpen className="w-6 h-6 text-blue-600" />
+    </div>
+    <div>
+      <h1 className="text-3xl font-bold text-gray-900">Your Workspaces</h1>
+      <p className="text-gray-600 mt-1">Organize your projects and collaborate with your team</p>
+    </div>
+  </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                type="text"
-                placeholder="Search workspaces..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm w-full lg:w-64"
-              />
-            </div>
+  <div className="flex flex-col gap-3 w-full lg:w-auto">
+    {/* Search + Workspace name + Create */}
+    <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Input
+          type="text"
+          placeholder="Search workspaces..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm w-full lg:w-64"
+        />
+      </div>
 
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                placeholder="Workspace name"
-                value={newWorkspaceName}
-                onChange={(e) => setNewWorkspaceName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleCreateWorkspace()}
-                className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm min-w-[200px]"
-              />
-              <Button
-                size="sm"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25 transition-all duration-200"
-                onClick={handleCreateWorkspace}
-                disabled={isCreating}
-              >
-                {isCreating ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <PlusCircle className="w-4 h-4" />
-                )}
-                Create
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-blue-600 text-blue-600 hover:bg-blue-50 transition-all duration-200"
-                onClick={openMasterTaskModal}
-              >
-                <PlusCircle className="w-4 h-4" />
-                Master Task
-              </Button>
-            </div>
-          </div>
-        </div>
+      <div className="flex gap-2">
+        <Input
+          type="text"
+          placeholder="Workspace name"
+          value={newWorkspaceName}
+          onChange={(e) => setNewWorkspaceName(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && handleCreateWorkspace()}
+          className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm min-w-[200px]"
+        />
+        <Button
+          size="sm"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25 transition-all duration-200"
+          onClick={handleCreateWorkspace}
+          disabled={isCreating}
+        >
+          {isCreating ? (
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <PlusCircle className="w-4 h-4" />
+          )}
+          Create
+        </Button>
+      </div>
+    </div>
+
+    {/* Master Task / Normal Task — now right-aligned, directly under Create */}
+    <div className="flex flex-wrap justify-end gap-2">
+      <Button
+        size="sm"
+        variant="outline"
+        className="flex items-center gap-2 px-4 py-2 rounded-xl border-blue-600 text-blue-600 hover:bg-blue-50 transition-all duration-200"
+        onClick={openMasterTaskModal}
+      >
+        <PlusCircle className="w-4 h-4" />
+        Master Task
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        className="flex items-center gap-2 px-4 py-2 rounded-xl border-emerald-600 text-emerald-600 hover:bg-emerald-50 transition-all duration-200"
+        onClick={openNormalTaskModal}
+      >
+        <PlusCircle className="w-4 h-4" />
+        Daily Task
+      </Button>
+    </div>
+  </div>
+</div>
 
         {/* Workspace Tabs */}
         <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-lg w-fit">
@@ -314,16 +435,14 @@ const Workspace = () => {
           >
             My Workspace
           </button>
-          {isAdminRole && (
-            <button
-              onClick={() => setActiveTab('team')}
-              className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
-                activeTab === 'team' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-              }`}
-            >
-              Team Tasks
-            </button>
-          )}
+          <button
+            onClick={() => setActiveTab('team')}
+            className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
+              activeTab === 'team' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+            }`}
+          >
+            Team Tasks
+          </button>
         </div>
 
         {activeTab === "my" ? (
@@ -540,6 +659,8 @@ const Workspace = () => {
                       </div>
                     </div>
 
+                    
+
                     {/* Right Column: Workspaces */}
                     <div className="flex flex-col">
                       <label className="block text-sm font-semibold text-gray-700 mb-1">Map to Workspaces <span className="text-red-500">*</span></label>
@@ -576,8 +697,161 @@ const Workspace = () => {
           </div>
 )}
 
+{/* Normal Task Modal */}
+        {isNormalModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <PlusCircle className="w-5 h-5 text-emerald-600" />
+                  Create Normal Task
+                </h2>
+                <button
+                  onClick={() => setIsNormalModalOpen(false)}
+                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto">
+                <form onSubmit={handleCreateNormalTask}>
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={ntTitle}
+                        onChange={(e) => setNtTitle(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                                    placeholder="Task (with KPI & Impact)"
+                        required
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 text-emerald-500 border-emerald-200 hover:bg-emerald-50"
+                        onClick={() => startListening(setNtTitle, ntTitle)}
+                      >
+                        <Mic className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="mb-4 grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        value={ntStartDate}
+                        onChange={(e) => setNtStartDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">End Date</label>
+                      <input
+                        type="date"
+                        value={ntEndDate}
+                        min={ntStartDate || undefined}
+                        onChange={(e) => setNtEndDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+                    <div className="flex gap-2 items-start">
+                      <textarea
+                        value={ntDescription}
+                        onChange={(e) => setNtDescription(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[80px]"
+                        placeholder="What is this task about?"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 text-emerald-500 border-emerald-200 hover:bg-emerald-50 mt-1"
+                        onClick={() => startListening(setNtDescription, ntDescription)}
+                      >
+                        <Mic className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 grid grid-cols-2 gap-4">
+                    {/* Left Column: Priority and Workspace */}
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Priority</label>
+                        <select
+                          value={ntPriority}
+                          onChange={(e) => setNtPriority(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        >
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                          <option value="critical">Critical</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Workspace <span className="text-red-500">*</span></label>
+                        <select
+                          value={ntWorkspace}
+                          onChange={(e) => setNtWorkspace(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          required
+                        >
+                          <option value="">Select workspace</option>
+                          {workspaces.map(ws => (
+                            <option key={ws.id} value={ws.id}>{ws.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Assign To */}
+                    <div className="flex flex-col">
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Assign To</label>
+                      <div className="flex-1 min-h-[185px] max-h-[185px] overflow-y-auto border border-gray-200 rounded-md p-2 bg-white flex flex-col gap-1">
+                        {employees.map(emp => (
+                          <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="rounded text-emerald-600"
+                              checked={ntAssignees.includes(emp.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) setNtAssignees([...ntAssignees, emp.id]);
+                                else setNtAssignees(ntAssignees.filter(id => id !== emp.id));
+                              }}
+                            />
+                            <span className="text-xs text-gray-700 font-medium">{emp.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
+                    <Button type="button" variant="outline" onClick={() => setIsNormalModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={isNtSubmitting || !ntTitle.trim() || !ntWorkspace} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                      {isNtSubmitting ? "Creating..." : "Create Task"}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Edit Workspace Modal */}
-        {editingWorkspace && (
+        {/* {editingWorkspace && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
               <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50">
@@ -615,7 +889,75 @@ const Workspace = () => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
+
+
+        {/* Edit Workspace Modal */}
+{editingWorkspace && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+      <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+        <h2 className="text-lg font-bold text-gray-800">Edit Workspace</h2>
+        <button
+          onClick={() => setEditingWorkspace(null)}
+          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+      <div className="p-6">
+        <label className="block text-sm font-semibold text-gray-700 mb-1">Workspace Name</label>
+        <input
+          type="text"
+          value={editName}
+          onChange={(e) => setEditName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleUpdateWorkspace()}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-4"
+          autoFocus
+        />
+
+        <label className="block text-sm font-semibold text-gray-700 mb-1">Team Members in this Workspace</label>
+        <div className="max-h-[180px] overflow-y-auto border border-gray-200 rounded-md p-2 bg-white flex flex-col gap-1">
+          {employees.length === 0 ? (
+            <span className="text-xs text-gray-400 p-1">No active team members found</span>
+          ) : (
+            employees.map((emp) => (
+              <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="rounded text-blue-600"
+                  checked={editEmployeeIds.includes(emp.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setEditEmployeeIds([...editEmployeeIds, emp.id]);
+                    } else {
+                      setEditEmployeeIds(editEmployeeIds.filter((eid) => eid !== emp.id));
+                    }
+                  }}
+                />
+                <span className="text-xs text-gray-700">{emp.name}</span>
+              </label>
+            ))
+          )}
+        </div>
+
+        <div className="flex justify-end gap-3 mt-5">
+          <Button type="button" variant="outline" onClick={() => setEditingWorkspace(null)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleUpdateWorkspace}
+            disabled={isUpdating || !editName.trim()}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {isUpdating ? "Saving..." : "Save"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </Layout>
   );

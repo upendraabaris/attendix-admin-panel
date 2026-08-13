@@ -70,7 +70,7 @@ const WFH = () => {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Home className="w-7 h-7 text-indigo-600" /> Work From Home Requests
           </h1>
-          <p className="text-gray-500 mt-1 text-sm">Review and manage employee work-from-home applications.</p>
+          <p className="text-gray-500 mt-1 text-sm">Review and manage team member work-from-home applications.</p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -101,7 +101,7 @@ const WFH = () => {
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
-                <Input placeholder="Search by employee name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-8 h-9 text-sm" />
+                <Input placeholder="Search by team member name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-8 h-9 text-sm" />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-44 h-9 text-sm"><SelectValue placeholder="Filter by status" /></SelectTrigger>
