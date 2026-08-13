@@ -93,21 +93,21 @@ const EditEmployee = () => {
         status: formData.status,
         manager_id: formData.manager_id ? Number(formData.manager_id) : null,
       });
-      toast.success("Employee updated successfully");
+      toast.success("Team Member updated successfully");
       navigate("/employees");
     } catch (error) {
-      console.error("Failed to update employee:", error);
-      toast.error ("Failed to update employee. Please try again.");
+      console.error("Failed to update team member:", error);
+      toast.error ("Failed to update team member. Please try again.");
     }
   };
 
   const handleDelete = () => {
     if (
       window.confirm(
-        "Are you sure you want to delete this employee? This action cannot be undone."
+        "Are you sure you want to delete this team member? This action cannot be undone."
       )
     ) {
-      console.log("Deleting employee:", id);
+      console.log("Deleting team member:", id);
       navigate("/employees");
     }
   };
@@ -123,14 +123,14 @@ const EditEmployee = () => {
           <div className="flex items-center space-x-4">
             <Button variant="ghost" onClick={() => navigate("/employees")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Employees
+              Back to Team Members
             </Button>
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Edit Employee</CardTitle>
+            <CardTitle>Edit Team Member</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -240,7 +240,7 @@ const EditEmployee = () => {
                   Cancel
                 </Button>
                 <Button type="submit" variant="outline">
-                  Update Employee
+                  Update Team Member
                 </Button>
               </div>
             </form>

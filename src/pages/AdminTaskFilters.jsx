@@ -79,6 +79,10 @@ const AdminTaskFilters = () => {
 
   // Tracks the in-flight request so a stale (slow) response can't overwrite a newer one
   const abortControllerRef = useRef(null);
+  const currentRole = (localStorage.getItem("role") || "").toLowerCase();
+  const isAdminUser = currentRole.includes("admin");
+  const currentEmployeeName = localStorage.getItem("employee_name");
+
 
   // Fetch employee list for the dropdown
   useEffect(() => {
@@ -153,12 +157,32 @@ const AdminTaskFilters = () => {
   );
 
   // Employees list used for the dropdown: active only, sorted alphabetically by name (A-Z)
-  const visibleEmployees = useMemo(() => {
-    const list = employees.filter(isEmployeeActive);
-    return [...list].sort((a, b) =>
-      (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+  // const visibleEmployees = useMemo(() => {
+  //   const list = employees.filter(isEmployeeActive);
+  //   return [...list].sort((a, b) =>
+  //     (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+  //   );
+  // }, [employees]);
+
+  // Employees list used for the dropdown: active only, sorted alphabetically by name (A-Z)
+// Non-admins only see themselves + employees reporting to them (their team)
+const visibleEmployees = useMemo(() => {
+  let list = employees.filter(isEmployeeActive);
+
+  if (!isAdminUser) {
+    const me = employees.find(
+      (e) => String(e.name).toLowerCase() === String(currentEmployeeName).toLowerCase()
     );
-  }, [employees]);
+    const myId = me?.id;
+    list = list.filter(
+      (e) => String(e.id) === String(myId) || String(e.manager_id) === String(myId)
+    );
+  }
+
+  return [...list].sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+  );
+}, [employees, isAdminUser, currentEmployeeName]);
 
   // If the currently selected employee becomes inactive/hidden by the toggle, reset selection
   useEffect(() => {
@@ -199,11 +223,15 @@ const AdminTaskFilters = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">All Employees' Tasks</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Showing last 7 days by default. Use filters to narrow the results.
-            </p>
-          </div>
+  <h1 className="text-2xl font-bold text-gray-800">
+    {isAdminUser ? "All Employees' Tasks" : "My Team's Tasks"}
+  </h1>
+  <p className="text-sm text-gray-500 mt-1">
+    {isAdminUser
+      ? "Showing last 7 days by default. Use filters to narrow the results."
+      : "Showing tasks for you and your team members. Use filters to narrow the results."}
+  </p>
+</div>
 
           <div className="relative w-full md:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />

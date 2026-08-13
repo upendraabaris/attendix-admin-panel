@@ -116,7 +116,7 @@ const Employees = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <Users className="w-7 h-7 text-indigo-600" />
-              Employee Management
+              Team Management
             </h1>
             <p className="text-gray-500 mt-1 text-sm">
               Manage and monitor your team members.
@@ -127,7 +127,7 @@ const Employees = () => {
             className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            Add Employee
+            Add Team Member
           </Button>
         </div>
 
@@ -136,7 +136,7 @@ const Employees = () => {
           {[
             {
               key: "all",
-              label: "Total Employees",
+              label: "Team Members",
               icon: Users,
               color: "bg-indigo-50",
               iconColor: "text-indigo-600",
@@ -218,12 +218,12 @@ const Employees = () => {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400">
             <div className="w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-sm">Loading employees...</p>
+            <p className="text-sm">Loading Team Member...</p>
           </div>
         ) : filteredEmployees.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
             <Users className="w-10 h-10 mb-3 opacity-30" />
-            <p className="text-sm font-medium">No employees found</p>
+            <p className="text-sm font-medium">No Team Member found</p>
             <p className="text-xs mt-1">
               Try adjusting your search or filters.
             </p>

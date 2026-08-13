@@ -634,7 +634,7 @@ export default function Reports() {
                                     <Table>
                                         <TableHeader className="bg-slate-50/50">
                                             <TableRow className="border-b border-slate-100">
-                                                <TableHead className="py-3 font-bold text-slate-500 pl-6 text-[10px] uppercase tracking-wider">Employee</TableHead>
+                                                <TableHead className="py-3 font-bold text-slate-500 pl-6 text-[10px] uppercase tracking-wider">Team Member</TableHead>
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Total Working Days</TableHead>
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Actual Working Days</TableHead>
                                                 <TableHead className="text-center py-3 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Extra Days Worked</TableHead>

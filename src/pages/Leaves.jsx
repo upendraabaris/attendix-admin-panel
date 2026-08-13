@@ -158,7 +158,7 @@ const Leaves = () => {
               Leave Requests
             </h1>
             <p className="text-gray-500 mt-1 text-sm">
-              Review and manage employee leave applications.
+              Review and manage team member leave applications.
             </p>
           </div>
         </div>

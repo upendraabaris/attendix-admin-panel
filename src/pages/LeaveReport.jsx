@@ -469,7 +469,7 @@ const AdminView = ({ policies, adminRows, loading }) => {
               <Users className="h-5 w-5 text-indigo-600" />
             </div>
             <div>
-              <p className="text-xs font-medium text-gray-500">Total Employees</p>
+              <p className="text-xs font-medium text-gray-500">Team Members</p>
               <p className="text-2xl font-bold text-gray-900">{filtered.length}</p>
             </div>
           </CardContent>
@@ -492,7 +492,7 @@ const AdminView = ({ policies, adminRows, loading }) => {
             </div>
             <div>
               <p className="text-xs font-medium text-gray-500">Report Scope</p>
-              <p className="text-base font-semibold text-gray-900">Active Employees</p>
+              <p className="text-base font-semibold text-gray-900">Active Team Members</p>
             </div>
           </CardContent>
         </Card>
@@ -504,7 +504,7 @@ const AdminView = ({ policies, adminRows, loading }) => {
         <Input
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search employee, email or role…"
+          placeholder="Search team member, email or role…"
           className="pl-9 text-sm"
         />
       </div>
@@ -513,21 +513,21 @@ const AdminView = ({ policies, adminRows, loading }) => {
       <Card className="border-gray-200 shadow-sm">
         <CardHeader className="border-b border-gray-100 pb-3 pt-4">
           <CardTitle className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Employee Leave Balance Matrix
+            Team Member Leave Balance Matrix
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
             <p className="p-6 text-sm text-gray-500">Loading leave report…</p>
           ) : filtered.length === 0 ? (
-            <p className="p-6 text-sm text-gray-500">No employees matched your search.</p>
+            <p className="p-6 text-sm text-gray-500">No team members matched your search.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="min-w-[220px] py-3 pl-5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Employee
+                      Team Member
                     </TableHead>
                     {leaveTypes.map((type) => (
                       <TableHead
@@ -740,7 +740,7 @@ const LeaveReport = () => {
             <h1 className="text-xl font-bold text-gray-900">Leave Report</h1>
             <p className="text-sm text-gray-500">
               {isAdmin
-                ? "All employees' available leave balances at a glance."
+                ? "All team members' available leave balances at a glance."
                 : "Your current available leave balances."}
             </p>
           </div>

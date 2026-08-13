@@ -67,13 +67,13 @@ const AddEmployee = () => {
         <div className="flex items-center space-x-4">
           <Button variant="ghost" onClick={() => navigate("/employees")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Employees
+            Back to Team Members
           </Button>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Add New Employee</CardTitle>
+            <CardTitle>Add New Team Member</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -188,7 +188,7 @@ const AddEmployee = () => {
                   Cancel
                 </Button>
                 <Button variant="outline">
-                  {loading ? "Adding..." : "Add Employee"}
+                  {loading ? "Adding..." : "Add Team Member"}
                 </Button>
               </div>
             </form>

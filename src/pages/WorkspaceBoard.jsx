@@ -29,6 +29,7 @@ const AddTaskModal = ({
   workspace_name,
   onTaskAdded,
   onAuthFailure,
+  allowedEmployeeIds,
 }) => {
   const [employees, setEmployees] = useState([]);
   const storedOrgID = localStorage.getItem("orgID");
@@ -95,10 +96,16 @@ const AddTaskModal = ({
               (emp) => String(getOrgIdFromItem(emp)) === String(orgID)
             )
             : allEmployees;
+        const scopedEmployees =
+          Array.isArray(allowedEmployeeIds) && allowedEmployeeIds.length > 0
+            ? orgEmployees.filter((emp) => allowedEmployeeIds.includes(emp.id))
+            : orgEmployees;
 
         setEmployees(
-          [...orgEmployees].sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+          [...scopedEmployees].sort((a, b) => (a.name || "").localeCompare(b.name || ""))
         );
+
+
       } catch (err) {
         if ([401, 403].includes(err.response?.status)) {
           onAuthFailure?.();
@@ -500,6 +507,8 @@ const [durationMinutes, setDurationMinutes] = useState(0);
   const [editMasterTaskId, setEditMasterTaskId] = useState(null);
   const [workspaceEmployees, setWorkspaceEmployees] = useState([]);
   const [allWorkspaces, setAllWorkspaces] = useState([]);
+  const [currentWorkspaceEmployeeIds, setCurrentWorkspaceEmployeeIds] = useState([]);
+
 
   const openMasterTaskModal = (task = null) => {
     if (task) {
@@ -605,6 +614,23 @@ const [durationMinutes, setDurationMinutes] = useState(0);
   }
 };
 
+const handleDeleteMasterTask = async (masterTaskId) => {
+    if (!window.confirm("Delete this master task? This will hide it from the list, but its child tasks won't be deleted.")) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem("token");
+      await api.patch(`/master-task/${masterTaskId}/toggle-status`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Master task deleted");
+      fetchMasterTasks();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete master task");
+    }
+  };
+
   const fetchMasterTasks = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -648,6 +674,25 @@ const [durationMinutes, setDurationMinutes] = useState(0);
     };
     fetchEmployees();
 
+    // const fetchAllWorkspaces = async () => {
+    //   try {
+    //     const token = localStorage.getItem("token");
+    //     const role = (localStorage.getItem("role") || "").toLowerCase();
+    //     const isAdminRole = role.includes("admin");
+    //     let res;
+    //     if (isAdminRole) {
+    //       res = await api.get("/workspaces", { headers: { Authorization: `Bearer ${token}` } });
+    //     } else {
+    //       res = await api.get("/workspaces/emp/workspace", { headers: { Authorization: `Bearer ${token}` } });
+    //     }
+    //     const workspacesData = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+    //     setAllWorkspaces(workspacesData);
+    //   } catch (err) {
+    //     console.error("Error fetching all workspaces:", err);
+    //   }
+    // };
+    // fetchAllWorkspaces();
+
     const fetchAllWorkspaces = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -661,6 +706,9 @@ const [durationMinutes, setDurationMinutes] = useState(0);
         }
         const workspacesData = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
         setAllWorkspaces(workspacesData);
+
+        const currentWs = workspacesData.find((ws) => String(ws.id) === String(id));
+        setCurrentWorkspaceEmployeeIds(Array.isArray(currentWs?.employee_ids) ? currentWs.employee_ids : []);
       } catch (err) {
         console.error("Error fetching all workspaces:", err);
       }
@@ -792,6 +840,33 @@ const [durationMinutes, setDurationMinutes] = useState(0);
   //   }
   // };
 
+// const handleInlineUpdate = async (taskId, field, newValue) => {
+//   try {
+//     const token = localStorage.getItem("token");
+//     const res = await api.post("/task/update-inline", {
+//       taskId,
+//       [field]: field === 'hours_worked' ? (parseFloat(newValue) || 0) : newValue
+//     }, { headers: { Authorization: `Bearer ${token}` } });
+
+//     const updatedTask = res.data?.data;
+
+//     if (updatedTask) {
+//       // Backend se poora updated task (ended_at, hours_worked, completed, etc.) merge karo
+//       setTasksList(prev =>
+//         prev.map(t =>
+//           t.task_id === taskId ? { ...t, ...updatedTask, task_id: t.task_id } : t
+//         )
+//       );
+//     } else {
+//       // Fallback agar response mein data na aaye
+//       setTasksList(prev => prev.map(t => t.task_id === taskId ? { ...t, [field]: newValue } : t));
+//     }
+//   } catch (err) {
+//     console.error(err);
+//     toast.error("Failed to update task");
+//   }
+// };
+
 const handleInlineUpdate = async (taskId, field, newValue) => {
   try {
     const token = localStorage.getItem("token");
@@ -813,12 +888,17 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
       // Fallback agar response mein data na aaye
       setTasksList(prev => prev.map(t => t.task_id === taskId ? { ...t, [field]: newValue } : t));
     }
+
+    // Agar status change hua hai aur task kisi Master Task se linked hai,
+    // to Master Task ka computed status bhi refresh karo (bina full page reload ke)
+    if (field === 'status' && (updatedTask?.master_task_id || quickMasterTaskId)) {
+      fetchMasterTasks();
+    }
   } catch (err) {
     console.error(err);
     toast.error("Failed to update task");
   }
 };
-
 
  const handleDurationSave = async (taskId) => {
     try {
@@ -874,6 +954,10 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
   const isUserAdmin = currentRole.toLowerCase().includes("admin");
   const myEmp = workspaceEmployees.find(e => String(e.name).toLowerCase() === String(currentUser).toLowerCase());
   const myEmpId = myEmp?.id;
+  const assignableEmployees =
+    currentWorkspaceEmployeeIds.length > 0
+      ? workspaceEmployees.filter((emp) => currentWorkspaceEmployeeIds.includes(emp.id))
+      : workspaceEmployees;
 
   // Filter tasks based on search term
   const filteredTasks = tasksList.filter((t) => {
@@ -994,7 +1078,7 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
         {/* Filters Drawer */}
         {showFilters && (
           <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 mb-4 flex flex-wrap gap-4 items-end animate-in fade-in duration-200">
-              <div>
+              {/* <div>
                 <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Employee</label>
                 <select
                   value={filterEmployeeId}
@@ -1003,6 +1087,20 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
                 >
                   <option value="all">All Employees</option>
                   {workspaceEmployees.map(emp => (
+                    <option key={emp.id} value={emp.id}>{emp.name}</option>
+                  ))}
+                </select>
+              </div> */}
+
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Team Member</label>
+                <select
+                  value={filterEmployeeId}
+                  onChange={e => setFilterEmployeeId(e.target.value)}
+                  className="w-full md:w-40 text-xs border border-gray-200 rounded-md p-1.5 focus:ring-1 focus:ring-blue-500 outline-none"
+                >
+                  <option value="all">All Team Member</option>
+                  {assignableEmployees.map(emp => (
                     <option key={emp.id} value={emp.id}>{emp.name}</option>
                   ))}
                 </select>
@@ -1171,13 +1269,24 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
                 ))}
               </select>
 
-              <select
+              {/* <select
                 value={quickEmployeeId}
                 onChange={(e) => setQuickEmployeeId(e.target.value)}
                 className="w-full md:w-40 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600"
               >
                 <option value="">Assign To (Myself)</option>
                 {workspaceEmployees.map(emp => (
+                  <option key={emp.id} value={emp.id}>{emp.name}</option>
+                ))}
+              </select> */}
+
+              <select
+                value={quickEmployeeId}
+                onChange={(e) => setQuickEmployeeId(e.target.value)}
+                className="w-full md:w-40 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600"
+              >
+                <option value="">Assign To (Myself)</option>
+                {assignableEmployees.map(emp => (
                   <option key={emp.id} value={emp.id}>{emp.name}</option>
                 ))}
               </select>
@@ -1223,11 +1332,12 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
                 <input type="text" value={quickRemark} onChange={e => setQuickRemark(e.target.value)} placeholder="Remark" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
               </div>
               ) : (
-              <div className="flex flex-col md:flex-row gap-3">
-                <input type="text" value={quickKpi} onChange={e => setQuickKpi(e.target.value)} placeholder="KPI / Expected Outcome" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
-                <input type="text" value={quickRemark} onChange={e => setQuickRemark(e.target.value)} placeholder="Remark" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
-              </div>
-            )}
+            <div className="flex flex-col md:flex-row gap-3">
+              <input type="text" value={quickKpi} onChange={e => setQuickKpi(e.target.value)} placeholder="KPI" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
+              <input type="text" value={quickTarget} onChange={e => setQuickTarget(e.target.value)} placeholder="Expected Outcome" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
+              <input type="text" value={quickRemark} onChange={e => setQuickRemark(e.target.value)} placeholder="Remark" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
+            </div>
+          )}
 
             <div className="flex flex-col gap-1 mt-1">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Attachment</label>
@@ -1288,107 +1398,150 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
 
         {/* ✅ Timesheet Timeline (Logbook) */}
         {activeTab === 'master' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredMasterTasks.length === 0 ? (
-              <div className="col-span-full p-12 text-center text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
-                No master tasks found. Click "Add Master Task" to create one.
-              </div>
-            ) : (
-              filteredMasterTasks.map((task) => {
-                const priorityStyles = {
-                  low: "bg-emerald-50 border-emerald-200 hover:border-emerald-400 hover:ring-emerald-100",
-                  medium: "bg-blue-50 border-blue-200 hover:border-blue-400 hover:ring-blue-100",
-                  high: "bg-orange-50 border-orange-200 hover:border-orange-400 hover:ring-orange-100",
-                  critical: "bg-red-50 border-red-300 hover:border-red-500 hover:ring-red-200"
-                };
-                const badgeStyles = {
-                  low: "bg-emerald-100 text-emerald-800 border-emerald-200",
-                  medium: "bg-blue-100 text-blue-800 border-blue-200",
-                  high: "bg-orange-100 text-orange-800 border-orange-200",
-                  critical: "bg-red-100 text-red-800 border-red-300"
-                };
-                const pStyle = priorityStyles[task.priority?.toLowerCase()] || "bg-white border-gray-200 hover:border-blue-400 hover:ring-blue-100";
-                const bStyle = badgeStyles[task.priority?.toLowerCase()] || "bg-gray-100 text-gray-800 border-gray-200";
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    {filteredMasterTasks.length === 0 ? (
+      <div className="p-8 text-center text-gray-500 text-sm">
+        No master tasks found. Click "Add Master Task" to create one.
+      </div>
+    ) : (
+      <ul className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+        {/* {filteredMasterTasks.map((task) => {
+          const badgeStyles = {
+            low: "bg-emerald-100 text-emerald-800 border-emerald-200",
+            medium: "bg-blue-100 text-blue-800 border-blue-200",
+            high: "bg-orange-100 text-orange-800 border-orange-200",
+            critical: "bg-red-100 text-red-800 border-red-300"
+          };
+          const bStyle = badgeStyles[task.priority?.toLowerCase()] || "bg-gray-100 text-gray-800 border-gray-200"; */}
+{filteredMasterTasks.map((task) => {
+          const badgeStyles = {
+            low: "bg-emerald-100 text-emerald-800 border-emerald-200",
+            medium: "bg-blue-100 text-blue-800 border-blue-200",
+            high: "bg-orange-100 text-orange-800 border-orange-200",
+            critical: "bg-red-100 text-red-800 border-red-300"
+          };
+          const bStyle = badgeStyles[task.priority?.toLowerCase()] || "bg-gray-100 text-gray-800 border-gray-200";
 
-                return (
-                  <div
-                    key={task.id}
-                    onClick={() => {
-                      setTasksList([]); // Clear stale data instantly
-                      setFilterMasterTaskId(String(task.id));
-                      setQuickMasterTaskId(String(task.id)); // Auto-select for quick add
-                      setActiveTab('daily');
-                      fetchTasksForMasterTask(task.id);
-                    }}
-                    className={`p-5 rounded-xl shadow-sm border hover:shadow-md hover:ring-2 transition-all cursor-pointer group relative flex flex-col justify-between ${pStyle}`}
-                  >
-                    <div>
-                      <div className="flex justify-between items-start mb-2 relative">
-                        <div className="pr-6">
-                          <h3 className="text-lg font-bold text-gray-800 group-hover:text-gray-900 transition-colors flex items-center gap-2">
-                            {task.title}
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider font-bold border ${bStyle}`}>
-                              {task.priority || "Medium"}
-                            </span>
-                          </h3>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openMasterTaskModal(task);
-                          }}
-                          className="text-gray-400 hover:text-blue-600 bg-white/50 hover:bg-white p-1.5 rounded-md transition opacity-0 group-hover:opacity-100 absolute top-0 right-0 z-10"
-                          title="Edit Master Task"
-                        >
-                          ✏️
-                        </button>
-                      </div>
-                    <p className="text-sm text-gray-500 line-clamp-3 mb-3">{task.description || "No description provided."}</p>
-                  </div>
+          const statusStyles = {
+            open: "bg-blue-50 text-blue-700 border-blue-200",
+            "in progress": "bg-yellow-50 text-yellow-700 border-yellow-200",
+            closed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+          };
+          const taskStatus = task.computed_status || "open";
+          const statusStyle = statusStyles[taskStatus] || statusStyles.open;
 
-                  <div className="flex flex-col gap-2 mb-3">
-                    {/* Created By Badge (Placeholder if backend doesn't send it yet) */}
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Created By:</span>
-                      <span className="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md border border-purple-100 font-bold">
-                        {task.created_by_name || "Admin"}
-                      </span>
-                    </div>
+          const priorityRowStyles = {
+            low: "bg-emerald-50/50 hover:bg-emerald-50",
+            medium: "bg-blue-50/50 hover:bg-blue-50",
+            high: "bg-orange-50/50 hover:bg-orange-50",
+            critical: "bg-red-50/50 hover:bg-red-50"
+          };
+          const pRowStyle = priorityRowStyles[task.priority?.toLowerCase()] || "hover:bg-blue-50/30";
 
-                    {/* Assigned To Badges */}
-                    {task.assignees && task.assignees.length > 0 && (
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Assigned To:</span>
-                        <div className="flex flex-wrap gap-1">
-                          {task.assignees.map(empId => {
-                            const emp = workspaceEmployees.find(e => String(e.id) === String(empId));
-                            return emp ? (
-                              <span key={empId} className="text-[10px] bg-white/60 text-slate-700 px-2 py-1 rounded-md border border-slate-200 font-medium" title={emp.name}>
-                                {emp.name.split(' ')[0]}
-                              </span>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-end mt-auto pt-2 border-t border-black/5">
-                    {(task.start_date || task.end_date) ? (
-                      <div className="text-[10px] font-semibold text-gray-600 bg-white/50 px-2 py-1 rounded inline-block border border-black/5">
-                        📅 {task.start_date ? new Date(task.start_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'} - {task.end_date ? new Date(task.end_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}
-                      </div>
-                    ) : <div />}
-                    <span className="text-gray-700 text-[11px] font-bold group-hover:underline">
-                      View Tasks ➔
-                    </span>
-                  </div>
+          return (
+            // <li
+            //   key={task.id}
+            //   onClick={() => {
+            //     setTasksList([]);
+            //     setFilterMasterTaskId(String(task.id));
+            //     setQuickMasterTaskId(String(task.id));
+            //     setActiveTab('daily');
+            //     fetchTasksForMasterTask(task.id);
+            //   }}
+            //   className={`p-4 transition border-b border-gray-100 flex flex-col sm:flex-row sm:items-start justify-between gap-4 cursor-pointer group ${pRowStyle}`}
+            // >
+            <li
+              key={task.id}
+              onClick={() => {
+                setTasksList([]);
+                setFilterMasterTaskId(String(task.id));
+                setQuickMasterTaskId(String(task.id));
+                setActiveTab('daily');
+                fetchTasksForMasterTask(task.id);
+              }}
+              className={`m-3 p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col sm:flex-row sm:items-start justify-between gap-4 cursor-pointer group ${pRowStyle}`}
+            >
+              <div className="flex-1 flex flex-col gap-1.5">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                  <span className="flex items-center gap-1">
+                    <span className="text-gray-400">📅</span>
+                    {task.start_date ? new Date(task.start_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}
+                    {' - '}
+                    {task.end_date ? new Date(task.end_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}
+                  </span>
+                  <span className="text-gray-300">|</span>
+                  <span className="flex items-center gap-1 text-purple-600">
+                    <span className="text-purple-400">👤</span> {task.created_by_name || "Admin"}
+                  </span>
                 </div>
-                );
-              })
-            )}
-          </div>
-        ) : (
+
+                {/* <div className="flex items-center gap-2 w-full flex-wrap">
+                  <span className="font-bold text-gray-900 text-[15px]">{task.title}</span>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider font-bold border ${bStyle}`}>
+                    {task.priority || "Medium"}
+                  </span>
+                </div> */}
+
+                <div className="flex items-center gap-2 w-full flex-wrap">
+                  <span className="font-bold text-gray-900 text-[15px]">{task.title}</span>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider font-bold border ${bStyle}`}>
+                    {task.priority || "Medium"}
+                  </span>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider font-bold border ${statusStyle}`}>
+                    {taskStatus}
+                  </span>
+                </div>
+
+                <p className="text-[12px] text-gray-500 line-clamp-2">{task.description || "No description provided."}</p>
+
+                {task.assignees && task.assignees.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {task.assignees.map(empId => {
+                      const emp = workspaceEmployees.find(e => String(e.id) === String(empId));
+                      return emp ? (
+                        <span key={empId} className="text-[10px] bg-slate-50 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200 font-medium">
+                          {emp.name.split(' ')[0]}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openMasterTaskModal(task);
+                  }}
+                  className="text-gray-400 hover:text-blue-600 bg-white hover:bg-blue-50 p-1.5 rounded-md transition opacity-0 group-hover:opacity-100 border border-transparent hover:border-blue-100"
+                  title="Edit Master Task"
+                >
+                  ✏️
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteMasterTask(task.id);
+                  }}
+                  className="text-gray-400 hover:text-red-600 bg-white hover:bg-red-50 p-1.5 rounded-md transition opacity-0 group-hover:opacity-100 border border-transparent hover:border-red-100"
+                  title="Delete Master Task"
+                >
+                  🗑️
+                </button>
+
+                <span className="text-blue-600 text-[11px] font-bold whitespace-nowrap group-hover:underline">
+                  View Tasks ➔
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    )}
+  </div>
+) : (
           <>
             <div className="mb-2">
               <h2 className="text-lg font-semibold text-gray-800">{activeTab === 'daily' ? 'Daily Timeline' : 'Weekly Outcomes'}</h2>
@@ -1429,7 +1582,7 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
                             <span className="flex items-center gap-1 text-blue-600"><span className="text-blue-400">👤</span> {t.employee_name}</span>
                           </div> */}
 
-                          <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                          {/* <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                             <span className="flex items-center gap-1">
                               <span className="text-gray-400">📅</span>
                               <span className="opacity-70">Due Date:</span>
@@ -1437,6 +1590,33 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
                             </span>
                             <span className="text-gray-300">|</span>
                             <span className="flex items-center gap-1 text-blue-600"><span className="text-blue-400">👤</span> {t.employee_name}</span>
+                          </div> */}
+
+
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                            <span className="flex items-center gap-1">
+                              <span className="text-gray-400">📅</span>
+                              <span className="opacity-70">Due Date:</span>
+                              {t.due_date ? new Date(t.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                            </span>
+                            <span className="text-gray-300">|</span>
+                            {isAdmin ? (
+                              <span className="flex items-center gap-1 text-blue-600">
+                                <span className="text-blue-400">👤</span>
+                                <select
+                                  value={t.employee_id || ""}
+                                  onChange={(e) => handleInlineUpdate(t.task_id || t.id, 'employee_id', e.target.value)}
+                                  className="bg-transparent border-none outline-none text-blue-600 font-bold text-[10px] uppercase cursor-pointer"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {assignableEmployees.map(emp => (
+                                    <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                  ))}
+                                </select>
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-blue-600"><span className="text-blue-400">👤</span> {t.employee_name}</span>
+                            )}
                           </div>
 
                           {/* 2. Title & Master Task */}
@@ -1470,19 +1650,31 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
                             </>
                           )}
 
-                            {(activeTab === 'weekly' || activeTab === 'daily') && (
-                              <div className={`flex items-center text-[11px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded border border-emerald-100 shadow-sm flex-1 min-w-[120px] ${!canEdit ? 'opacity-70' : ''}`}>
-                                <span className="font-bold mr-1 opacity-70 whitespace-nowrap">{activeTab === 'daily' ? 'Actual:' : 'KPI:'}</span>
-                                <InlineInput
-                                  disabled={!canEdit}
-                                  value={activeTab === 'daily' ? t.actual_result : t.kpi}
-                                  placeholder="..."
-                                  onSave={(val) => handleInlineUpdate(t.task_id, activeTab === 'daily' ? 'actual_result' : 'kpi', val)}
-                                  className="bg-transparent border-none outline-none w-full text-emerald-700 placeholder-emerald-300 font-medium disabled:cursor-not-allowed"
-                                />
-                              </div>
-                            )}
+                           {(activeTab === 'weekly' || activeTab === 'daily') && (
+                          <div className={`flex items-center text-[11px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded border border-emerald-100 shadow-sm flex-1 min-w-[120px] ${!canEdit ? 'opacity-70' : ''}`}>
+                            <span className="font-bold mr-1 opacity-70 whitespace-nowrap">{activeTab === 'daily' ? 'Actual:' : 'KPI:'}</span>
+                            <InlineInput
+                              disabled={!canEdit}
+                              value={activeTab === 'daily' ? t.actual_result : t.kpi}
+                              placeholder="..."
+                              onSave={(val) => handleInlineUpdate(t.task_id, activeTab === 'daily' ? 'actual_result' : 'kpi', val)}
+                              className="bg-transparent border-none outline-none w-full text-emerald-700 placeholder-emerald-300 font-medium disabled:cursor-not-allowed"
+                            />
+                          </div>
+                        )}
 
+                        {activeTab === 'weekly' && (
+                          <div className={`flex items-center text-[11px] bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100 shadow-sm flex-1 min-w-[120px] ${!canEdit ? 'opacity-70' : ''}`}>
+                            <span className="font-bold mr-1 opacity-70 whitespace-nowrap">Expected Outcome:</span>
+                            <InlineInput
+                              disabled={!canEdit}
+                              value={t.target_val}
+                              placeholder="..."
+                              onSave={(val) => handleInlineUpdate(t.task_id, 'target_val', val)}
+                              className="bg-transparent border-none outline-none w-full text-indigo-700 placeholder-indigo-300 font-medium disabled:cursor-not-allowed"
+                            />
+                          </div>
+                        )}
                             <div className={`flex items-center text-[11px] bg-gray-50 text-gray-700 px-2 py-1 rounded border border-gray-200 flex-1 min-w-[150px] shadow-sm ${!canEdit ? 'opacity-70' : ''}`}>
                               <span className="font-bold mr-1 text-gray-400">Remark:</span>
                               <InlineInput disabled={!canEdit} value={t.remark} placeholder="..." onSave={(val) => handleInlineUpdate(t.task_id, 'remark', val)} className="bg-transparent border-none outline-none w-full italic text-gray-700 placeholder-gray-300 disabled:cursor-not-allowed" />
@@ -1801,11 +1993,16 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
                   </div>
                   <div className="flex-1 flex flex-col">
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Assign To (Optional)</label>
-                    <div className="flex-1 min-h-[120px] max-h-[120px] overflow-y-auto border border-gray-200 rounded-md p-2 bg-white flex flex-col gap-1">
+                    {/* <div className="flex-1 min-h-[120px] max-h-[120px] overflow-y-auto border border-gray-200 rounded-md p-2 bg-white flex flex-col gap-1">
                       {workspaceEmployees.length === 0 ? (
                         <span className="text-xs text-gray-400 p-1">No active employees found</span>
                       ) : (
-                        workspaceEmployees.map(emp => (
+                        workspaceEmployees.map(emp => ( */}
+                        <div className="flex-1 min-h-[120px] max-h-[120px] overflow-y-auto border border-gray-200 rounded-md p-2 bg-white flex flex-col gap-1">
+                      {assignableEmployees.length === 0 ? (
+                        <span className="text-xs text-gray-400 p-1">No active employees found</span>
+                      ) : (
+                        assignableEmployees.map(emp => (
                           <label key={emp.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
                             <input
                               type="checkbox"
