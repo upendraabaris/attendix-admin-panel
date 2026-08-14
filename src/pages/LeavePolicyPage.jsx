@@ -607,7 +607,7 @@ const LeavePolicyPage = () => {
             <p className="mb-4 text-sm text-gray-500">
               Choose when team member leaves reset every year for your organization.
             </p>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {/* Option 1: Date of Joining */}
               <button
                 type="button"
@@ -665,6 +665,35 @@ const LeavePolicyPage = () => {
                   </p>
                 </div>
               </button>
+
+              {/* Option 3: Financial Year */}
+              <button
+                type="button"
+                onClick={() => setRenewalType("financial_year")}
+                className={`flex items-start gap-3 rounded-lg border-2 p-4 text-left transition-all ${
+                  renewalType === "financial_year"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <span
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    renewalType === "financial_year"
+                      ? "border-blue-500 bg-blue-500"
+                      : "border-gray-300 bg-white"
+                  }`}
+                >
+                  {renewalType === "financial_year" && (
+                    <span className="h-2 w-2 rounded-full bg-white" />
+                  )}
+                </span>
+                <div>
+                  <p className="font-semibold text-gray-800">Financial Year (Apr 1 – Mar 31)</p>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Leaves renew for all employees on April 1st every year.
+                  </p>
+                </div>
+              </button>
             </div>
 
             <div className="mt-4 flex items-center gap-3">
@@ -678,7 +707,11 @@ const LeavePolicyPage = () => {
               <p className="text-xs text-gray-400">
                 Current:{" "}
                 <span className="font-medium capitalize text-gray-600">
-                  {renewalType === "calendar_year" ? "Calendar Year (Jan 1 – Dec 31)" : "Date of Joining"}
+                  {renewalType === "calendar_year"
+                    ? "Calendar Year (Jan 1 – Dec 31)"
+                    : renewalType === "financial_year"
+                      ? "Financial Year (Apr 1 – Mar 31)"
+                      : "Date of Joining"}
                 </span>
               </p>
             </div>
