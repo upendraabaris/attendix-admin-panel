@@ -20,6 +20,7 @@ const Workspace = () => {
   const [activeTab, setActiveTab] = useState("all");
   const role = (localStorage.getItem("role") || "").toLowerCase();
   const isAdminRole = role.includes("admin");
+  const currentEmployeeName = localStorage.getItem("employee_name");
 
   const handleAuthFailure = () => {
     localStorage.removeItem("token");
@@ -418,32 +419,40 @@ const handleUpdateWorkspace = () => {
 </div>
 
         {/* Workspace Tabs */}
-        <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-lg w-fit">
-          <button 
-            onClick={() => setActiveTab('all')}
-            className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
-              activeTab === 'all' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-            }`}
-          >
-            All Workspaces
-          </button>
-          <button 
-            onClick={() => setActiveTab('my')}
-            className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
-              activeTab === 'my' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-            }`}
-          >
-            My Workspace
-          </button>
-          <button
-            onClick={() => setActiveTab('team')}
-            className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
-              activeTab === 'team' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-            }`}
-          >
-            Team Tasks
-          </button>
-        </div>
+<div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-lg w-fit">
+  <button 
+    onClick={() => setActiveTab('all')}
+    className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
+      activeTab === 'all' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+    }`}
+  >
+    All Workspaces
+  </button>
+  <button 
+    onClick={() => setActiveTab('my')}
+    className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
+      activeTab === 'my' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+    }`}
+  >
+    My Workspace
+  </button>
+  {(isAdminRole || (() => {
+    const me = employees.find(
+      (e) => String(e.name).toLowerCase() === String(currentEmployeeName).toLowerCase()
+    );
+    const myId = me?.id;
+    return myId != null && employees.some((e) => String(e.manager_id) === String(myId));
+  })()) && (
+    <button
+      onClick={() => setActiveTab('team')}
+      className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
+        activeTab === 'team' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+      }`}
+    >
+      Team Tasks
+    </button>
+  )}
+</div>
 
         {activeTab === "my" ? (
           <MyWorkspace />
