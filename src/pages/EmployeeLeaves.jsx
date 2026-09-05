@@ -145,6 +145,7 @@ function EmployeeLeaves() {
   const [leaveList, setLeaveList] = useState([]);
   const [leaveBalances, setLeaveBalances] = useState([]);
   const [teamRequests, setTeamRequests] = useState([]);
+  const [teamBalances, setTeamBalances] = useState([]);
   const [processingId, setProcessingId] = useState(null);
   const [activeLeaveTab, setActiveLeaveTab] = useState("my");
   const [formData, setFormData] = useState({
@@ -210,6 +211,15 @@ function EmployeeLeaves() {
       const [leaveRes, balanceRes, compOffRes] = await Promise.all(requests);
       setLeaveList(leaveRes?.data?.data || []);
       setTeamRequests(leaveRes?.data?.teamRequests || []);
+
+      try {
+        const teamBalanceRes = await api.get("/leave/team-balances");
+        setTeamBalances(teamBalanceRes?.data?.data || []);
+      } catch (teamBalanceError) {
+        console.error("Error fetching team leave balances:", teamBalanceError);
+        setTeamBalances([]);
+      }
+
       const baseBalances = (balanceRes?.data?.data || []).filter(
         (balance) => !HIDDEN_BALANCE_TYPES.includes(balance.leave_type),
       );
@@ -612,6 +622,40 @@ const handleTeamLeaveAction = async (leaveId, status) => {
         {/* Team Leave Requests */}
         {teamRequests.length > 0 && activeLeaveTab === "team" && (
           <div>
+            {teamBalances.length > 0 && (
+              <div className="mb-5">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                  Team Leave Balances
+                </h3>
+                <div className="space-y-2">
+                  {teamBalances.map((member) => (
+                    <div
+                      key={member.employee_id}
+                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-3"
+                    >
+                      <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">
+                        {member.employee_name}
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        {(member.balances || []).map((balance) => (
+                          <div
+                            key={`${member.employee_id}-${balance.leave_type}`}
+                            className="text-xs text-gray-600"
+                          >
+                            <span className="uppercase tracking-wide text-gray-400">
+                              {balance.leave_type}:
+                            </span>{" "}
+                            <span className="font-semibold text-gray-800">
+                              {formatLeaveValue(balance.balance)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="space-y-3">
               {teamRequests.map((leave) => {
                 const cfg =
