@@ -146,6 +146,7 @@ function EmployeeLeaves() {
   const [leaveBalances, setLeaveBalances] = useState([]);
   const [teamRequests, setTeamRequests] = useState([]);
   const [teamBalances, setTeamBalances] = useState([]);
+  const [isManager, setIsManager] = useState(false);
   const [processingId, setProcessingId] = useState(null);
   const [activeLeaveTab, setActiveLeaveTab] = useState("my");
   const [formData, setFormData] = useState({
@@ -211,6 +212,10 @@ function EmployeeLeaves() {
       const [leaveRes, balanceRes, compOffRes] = await Promise.all(requests);
       setLeaveList(leaveRes?.data?.data || []);
       setTeamRequests(leaveRes?.data?.teamRequests || []);
+      // isManager reflects whether the caller has ≥1 direct report — NOT
+      // whether any team leave requests happen to exist yet. A manager
+      // whose reports haven't submitted a leave request still has a team.
+      setIsManager(Boolean(leaveRes?.data?.isManager));
 
       try {
         const teamBalanceRes = await api.get("/leave/team-balances");
@@ -587,8 +592,8 @@ const handleTeamLeaveAction = async (leaveId, status) => {
           </CardContent>
         </Card>
 
-        {/* Toggle Tabs (only show if user has team requests) */}
-        {teamRequests.length > 0 && (
+        {/* Toggle Tabs (only show if user has direct reports) */}
+        {isManager && (
           <div className="flex gap-2 border-b border-gray-200">
             <button
               onClick={() => setActiveLeaveTab("my")}
@@ -620,7 +625,7 @@ const handleTeamLeaveAction = async (leaveId, status) => {
         )}
 
         {/* Team Leave Requests */}
-        {teamRequests.length > 0 && activeLeaveTab === "team" && (
+        {isManager && activeLeaveTab === "team" && (
           <div>
             {teamBalances.length > 0 && (
               <div className="mb-5">
@@ -654,6 +659,12 @@ const handleTeamLeaveAction = async (leaveId, status) => {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+            {teamRequests.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
+                <ClipboardList className="w-9 h-9 mb-2 opacity-30" />
+                <p className="text-sm font-medium">No team leave requests yet</p>
               </div>
             )}
             <div className="space-y-3">
@@ -762,9 +773,9 @@ const handleTeamLeaveAction = async (leaveId, status) => {
         )}
 
         {/* My Leave Requests */}
-        {(teamRequests.length === 0 || activeLeaveTab === "my") && (
+        {(!isManager || activeLeaveTab === "my") && (
           <div>
-            {teamRequests.length === 0 && (
+            {!isManager && (
               <h2 className="text-base font-semibold text-gray-800 mb-3">
                 My Leave Requests
               </h2>

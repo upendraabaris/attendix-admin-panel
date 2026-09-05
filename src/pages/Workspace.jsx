@@ -4,7 +4,7 @@ import Layout from "../components/Layout";
 import { Card, CardTitle, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { PlusCircle, Users, ArrowRight, Search, FolderOpen, Sparkles, Mic, X, Pencil, Trash2 } from "lucide-react";
+import { PlusCircle, ArrowRight, Search, FolderOpen, Sparkles, Mic, X, Pencil, Trash2 } from "lucide-react";
 import api from "../hooks/useApi";
 import { toast } from "sonner";
 import MyWorkspace from "./MyWorkspace";
@@ -83,9 +83,12 @@ const [ntStatus, setNtStatus] = useState("open");
   }, []);
 
   // Whether the logged-in employee has direct reports (i.e. is a Reporting
-  // Manager). Admin already has full org-wide visibility via "All Workspaces"
-  // / "Team Tasks", so this is only used to gate the manager-specific
-  // "Team Workspace" tab below.
+  // Manager). Admin already has full org-wide visibility via "All Workspaces",
+  // so this is only used to gate the "Team Tasks" tab. Team workspace
+  // visibility itself is NOT a separate tab — the backend's
+  // /workspaces/emp/workspace (the "All Workspaces" tab's own data source for
+  // non-admins) already folds in every workspace the caller's direct reports
+  // belong to, automatically, with no client-side gating needed.
   const isManager = useMemo(() => {
     if (isAdminRole) return false;
     const me = employees.find(
@@ -94,34 +97,6 @@ const [ntStatus, setNtStatus] = useState("open");
     const myId = me?.id;
     return myId != null && employees.some((e) => String(e.manager_id) === String(myId));
   }, [employees, currentEmployeeName, isAdminRole]);
-
-  const [teamWorkspaces, setTeamWorkspaces] = useState([]);
-  const [loadingTeamWorkspaces, setLoadingTeamWorkspaces] = useState(false);
-
-  useEffect(() => {
-    if (!isManager) {
-      setTeamWorkspaces([]);
-      return;
-    }
-
-    const fetchTeamWorkspaces = async () => {
-      try {
-        setLoadingTeamWorkspaces(true);
-        const res = await api.get("/workspaces/team");
-        setTeamWorkspaces(Array.isArray(res.data) ? res.data : []);
-      } catch (error) {
-        if ([401, 403].includes(error.response?.status)) {
-          handleAuthFailure();
-          return;
-        }
-        console.error("Error fetching team workspaces:", error);
-      } finally {
-        setLoadingTeamWorkspaces(false);
-      }
-    };
-
-    fetchTeamWorkspaces();
-  }, [isManager]);
 
   const openMasterTaskModal = () => {
     setMtTitle("");
@@ -487,64 +462,12 @@ const handleUpdateWorkspace = () => {
       Team Tasks
     </button>
   )}
-  {isManager && (
-    <button
-      onClick={() => setActiveTab('team-workspace')}
-      className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
-        activeTab === 'team-workspace' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-      }`}
-    >
-      Team Workspace
-    </button>
-  )}
 </div>
 
         {activeTab === "my" ? (
           <MyWorkspace />
         ) : activeTab === "team" ? (
           <AdminTaskFilters />
-        ) : activeTab === "team-workspace" ? (
-          loadingTeamWorkspaces ? (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-              <div className="w-7 h-7 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mb-3" />
-              <p className="text-sm">Loading team workspaces...</p>
-            </div>
-          ) : teamWorkspaces.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-6">
-                <Users className="w-12 h-12 text-blue-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">No team workspaces yet</h2>
-              <p className="text-gray-600 max-w-md mb-6">
-                Workspaces your direct reports are part of will show up here.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-              {teamWorkspaces
-                .filter((ws) => ws.name.toLowerCase().includes(searchTerm.toLowerCase()))
-                .map((ws) => (
-                  <Card
-                    key={ws.id}
-                    className="cursor-pointer group bg-white border border-gray-200 rounded-2xl hover:shadow-2xl hover:scale-105 transition-all duration-300 overflow-hidden"
-                    onClick={() => navigate(`/workspace/${ws.id}`, { state: { workspaceName: ws.name } })}
-                  >
-                    <div className="h-2 bg-blue-200" />
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between mb-3">
-                        <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
-                          {ws.name}
-                        </CardTitle>
-                        <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transform group-hover:translate-x-1 transition-all" />
-                      </div>
-                      {ws.created_by_name && (
-                        <p className="text-xs text-gray-400 mt-1">Created by {ws.created_by_name}</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
-          )
         ) : (
           <>
             {/* Empty State */}

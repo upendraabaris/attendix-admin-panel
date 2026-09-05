@@ -19,6 +19,26 @@ const getToday = () => {
   ).padStart(2, "0")}`;
 };
 
+const TEAM_ATTENDANCE_MONTH_ABBR = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+// Display-only formatter for Team Attendance's raw "YYYY-MM-DD" date string
+// (as returned by GET /attendance/team) into "Jun 1, 2026". Pure string
+// reformatting — does NOT parse via `new Date()` (avoids any timezone
+// shift), does not touch the API/backend date format, and has no effect on
+// date filtering/query params.
+const formatTeamAttendanceDate = (dateStr) => {
+  if (!dateStr) return "N/A";
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr));
+  if (!match) return dateStr;
+  const [, year, month, day] = match;
+  const monthIndex = Number(month) - 1;
+  if (monthIndex < 0 || monthIndex > 11) return dateStr;
+  return `${TEAM_ATTENDANCE_MONTH_ABBR[monthIndex]} ${Number(day)}, ${year}`;
+};
+
 const getOptionalCoords = () =>
   new Promise((resolve) => {
     if (!navigator.geolocation) {
@@ -69,6 +89,13 @@ function EmployeeAttendanceTab() {
   const [actionLoading, setActionLoading] = useState("");
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [teamAttendance, setTeamAttendance] = useState([]);
+  const [isManager, setIsManager] = useState(false);
+  // Authorized direct-report options for the Team Attendance employee
+  // filter — sourced only from /attendance/team's own `directReports` field
+  // (the manager's own manager_id + organization_id scoped team), never from
+  // the full organization employee list.
+  const [directReports, setDirectReports] = useState([]);
+  const [selectedTeamEmployeeId, setSelectedTeamEmployeeId] = useState("");
   const [activeAttendanceTab, setActiveAttendanceTab] = useState("my");
 
   const fetchBreakSummary = useCallback(async () => {
@@ -167,14 +194,26 @@ function EmployeeAttendanceTab() {
   const fetchTeamAttendance = useCallback(async () => {
     try {
       const res = await api.get("/attendance/team", {
-        params: { startDate: filters.startDate, endDate: filters.endDate },
+        params: {
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+          // Omitted entirely when "All Employees" is selected — backend
+          // treats a missing/empty employeeId as "whole team".
+          ...(selectedTeamEmployeeId ? { employeeId: selectedTeamEmployeeId } : {}),
+        },
       });
       setTeamAttendance(res?.data?.data || []);
+      setDirectReports(res?.data?.directReports || []);
+      // isManager reflects whether the caller has ≥1 direct report — NOT
+      // whether any team attendance rows exist in the selected date range.
+      // A manager whose reports haven't clocked in yet still has a team.
+      setIsManager(Boolean(res?.data?.isManager));
     } catch (error) {
       console.error("Error fetching team attendance:", error);
       setTeamAttendance([]);
+      setIsManager(false);
     }
-  }, [filters.startDate, filters.endDate]);
+  }, [filters.startDate, filters.endDate, selectedTeamEmployeeId]);
 
   useEffect(() => { fetchTeamAttendance(); }, [fetchTeamAttendance]);
 
@@ -441,7 +480,7 @@ function EmployeeAttendanceTab() {
         </div>
 
         {/* Toggle Tabs (only show if user has direct reports) */}
-        {teamAttendance.length > 0 && (
+        {isManager && (
           <div className="flex gap-2 border-b border-gray-200">
             <button
               type="button"
@@ -469,8 +508,33 @@ function EmployeeAttendanceTab() {
         )}
 
         {/* Team Attendance */}
-        {teamAttendance.length > 0 && activeAttendanceTab === "team" && (
+        {isManager && activeAttendanceTab === "team" && (
           <div className="space-y-2">
+            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wide shrink-0">
+                Employee
+              </label>
+              <select
+                value={selectedTeamEmployeeId}
+                onChange={(e) => setSelectedTeamEmployeeId(e.target.value)}
+                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Employees</option>
+                {directReports.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {teamAttendance.length === 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-10 text-center shadow-sm">
+                <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">
+                  No team attendance records found for the selected date range
+                </p>
+              </div>
+            )}
             {teamAttendance.map((record, index) => (
               <div
                 key={index}
@@ -479,7 +543,7 @@ function EmployeeAttendanceTab() {
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm font-medium text-gray-800">{record.date || "N/A"}</span>
+                    <span className="text-sm font-medium text-gray-800">{formatTeamAttendanceDate(record.date)}</span>
                   </div>
                   <StatusBadge clockIn={record.clock_in} clockOut={record.clock_out} />
                 </div>
@@ -515,7 +579,7 @@ function EmployeeAttendanceTab() {
         )}
 
         {/* Records */}
-        {(teamAttendance.length === 0 || activeAttendanceTab === "my") && (loading ? (
+        {(!isManager || activeAttendanceTab === "my") && (loading ? (
           <div className="bg-white border border-gray-200 rounded-xl p-10 text-center shadow-sm">
             <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="text-sm text-gray-500">Loading attendance...</p>
