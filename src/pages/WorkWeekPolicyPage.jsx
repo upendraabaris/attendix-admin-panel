@@ -84,6 +84,9 @@ const WorkWeekPolicyPage = () => {
   const [autoAbsentEnabled, setAutoAbsentEnabled] = useState(false);
   const [autoAbsentSaving, setAutoAbsentSaving] = useState(false);
   const [autoAbsentLastProcessedDate, setAutoAbsentLastProcessedDate] = useState(null);
+  const [autoAbsentEmployees, setAutoAbsentEmployees] = useState([]);
+  const [excludedEmployeeIds, setExcludedEmployeeIds] = useState([]);
+  const [exclusionsSaving, setExclusionsSaving] = useState(false);
 
   const [holidays, setHolidays] = useState([]);
   const [holidayForm, setHolidayForm] = useState(EMPTY_HOLIDAY_FORM);
@@ -94,15 +97,19 @@ const WorkWeekPolicyPage = () => {
   const loadData = async () => {
     try {
       setPageLoading(true);
-      const [policyRes, holidaysRes, autoAbsentRes] = await Promise.all([
+      const [policyRes, holidaysRes, autoAbsentRes, exclusionsRes, employeesRes] = await Promise.all([
         api.get("/work-week-policy"),
         api.get("/holidays"),
         api.get("/auto-absent/settings"),
+        api.get("/auto-absent/exclusions"),
+        api.get("/employee/getEmployees"),
       ]);
 
       const policy = policyRes?.data?.data || null;
       const holidayRows = holidaysRes?.data?.data || [];
       const autoAbsent = autoAbsentRes?.data?.data || null;
+      const exclusions = exclusionsRes?.data?.data || null;
+      const employeeRows = employeesRes?.data?.data || [];
 
       setPolicyId(policy?.id ?? null);
       setSelectedPolicy(policy?.policy_name || POLICY_OPTIONS[0].value);
@@ -110,6 +117,10 @@ const WorkWeekPolicyPage = () => {
       setHolidays(holidayRows);
       setAutoAbsentEnabled(Boolean(autoAbsent?.is_enabled));
       setAutoAbsentLastProcessedDate(autoAbsent?.last_processed_date || null);
+      setExcludedEmployeeIds(Array.isArray(exclusions?.employee_ids) ? exclusions.employee_ids : []);
+      setAutoAbsentEmployees(
+        employeeRows.filter((emp) => String(emp.role || "").toLowerCase() !== "admin")
+      );
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to load work week policy and holidays");
     } finally {
@@ -173,6 +184,27 @@ const WorkWeekPolicyPage = () => {
       toast.error(error?.response?.data?.message || "Failed to update auto absent setting");
     } finally {
       setAutoAbsentSaving(false);
+    }
+  };
+
+  const toggleExcludedEmployee = (employeeId) => {
+    setExcludedEmployeeIds((prev) =>
+      prev.includes(employeeId)
+        ? prev.filter((id) => id !== employeeId)
+        : [...prev, employeeId]
+    );
+  };
+
+  const handleSaveExclusions = async () => {
+    try {
+      setExclusionsSaving(true);
+      const res = await api.put("/auto-absent/exclusions", { employee_ids: excludedEmployeeIds });
+      setExcludedEmployeeIds(res?.data?.data?.employee_ids || []);
+      toast.success("Auto absent exclusions saved");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to save auto absent exclusions");
+    } finally {
+      setExclusionsSaving(false);
     }
   };
 
@@ -375,6 +407,46 @@ const WorkWeekPolicyPage = () => {
                     <p className="text-xs text-slate-500 mt-1">
                       Last processed: {autoAbsentLastProcessedDate ? formatHolidayDate(autoAbsentLastProcessedDate) : "Not processed yet"}
                     </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      Excluded Employees
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1 mb-2">
+                      These employees are skipped by Auto Absent even while it stays enabled for everyone else.
+                    </p>
+                    {autoAbsentEmployees.length === 0 ? (
+                      <p className="text-xs text-gray-400">No employees available.</p>
+                    ) : (
+                      <div className="max-h-56 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                        {autoAbsentEmployees.map((emp) => (
+                          <label
+                            key={emp.id}
+                            className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={excludedEmployeeIds.includes(emp.id)}
+                              onChange={() => toggleExcludedEmployee(emp.id)}
+                              disabled={exclusionsSaving}
+                              className="accent-indigo-600"
+                            />
+                            <span className="text-gray-800">{emp.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleSaveExclusions}
+                      disabled={exclusionsSaving}
+                      className="mt-3 flex items-center gap-2"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      {exclusionsSaving ? "Saving..." : "Save Exclusions"}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
