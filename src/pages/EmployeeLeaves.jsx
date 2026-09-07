@@ -32,6 +32,10 @@ import {
 } from "lucide-react";
 
 const HIDDEN_BALANCE_TYPES = ["vacation","unpaid", "other","compensation"];
+// Reporting Manager's Team Leave Balances view only — hides just Other and
+// Unpaid, distinct from HIDDEN_BALANCE_TYPES above (self balances, Admin
+// reports, and Employee's own view are unaffected by this list).
+const TEAM_BALANCE_HIDDEN_TYPES = ["other", "unpaid"];
 // const SICK_LEAVE_PROOF_THRESHOLD_DAYS = 2;
 
 // const getLeaveTypeHelpText = (leaveType) => {
@@ -642,7 +646,11 @@ const handleTeamLeaveAction = async (leaveId, status) => {
                         {member.employee_name}
                       </p>
                       <div className="flex flex-wrap gap-3">
-                        {(member.balances || []).map((balance) => (
+                        {(member.balances || [])
+                          .filter(
+                            (balance) => !TEAM_BALANCE_HIDDEN_TYPES.includes(balance.leave_type)
+                          )
+                          .map((balance) => (
                           <div
                             key={`${member.employee_id}-${balance.leave_type}`}
                             className="text-xs text-gray-600"

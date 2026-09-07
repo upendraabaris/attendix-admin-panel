@@ -119,7 +119,11 @@ const WorkWeekPolicyPage = () => {
       setAutoAbsentLastProcessedDate(autoAbsent?.last_processed_date || null);
       setExcludedEmployeeIds(Array.isArray(exclusions?.employee_ids) ? exclusions.employee_ids : []);
       setAutoAbsentEmployees(
-        employeeRows.filter((emp) => String(emp.role || "").toLowerCase() !== "admin")
+        employeeRows.filter(
+          (emp) =>
+            String(emp.role || "").toLowerCase() !== "admin" &&
+            emp.status === "active"
+        )
       );
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to load work week policy and holidays");
