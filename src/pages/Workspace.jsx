@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { Card, CardTitle, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { PlusCircle, Users, ArrowRight, Search, FolderOpen, Sparkles, Mic, X, Pencil, Trash2 } from "lucide-react";
+import { PlusCircle, ArrowRight, Search, FolderOpen, Sparkles, Mic, X, Pencil, Trash2 } from "lucide-react";
 import api from "../hooks/useApi";
 import { toast } from "sonner";
 import MyWorkspace from "./MyWorkspace";
@@ -81,6 +81,22 @@ const [ntStatus, setNtStatus] = useState("open");
     };
     fetchEmployees();
   }, []);
+
+  // Whether the logged-in employee has direct reports (i.e. is a Reporting
+  // Manager). Admin already has full org-wide visibility via "All Workspaces",
+  // so this is only used to gate the "Team Tasks" tab. Team workspace
+  // visibility itself is NOT a separate tab — the backend's
+  // /workspaces/emp/workspace (the "All Workspaces" tab's own data source for
+  // non-admins) already folds in every workspace the caller's direct reports
+  // belong to, automatically, with no client-side gating needed.
+  const isManager = useMemo(() => {
+    if (isAdminRole) return false;
+    const me = employees.find(
+      (e) => String(e.name).toLowerCase() === String(currentEmployeeName).toLowerCase()
+    );
+    const myId = me?.id;
+    return myId != null && employees.some((e) => String(e.manager_id) === String(myId));
+  }, [employees, currentEmployeeName, isAdminRole]);
 
   const openMasterTaskModal = () => {
     setMtTitle("");
@@ -436,13 +452,7 @@ const handleUpdateWorkspace = () => {
   >
     My Workspace
   </button>
-  {(isAdminRole || (() => {
-    const me = employees.find(
-      (e) => String(e.name).toLowerCase() === String(currentEmployeeName).toLowerCase()
-    );
-    const myId = me?.id;
-    return myId != null && employees.some((e) => String(e.manager_id) === String(myId));
-  })()) && (
+  {(isAdminRole || isManager) && (
     <button
       onClick={() => setActiveTab('team')}
       className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${

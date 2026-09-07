@@ -32,6 +32,10 @@ import {
 } from "lucide-react";
 
 const HIDDEN_BALANCE_TYPES = ["vacation","unpaid", "other","compensation"];
+// Reporting Manager's Team Leave Balances view only — hides just Other and
+// Unpaid, distinct from HIDDEN_BALANCE_TYPES above (self balances, Admin
+// reports, and Employee's own view are unaffected by this list).
+const TEAM_BALANCE_HIDDEN_TYPES = ["other", "unpaid"];
 // const SICK_LEAVE_PROOF_THRESHOLD_DAYS = 2;
 
 // const getLeaveTypeHelpText = (leaveType) => {
@@ -145,6 +149,8 @@ function EmployeeLeaves() {
   const [leaveList, setLeaveList] = useState([]);
   const [leaveBalances, setLeaveBalances] = useState([]);
   const [teamRequests, setTeamRequests] = useState([]);
+  const [teamBalances, setTeamBalances] = useState([]);
+  const [isManager, setIsManager] = useState(false);
   const [processingId, setProcessingId] = useState(null);
   const [activeLeaveTab, setActiveLeaveTab] = useState("my");
   const [formData, setFormData] = useState({
@@ -210,6 +216,19 @@ function EmployeeLeaves() {
       const [leaveRes, balanceRes, compOffRes] = await Promise.all(requests);
       setLeaveList(leaveRes?.data?.data || []);
       setTeamRequests(leaveRes?.data?.teamRequests || []);
+      // isManager reflects whether the caller has ≥1 direct report — NOT
+      // whether any team leave requests happen to exist yet. A manager
+      // whose reports haven't submitted a leave request still has a team.
+      setIsManager(Boolean(leaveRes?.data?.isManager));
+
+      try {
+        const teamBalanceRes = await api.get("/leave/team-balances");
+        setTeamBalances(teamBalanceRes?.data?.data || []);
+      } catch (teamBalanceError) {
+        console.error("Error fetching team leave balances:", teamBalanceError);
+        setTeamBalances([]);
+      }
+
       const baseBalances = (balanceRes?.data?.data || []).filter(
         (balance) => !HIDDEN_BALANCE_TYPES.includes(balance.leave_type),
       );
@@ -577,8 +596,8 @@ const handleTeamLeaveAction = async (leaveId, status) => {
           </CardContent>
         </Card>
 
-        {/* Toggle Tabs (only show if user has team requests) */}
-        {teamRequests.length > 0 && (
+        {/* Toggle Tabs (only show if user has direct reports) */}
+        {isManager && (
           <div className="flex gap-2 border-b border-gray-200">
             <button
               onClick={() => setActiveLeaveTab("my")}
@@ -610,8 +629,52 @@ const handleTeamLeaveAction = async (leaveId, status) => {
         )}
 
         {/* Team Leave Requests */}
-        {teamRequests.length > 0 && activeLeaveTab === "team" && (
+        {isManager && activeLeaveTab === "team" && (
           <div>
+            {teamBalances.length > 0 && (
+              <div className="mb-5">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                  Team Leave Balances
+                </h3>
+                <div className="space-y-2">
+                  {teamBalances.map((member) => (
+                    <div
+                      key={member.employee_id}
+                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-3"
+                    >
+                      <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2">
+                        {member.employee_name}
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        {(member.balances || [])
+                          .filter(
+                            (balance) => !TEAM_BALANCE_HIDDEN_TYPES.includes(balance.leave_type)
+                          )
+                          .map((balance) => (
+                          <div
+                            key={`${member.employee_id}-${balance.leave_type}`}
+                            className="text-xs text-gray-600"
+                          >
+                            <span className="uppercase tracking-wide text-gray-400">
+                              {balance.leave_type}:
+                            </span>{" "}
+                            <span className="font-semibold text-gray-800">
+                              {formatLeaveValue(balance.balance)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {teamRequests.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
+                <ClipboardList className="w-9 h-9 mb-2 opacity-30" />
+                <p className="text-sm font-medium">No team leave requests yet</p>
+              </div>
+            )}
             <div className="space-y-3">
               {teamRequests.map((leave) => {
                 const cfg =
@@ -718,9 +781,9 @@ const handleTeamLeaveAction = async (leaveId, status) => {
         )}
 
         {/* My Leave Requests */}
-        {(teamRequests.length === 0 || activeLeaveTab === "my") && (
+        {(!isManager || activeLeaveTab === "my") && (
           <div>
-            {teamRequests.length === 0 && (
+            {!isManager && (
               <h2 className="text-base font-semibold text-gray-800 mb-3">
                 My Leave Requests
               </h2>
