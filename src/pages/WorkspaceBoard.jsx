@@ -443,6 +443,412 @@ const InlineInput = ({ value, placeholder, onSave, className, type = "text", ste
   );
 };
 
+// ✅ Excel-style List View for daily/weekly tasks.
+// Renders the same task objects and the same inline handlers as the Card View —
+// only the layout differs. Widths are percentages on a fixed-layout table so the
+// grid always fits the available page width without a horizontal scrollbar.
+const TaskListView = ({
+  tasks,
+  activeTab,
+  masterTasks,
+  assignableEmployees,
+  handleInlineUpdate,
+  handleDeleteTask,
+  isCurrentOrFutureTask,
+  editingDurationTaskId,
+  setEditingDurationTaskId,
+  durationHours,
+  setDurationHours,
+  durationMinutes,
+  setDurationMinutes,
+  handleDurationSave,
+}) => {
+  const isDaily = activeTab === "daily";
+  const role = localStorage.getItem("role");
+  const isAdmin = role?.toLowerCase().includes("admin");
+  const loggedInUser = localStorage.getItem("employee_name");
+
+  const headCell =
+    "px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500 border-b border-gray-200";
+  const bodyCell = "px-2 py-2 align-top border-b border-gray-100 text-[11px] text-gray-700";
+  const inlineCls =
+    "bg-transparent border-none outline-none w-full text-[11px] disabled:cursor-not-allowed";
+
+  const priorityStyles = {
+    low: "bg-emerald-50/50 hover:bg-emerald-50",
+    medium: "bg-blue-50/50 hover:bg-blue-50",
+    high: "bg-orange-50/50 hover:bg-orange-50",
+    critical: "bg-red-50/50 hover:bg-red-50",
+  };
+
+  return (
+    <div className="max-h-[60vh] overflow-y-auto">
+      <table className="w-full table-fixed border-collapse">
+        <thead className="sticky top-0 z-10 bg-gray-50">
+          <tr>
+            <th className={`${headCell} ${isDaily ? "w-[7%]" : "w-[8%]"}`}>Due Date</th>
+            <th className={`${headCell} ${isDaily ? "w-[9%]" : "w-[10%]"} hidden sm:table-cell`}>
+              Employee
+            </th>
+            <th className={`${headCell} ${isDaily ? "w-[17%]" : "w-[18%]"}`}>Task</th>
+            <th className={`${headCell} ${isDaily ? "w-[9%]" : "w-[13%]"} hidden lg:table-cell`}>
+              KPI
+            </th>
+            <th className={`${headCell} ${isDaily ? "w-[8%]" : "w-[13%]"} hidden lg:table-cell`}>
+              {isDaily ? "Target" : "Expected Outcome"}
+            </th>
+            {isDaily && <th className={`${headCell} w-[9%] hidden lg:table-cell`}>Actual</th>}
+            <th className={`${headCell} ${isDaily ? "w-[12%]" : "w-[14%]"} hidden md:table-cell`}>
+              Remark
+            </th>
+            <th className={`${headCell} w-[7%]`}>Priority</th>
+            <th className={`${headCell} w-[7%]`}>Status</th>
+            {isDaily && <th className={`${headCell} w-[8%] hidden md:table-cell`}>Tracked</th>}
+            <th className={`${headCell} ${isDaily ? "w-[5%]" : "w-[8%]"} hidden md:table-cell`}>
+              Screenshot
+            </th>
+            <th className={`${headCell} w-[2%]`} aria-label="Actions" />
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.map((t) => {
+            const isMyTask = t.employee_name === loggedInUser;
+            const canEdit = isAdmin || isMyTask;
+            const canDelete = isAdmin || isMyTask;
+            const pStyle =
+              priorityStyles[t.priority?.toLowerCase()] || "hover:bg-blue-50/30";
+            const masterTaskTitle = t.master_task_id
+              ? masterTasks.find((m) => String(m.id) === String(t.master_task_id))?.title ||
+                "Master Task"
+              : null;
+
+            return (
+              <tr key={t.task_id} className={`transition ${pStyle}`}>
+                {/* Due Date */}
+                <td className={`${bodyCell} font-semibold text-gray-600 whitespace-nowrap`}>
+                  {t.due_date
+                    ? new Date(t.due_date).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })
+                    : "—"}
+                </td>
+
+                {/* Employee */}
+                <td className={`${bodyCell} hidden sm:table-cell`}>
+                  {isAdmin ? (
+                    <select
+                      value={t.employee_id || ""}
+                      onChange={(e) =>
+                        handleInlineUpdate(t.task_id || t.id, "employee_id", e.target.value)
+                      }
+                      className="w-full bg-transparent border-none outline-none text-blue-600 font-semibold text-[11px] cursor-pointer truncate"
+                      title={t.employee_name}
+                    >
+                      {assignableEmployees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="block truncate text-blue-600 font-semibold" title={t.employee_name}>
+                      {t.employee_name}
+                    </span>
+                  )}
+                </td>
+
+                {/* Task */}
+                <td className={bodyCell}>
+                  <div title={t.title || ""}>
+                    <InlineInput
+                      disabled={!canEdit}
+                      value={t.title}
+                      placeholder="Task title"
+                      onSave={(val) => handleInlineUpdate(t.task_id || t.id, "title", val)}
+                      className={`${inlineCls} font-semibold text-gray-900`}
+                    />
+                  </div>
+                  {masterTaskTitle && (
+                    <span
+                      className="mt-1 inline-block max-w-full truncate text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full border border-purple-200 font-bold uppercase tracking-wide"
+                      title={masterTaskTitle}
+                    >
+                      🗂️ {masterTaskTitle}
+                    </span>
+                  )}
+                </td>
+
+                {/* KPI — daily: t.kpi, weekly: t.kpi */}
+                <td className={`${bodyCell} hidden lg:table-cell`}>
+                  <div title={t.kpi || ""}>
+                    <InlineInput
+                      disabled={!canEdit}
+                      value={t.kpi}
+                      placeholder="..."
+                      onSave={(val) => handleInlineUpdate(t.task_id, "kpi", val)}
+                      className={`${inlineCls} text-indigo-700 placeholder-indigo-300 font-medium`}
+                    />
+                  </div>
+                </td>
+
+                {/* Target (daily) / Expected Outcome (weekly) */}
+                <td className={`${bodyCell} hidden lg:table-cell`}>
+                  <div title={t.target_val || ""}>
+                    <InlineInput
+                      disabled={!canEdit}
+                      value={t.target_val}
+                      placeholder="..."
+                      onSave={(val) => handleInlineUpdate(t.task_id, "target_val", val)}
+                      className={`${inlineCls} text-indigo-700 placeholder-indigo-300 font-medium`}
+                    />
+                  </div>
+                </td>
+
+                {/* Actual (daily only) */}
+                {isDaily && (
+                  <td className={`${bodyCell} hidden lg:table-cell`}>
+                    <div title={t.actual_result || ""}>
+                      <InlineInput
+                        disabled={!canEdit}
+                        value={t.actual_result}
+                        placeholder="..."
+                        onSave={(val) => handleInlineUpdate(t.task_id, "actual_result", val)}
+                        className={`${inlineCls} text-emerald-700 placeholder-emerald-300 font-medium`}
+                      />
+                    </div>
+                  </td>
+                )}
+
+                {/* Remark */}
+                <td className={`${bodyCell} hidden md:table-cell`}>
+                  <div title={t.remark || ""}>
+                    <InlineInput
+                      disabled={!canEdit}
+                      value={t.remark}
+                      placeholder="..."
+                      onSave={(val) => handleInlineUpdate(t.task_id, "remark", val)}
+                      className={`${inlineCls} italic text-gray-700 placeholder-gray-300`}
+                    />
+                  </div>
+                </td>
+
+                {/* Priority */}
+                <td className={bodyCell}>
+                  <select
+                    disabled={!canEdit}
+                    value={t.priority || "medium"}
+                    onChange={(e) =>
+                      handleInlineUpdate(t.task_id || t.id, "priority", e.target.value)
+                    }
+                    className={`w-full text-[9px] uppercase tracking-wider font-bold px-1 py-1 rounded border outline-none text-center shadow-sm ${
+                      canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-80"
+                    } ${
+                      t.priority === "low"
+                        ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                        : t.priority === "high"
+                        ? "bg-orange-100 text-orange-800 border-orange-200"
+                        : t.priority === "critical"
+                        ? "bg-red-100 text-red-800 border-red-300"
+                        : "bg-blue-100 text-blue-800 border-blue-200"
+                    }`}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </td>
+
+                {/* Status */}
+                <td className={bodyCell}>
+                  <select
+                    disabled={!canEdit}
+                    value={t.status || "open"}
+                    onChange={(e) =>
+                      handleInlineUpdate(t.task_id || t.id, "status", e.target.value)
+                    }
+                    className={`w-full text-[9px] uppercase tracking-wider font-bold px-1 py-1 rounded border outline-none text-center shadow-sm ${
+                      canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-80"
+                    } ${
+                      t.status === "closed"
+                        ? "bg-green-100 text-green-700 border-green-200"
+                        : t.status === "in progress"
+                        ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                        : t.status === "waiting"
+                        ? "bg-orange-100 text-orange-700 border-orange-200"
+                        : "bg-blue-100 text-blue-700 border-blue-200"
+                    }`}
+                  >
+                    <option value="open">Open</option>
+                    <option value="in progress">In Prog</option>
+                    <option value="waiting">Waiting</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </td>
+
+                {/* Tracked Time (daily only) */}
+                {isDaily && (
+                  <td className={`${bodyCell} hidden md:table-cell`}>
+                    {t.started_at ? (
+                      editingDurationTaskId === (t.task_id || t.id) ? (
+                        <div className="flex flex-wrap items-center gap-0.5">
+                          <input
+                            type="number"
+                            min="0"
+                            value={durationHours}
+                            onChange={(e) => setDurationHours(Math.max(0, Number(e.target.value)))}
+                            className="w-8 text-[10px] text-center border border-purple-200 rounded px-0.5 py-0.5 outline-none"
+                          />
+                          <span className="text-[9px] text-purple-700 font-bold">h</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="59"
+                            value={durationMinutes}
+                            onChange={(e) =>
+                              setDurationMinutes(Math.min(59, Math.max(0, Number(e.target.value))))
+                            }
+                            className="w-8 text-[10px] text-center border border-purple-200 rounded px-0.5 py-0.5 outline-none"
+                          />
+                          <span className="text-[9px] text-purple-700 font-bold">m</span>
+                          <button
+                            onClick={() => handleDurationSave(t.task_id || t.id)}
+                            className="text-[9px] bg-purple-600 text-white px-1 py-0.5 rounded hover:bg-purple-700"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => setEditingDurationTaskId(null)}
+                            className="text-[9px] bg-gray-200 text-gray-600 px-1 py-0.5 rounded hover:bg-gray-300"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => {
+                            if (!canEdit) {
+                              toast.error("You are not authorized to edit this task");
+                              return;
+                            }
+                            if (String(t.status).toLowerCase() !== "closed") {
+                              toast.error("Only closed tasks can have their tracked time edited");
+                              return;
+                            }
+                            const hrs = parseFloat(t.hours_worked) || 0;
+                            setDurationHours(Math.floor(hrs));
+                            setDurationMinutes(Math.round((hrs % 1) * 60));
+                            setEditingDurationTaskId(t.task_id || t.id);
+                          }}
+                          className={`bg-purple-50 text-purple-800 border border-purple-200 px-1.5 py-1 rounded text-[10px] font-bold text-center shadow-sm transition ${
+                            canEdit ? "cursor-pointer hover:bg-purple-100" : "cursor-not-allowed opacity-70"
+                          }`}
+                          title={
+                            canEdit
+                              ? "Click to manually edit tracked time (closed tasks only)"
+                              : "You can only edit your own tasks"
+                          }
+                        >
+                          {(() => {
+                            const start = new Date(t.started_at).getTime();
+                            const end = t.ended_at ? new Date(t.ended_at).getTime() : new Date().getTime();
+                            const diffMs = Math.max(0, end - start);
+                            const diffHrs = Math.floor(diffMs / 3600000);
+                            const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                            return `${diffHrs}h ${diffMins}m${!t.ended_at ? " (Live)" : ""}`;
+                          })()}
+                        </div>
+                      )
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
+                )}
+
+                {/* Screenshot */}
+                <td className={`${bodyCell} hidden md:table-cell`}>
+                  {t.attachment ? (
+                    <div className="relative group/image inline-block">
+                      <img
+                        src={t.attachment}
+                        alt="Task attachment"
+                        className="h-8 w-auto max-w-full object-contain rounded border border-gray-200 bg-white cursor-zoom-in hover:opacity-90 transition"
+                        onClick={() => {
+                          const newTab = window.open();
+                          newTab.document.write(
+                            `<img src="${t.attachment}" style="max-width: 100vw; max-height: 100vh; object-fit: contain; display: block; margin: auto;" />`
+                          );
+                        }}
+                        title="Click to view full size"
+                      />
+                      {canEdit && (
+                        <button
+                          onClick={() => handleInlineUpdate(t.task_id || t.id, "attachment", null)}
+                          className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center text-[8px] shadow transition opacity-0 group-hover/image:opacity-100"
+                          title="Remove Image"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    canEdit && (
+                      <div
+                        onPaste={(e) => {
+                          const items = e.clipboardData?.items;
+                          if (items) {
+                            for (let i = 0; i < items.length; i++) {
+                              if (items[i].type.indexOf("image") !== -1) {
+                                const file = items[i].getAsFile();
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  handleInlineUpdate(
+                                    t.task_id || t.id,
+                                    "attachment",
+                                    event.target.result
+                                  );
+                                  toast.success("Image pasted successfully to task!");
+                                };
+                                reader.readAsDataURL(file);
+                                break;
+                              }
+                            }
+                          }
+                        }}
+                        onClick={(e) => e.currentTarget.focus()}
+                        className="text-[10px] text-center bg-slate-50 text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-1 py-1 rounded border border-dashed border-slate-200 cursor-pointer transition focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        tabIndex={0}
+                        title="Click and press Ctrl+V to paste an image for this task"
+                      >
+                        📋
+                      </div>
+                    )
+                  )}
+                </td>
+
+                {/* Delete */}
+                <td className={`${bodyCell} text-center`}>
+                  {canDelete && isCurrentOrFutureTask(t) && (
+                    <button
+                      onClick={() => handleDeleteTask(t.task_id)}
+                      className="text-red-400 hover:text-red-600 hover:bg-red-100 p-1 rounded transition"
+                      title="Delete Task"
+                    >
+                      ❌
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 // ✅ Main Board Component
 const WorkspaceBoard = () => {
   const { id, masterTaskId } = useParams();
@@ -469,6 +875,7 @@ const WorkspaceBoard = () => {
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("daily"); // "daily", "weekly", or "master"
+  const [viewMode, setViewMode] = useState("card"); // "card" or "list" — presentation only
 
   // Filters & Sorting
   const [showFilters, setShowFilters] = useState(false);
@@ -1189,25 +1596,47 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
         )}
 
         {/* ✅ Tabs for Daily/Weekly/Master */}
-        <div className="flex gap-6 border-b border-gray-200 mb-4 px-2">
-          <button
-            onClick={() => setActiveTab('daily')}
-            className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'daily' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            ☀️ Daily Log
-          </button>
-          <button
-            onClick={() => setActiveTab('weekly')}
-            className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'weekly' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            📅 Weekly Log
-          </button>
-          <button
-            onClick={() => setActiveTab('master')}
-            className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'master' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            🗂️ Master Tasks
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 mb-4 px-2">
+          <div className="flex gap-6">
+            <button
+              onClick={() => setActiveTab('daily')}
+              className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'daily' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              ☀️ Daily Log
+            </button>
+            <button
+              onClick={() => setActiveTab('weekly')}
+              className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'weekly' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              📅 Weekly Log
+            </button>
+            <button
+              onClick={() => setActiveTab('master')}
+              className={`pb-2 px-1 text-sm font-medium transition-colors ${activeTab === 'master' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              🗂️ Master Tasks
+            </button>
+          </div>
+
+          {/* Card / List view toggle (presentation only — task data & state are shared) */}
+          {activeTab !== 'master' && (
+            <div className="flex bg-white rounded-lg p-1 border shadow-sm mb-2">
+              <button
+                type="button"
+                onClick={() => setViewMode('card')}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === 'card' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Card View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === 'list' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                List View
+              </button>
+            </div>
+          )}
         </div>
 
         {filterMasterTaskId !== 'all' && activeTab !== 'master' && (
@@ -1550,6 +1979,23 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               {filteredTasks.length === 0 ? (
                 <div className="p-8 text-center text-gray-500 text-sm">No {activeTab} tasks logged yet. Add one above!</div>
+              ) : viewMode === 'list' ? (
+                <TaskListView
+                  tasks={filteredTasks}
+                  activeTab={activeTab}
+                  masterTasks={masterTasks}
+                  assignableEmployees={assignableEmployees}
+                  handleInlineUpdate={handleInlineUpdate}
+                  handleDeleteTask={handleDeleteTask}
+                  isCurrentOrFutureTask={isCurrentOrFutureTask}
+                  editingDurationTaskId={editingDurationTaskId}
+                  setEditingDurationTaskId={setEditingDurationTaskId}
+                  durationHours={durationHours}
+                  setDurationHours={setDurationHours}
+                  durationMinutes={durationMinutes}
+                  setDurationMinutes={setDurationMinutes}
+                  handleDurationSave={handleDurationSave}
+                />
               ) : (
                 <ul className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
                   {filteredTasks.map((t) => {

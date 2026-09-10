@@ -21,6 +21,37 @@ import {
 import { ArrowLeft, Trash2 } from "lucide-react";
 import api from "../hooks/useApi";
 
+// 12-hour AM/PM UI helpers for Expected Clock-In Time. The DB/API value stays
+// a 24-hour "HH:mm" string (or "" for not-set) — conversion happens only here.
+const HOUR_12_OPTIONS = Array.from({ length: 12 }, (_, index) =>
+  String(index + 1).padStart(2, "0")
+);
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, index) =>
+  String(index).padStart(2, "0")
+);
+
+const getTwelveHourParts = (timeValue) => {
+  if (!timeValue) return { hour12: "09", minute: "00", meridiem: "AM" };
+  const [hourRaw = "09", minute = "00"] = String(timeValue).split(":");
+  const parsedHour = Number.parseInt(hourRaw, 10);
+  if (Number.isNaN(parsedHour)) return { hour12: "09", minute: "00", meridiem: "AM" };
+  const meridiem = parsedHour >= 12 ? "PM" : "AM";
+  const normalizedHour = parsedHour % 12 || 12;
+  return {
+    hour12: String(normalizedHour).padStart(2, "0"),
+    minute: String(minute).padStart(2, "0"),
+    meridiem,
+  };
+};
+
+const build24HourTime = (hour12, minute, meridiem) => {
+  const parsedHour = Number.parseInt(hour12, 10);
+  if (Number.isNaN(parsedHour)) return "";
+  let hour24 = parsedHour % 12;
+  if (meridiem === "PM") hour24 += 12;
+  return `${String(hour24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+};
+
 const EditEmployee = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -35,6 +66,7 @@ const EditEmployee = () => {
     startDate: "",
     status: "active",
     manager_id: "",
+    expected_clock_in_time: "",
   });
 
   const [allEmployees, setAllEmployees] = useState([]);
@@ -55,6 +87,9 @@ const EditEmployee = () => {
           startDate: employee.created_at?.split("T")[0] || "",
           status: employee.status || "active",
           manager_id: employee.manager_id ? String(employee.manager_id) : "",
+          expected_clock_in_time: employee.expected_clock_in_time
+            ? employee.expected_clock_in_time.slice(0, 5)
+            : "",
         });
       } catch (err) {
         console.error("Error fetching employee:", err);
@@ -92,6 +127,7 @@ const EditEmployee = () => {
         address: formData.address,
         status: formData.status,
         manager_id: formData.manager_id ? Number(formData.manager_id) : null,
+        expected_clock_in_time: formData.expected_clock_in_time || null,
       });
       toast.success("Team Member updated successfully");
       navigate("/employees");
@@ -114,6 +150,20 @@ const EditEmployee = () => {
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleExpectedClockInPartChange = (part, value) => {
+    if (part === "hour12" && value === "none") {
+      handleInputChange("expected_clock_in_time", "");
+      return;
+    }
+
+    const current = getTwelveHourParts(formData.expected_clock_in_time);
+    const next = { ...current, [part]: value };
+    handleInputChange(
+      "expected_clock_in_time",
+      build24HourTime(next.hour12, next.minute, next.meridiem)
+    );
   };
 
   return (
@@ -228,6 +278,73 @@ const EditEmployee = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expected_clock_in_time">Expected Clock-In Time</Label>
+                  {(() => {
+                    const isSet = Boolean(formData.expected_clock_in_time);
+                    const { hour12, minute, meridiem } = getTwelveHourParts(
+                      formData.expected_clock_in_time
+                    );
+                    return (
+                      <div className="flex gap-2">
+                        <Select
+                          value={isSet ? hour12 : "none"}
+                          onValueChange={(value) =>
+                            handleExpectedClockInPartChange("hour12", value)
+                          }
+                        >
+                          <SelectTrigger id="expected_clock_in_time">
+                            <SelectValue placeholder="Hour" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Not set</SelectItem>
+                            {HOUR_12_OPTIONS.map((h) => (
+                              <SelectItem key={h} value={h}>
+                                {Number(h)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select
+                          value={minute}
+                          disabled={!isSet}
+                          onValueChange={(value) =>
+                            handleExpectedClockInPartChange("minute", value)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Minute" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MINUTE_OPTIONS.map((m) => (
+                              <SelectItem key={m} value={m}>
+                                {m}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select
+                          value={meridiem}
+                          disabled={!isSet}
+                          onValueChange={(value) =>
+                            handleExpectedClockInPartChange("meridiem", value)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="AM/PM" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="AM">AM</SelectItem>
+                            <SelectItem value="PM">PM</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 

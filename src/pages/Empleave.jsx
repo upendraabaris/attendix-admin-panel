@@ -619,6 +619,7 @@ function Empleave() {
         .map(([leaveType, balance]) => ({
           leave_type: leaveType,
           balance: balance.balance || 0,
+          total_entitled: balance.total_entitled || 0,
         }));
 
       const compOffBalance = compOffRes?.data?.data;
@@ -628,6 +629,12 @@ function Empleave() {
         const compensationBalance = {
           leave_type: "compensation",
           balance: Number(compOffBalance.available_balance || 0),
+          // Granted comp-off that has not expired. available_balance is already
+          // net of pending, so pending is added back to get the granted total.
+          total_entitled:
+            Number(compOffBalance.used_count || 0) +
+            Number(compOffBalance.available_balance || 0) +
+            Number(compOffBalance.pending_days || 0),
         };
 
         const existingIndex = mergedBalances.findIndex(
@@ -744,6 +751,14 @@ function Empleave() {
                       {formatLeaveValue(item.balance)}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">Available Balance</p>
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <p className="text-sm font-semibold text-gray-700">
+                        {formatLeaveValue(item.total_entitled)}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-gray-400 mt-0.5">
+                        Total Entitled
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
               ))
