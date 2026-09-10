@@ -97,6 +97,7 @@ function EmployeeAttendanceTab() {
   const [directReports, setDirectReports] = useState([]);
   const [selectedTeamEmployeeId, setSelectedTeamEmployeeId] = useState("");
   const [activeAttendanceTab, setActiveAttendanceTab] = useState("my");
+  const [expectedClockInTime, setExpectedClockInTime] = useState(null);
 
   const fetchBreakSummary = useCallback(async () => {
     if (!employeeId) return;
@@ -191,6 +192,19 @@ function EmployeeAttendanceTab() {
 
   useEffect(() => { fetchMyAttendance(); }, [fetchMyAttendance]);
 
+  useEffect(() => {
+    if (!employeeId) return;
+    const fetchExpectedClockInTime = async () => {
+      try {
+        const res = await api.get(`/employee/getEmployeeById/${employeeId}`);
+        setExpectedClockInTime(res?.data?.expected_clock_in_time || null);
+      } catch (err) {
+        console.error("Error fetching expected clock-in time:", err);
+      }
+    };
+    fetchExpectedClockInTime();
+  }, [employeeId]);
+
   const fetchTeamAttendance = useCallback(async () => {
     try {
       const res = await api.get("/attendance/team", {
@@ -263,6 +277,52 @@ function EmployeeAttendanceTab() {
   const isClockedIn = attendance.some(
     (r) => r.date === todayStr && r.clock_in && !r.clock_out
   );
+
+  const formatLateDuration = (diffMinutes) => {
+    const hours = Math.floor(diffMinutes / 60);
+    const mins = diffMinutes % 60;
+    if (hours <= 0) return `${mins} minute${mins === 1 ? "" : "s"}`;
+    if (mins === 0) return `${hours} hour${hours === 1 ? "" : "s"}`;
+    return `${hours} hour${hours === 1 ? "" : "s"} ${mins} minute${mins === 1 ? "" : "s"}`;
+  };
+
+  // Parses the already-displayed "h:mm AM/PM" clock-in string (the same
+  // value rendered in the attendance list below) into minutes-since-midnight.
+  // Comparing against this — rather than any raw UTC/ISO timestamp — keeps
+  // the late check in the exact same local time the attendance UI shows.
+  const parseDisplayedTimeToMinutes = (timeStr) => {
+    if (!timeStr) return null;
+    const match = /^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/.exec(String(timeStr).trim());
+    if (!match) return null;
+
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const meridiem = match[3].toLowerCase();
+    if (hours === 12) hours = 0;
+    if (meridiem === "pm") hours += 12;
+
+    return hours * 60 + minutes;
+  };
+
+  const getLateClockInMessage = () => {
+    if (!expectedClockInTime) return null;
+    const todayRecord = attendance.find((r) => r.date === todayStr && r.clock_in);
+    if (!todayRecord) return null;
+
+    const [expHours, expMinutes] = expectedClockInTime.split(":").map(Number);
+    if (Number.isNaN(expHours) || Number.isNaN(expMinutes)) return null;
+
+    const actualMinutesOfDay = parseDisplayedTimeToMinutes(todayRecord.clock_in);
+    if (actualMinutesOfDay === null) return null;
+
+    const expectedMinutesOfDay = expHours * 60 + expMinutes;
+    const diff = actualMinutesOfDay - expectedMinutesOfDay;
+
+    if (diff <= 0) return null;
+    return `You clocked in late by ${formatLateDuration(diff)}`;
+  };
+
+  const lateClockInMessage = getLateClockInMessage();
 
   const formatDurationSeconds = (totalSecs) => {
     const secs = Math.max(0, Math.floor(totalSecs));
@@ -449,6 +509,12 @@ function EmployeeAttendanceTab() {
               >
                 Retry Location
               </button>
+            </div>
+          )}
+
+          {lateClockInMessage && (
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              {lateClockInMessage}
             </div>
           )}
 

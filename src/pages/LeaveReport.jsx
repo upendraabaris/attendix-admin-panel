@@ -430,13 +430,30 @@ const getAvatarColor = (name = "") => {
 };
 
 // ── Badge for balance value ──────────────────────────────────────────────────
-const BalanceBadge = ({ value }) => {
+// `total` is optional: when supplied, the total entitled is shown alongside the
+// balance as "balance / total". Badge colouring stays driven by the balance.
+const BalanceBadge = ({ value, total }) => {
   const num = Number(value || 0);
   let cls = "inline-flex items-center justify-center rounded-md px-2.5 py-0.5 text-sm font-semibold ";
   if (num === 0) cls += "bg-gray-100 text-gray-400";
   else if (num <= 3) cls += "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
   else cls += "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200";
-  return <span className={cls}>{formatLeaveValue(num)}</span>;
+
+  const badge = <span className={cls}>{formatLeaveValue(num)}</span>;
+
+  if (total === undefined || total === null) return badge;
+
+  return (
+    <span
+      className="inline-flex items-baseline gap-1"
+      title={`Balance ${formatLeaveValue(num)} of ${formatLeaveValue(Number(total || 0))} total entitled`}
+    >
+      {badge}
+      <span className="text-xs font-medium text-gray-400">
+        / {formatLeaveValue(Number(total || 0))}
+      </span>
+    </span>
+  );
 };
 
 // ── ADMIN VIEW ───────────────────────────────────────────────────────────────
@@ -572,7 +589,10 @@ const AdminView = ({ policies, adminRows, loading }) => {
                             key={`${row.employee_id}-${type}`}
                             className="py-3 text-center"
                           >
-                            <BalanceBadge value={bal?.balance || 0} />
+                            <BalanceBadge
+                              value={bal?.balance || 0}
+                              total={bal?.total_entitled || 0}
+                            />
                           </TableCell>
                         );
                       })}
@@ -632,7 +652,7 @@ const EmployeeView = ({ policies, employeeBalances, loading }) => {
                     Leave Type
                   </TableHead>
                   <TableHead className="py-3 text-right pr-6 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    Available Balance
+                    Balance / Total Entitled
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -648,7 +668,10 @@ const EmployeeView = ({ policies, employeeBalances, loading }) => {
                         {formatLeaveTypeLabel(type)}
                       </TableCell>
                       <TableCell className="py-3 pr-6 text-right">
-                        <BalanceBadge value={bal?.balance || 0} />
+                        <BalanceBadge
+                          value={bal?.balance || 0}
+                          total={bal?.total_entitled || 0}
+                        />
                       </TableCell>
                     </TableRow>
                   );
@@ -707,6 +730,12 @@ const LeaveReport = () => {
               balance: Number(compOffBalance.available_balance || 0),
               used_days: Number(compOffBalance.used_count || 0),
               pending_days: Number(compOffBalance.pending_days || 0),
+              // Granted comp-off that has not expired. available_balance is already
+              // net of pending, so pending is added back to get the granted total.
+              total_entitled:
+                Number(compOffBalance.used_count || 0) +
+                Number(compOffBalance.available_balance || 0) +
+                Number(compOffBalance.pending_days || 0),
             };
             const existingIndex = mergedBalances.findIndex(
               (item) => item.leave_type === "compensation"
