@@ -21,6 +21,21 @@ const WEEKDAY_OPTIONS = [
 
 const currentUser = localStorage.getItem("employee_name");
 
+// Minimal cookie helpers used only for the WorkspaceBoard view-mode preference.
+const VIEW_MODE_COOKIE_NAME = "workspaceBoardViewMode";
+const VIEW_MODE_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60; // ~1 year
+
+const getCookie = (name) => {
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.split("=")[1]) : null;
+};
+
+const setCookie = (name, value, maxAgeSeconds) => {
+  document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${maxAgeSeconds}; path=/; SameSite=Lax`;
+};
+
 // ✅ Modal Component (unchanged)
 const AddTaskModal = ({
   isOpen,
@@ -875,7 +890,17 @@ const WorkspaceBoard = () => {
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("daily"); // "daily", "weekly", or "master"
-  const [viewMode, setViewMode] = useState("card"); // "card" or "list" — presentation only
+  // "card" or "list" — presentation only. Defaults to "list" and remembers the
+  // user's last choice via a cookie so it stays selected across refreshes and
+  // browser reopens.
+  const [viewMode, setViewMode] = useState(
+    () => getCookie(VIEW_MODE_COOKIE_NAME) || "list"
+  );
+
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode);
+    setCookie(VIEW_MODE_COOKIE_NAME, mode, VIEW_MODE_COOKIE_MAX_AGE_SECONDS);
+  };
 
   // Filters & Sorting
   const [showFilters, setShowFilters] = useState(false);
@@ -1623,14 +1648,14 @@ const handleInlineUpdate = async (taskId, field, newValue) => {
             <div className="flex bg-white rounded-lg p-1 border shadow-sm mb-2">
               <button
                 type="button"
-                onClick={() => setViewMode('card')}
+                onClick={() => handleViewModeChange('card')}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === 'card' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 Card View
               </button>
               <button
                 type="button"
-                onClick={() => setViewMode('list')}
+                onClick={() => handleViewModeChange('list')}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === 'list' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 List View

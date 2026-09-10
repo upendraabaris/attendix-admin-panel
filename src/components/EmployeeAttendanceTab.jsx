@@ -513,7 +513,7 @@ function EmployeeAttendanceTab() {
           )}
 
           {lateClockInMessage && (
-            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
               {lateClockInMessage}
             </div>
           )}
