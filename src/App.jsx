@@ -37,6 +37,7 @@ import HolidayManagementPage from "./pages/HolidayManagementPage";
 import Reports from "./pages/Reports";
 import Support from "./pages/Support";
 import TrackingSettings from "./pages/TrackingSettings";
+import RewardSettings from "./pages/RewardSettings";
 import BreakHistoryPage from "./components/BreakHistoryPage";
 import Chat from "./pages/Chat";
 import LeaveReport from "./pages/LeaveReport";
@@ -273,6 +274,15 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <TrackingSettings />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reward-settings"
+            element={
+              <ProtectedRoute>
+                <RewardSettings />
               </ProtectedRoute>
             }
           />

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Calendar, Clock, MapPin, LogIn, LogOut, Coffee, Briefcase } from "lucide-react";
+import { Calendar, Clock, MapPin, LogIn, LogOut, Coffee, Briefcase, Trophy } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -98,6 +98,9 @@ function EmployeeAttendanceTab() {
   const [selectedTeamEmployeeId, setSelectedTeamEmployeeId] = useState("");
   const [activeAttendanceTab, setActiveAttendanceTab] = useState("my");
   const [expectedClockInTime, setExpectedClockInTime] = useState(null);
+  const [rewardEnabled, setRewardEnabled] = useState(false);
+  const [myReward, setMyReward] = useState(null);
+  const [topRankers, setTopRankers] = useState([]);
 
   const fetchBreakSummary = useCallback(async () => {
     if (!employeeId) return;
@@ -204,6 +207,33 @@ function EmployeeAttendanceTab() {
     };
     fetchExpectedClockInTime();
   }, [employeeId]);
+
+  // ── Own reward points / rank (additive; independent of attendance state) ──
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchMyRanking = async () => {
+      try {
+        const res = await api.get("/rewards/my-ranking", {
+          params: { from: filters.startDate, to: filters.endDate },
+        });
+        if (cancelled) return;
+        setRewardEnabled(Boolean(res?.data?.rewardSystemEnabled));
+        setMyReward(res?.data?.data || null);
+        setTopRankers(Array.isArray(res?.data?.topRankers) ? res.data.topRankers : []);
+      } catch {
+        if (cancelled) return;
+        setRewardEnabled(false);
+        setMyReward(null);
+        setTopRankers([]);
+      }
+    };
+
+    fetchMyRanking();
+    return () => {
+      cancelled = true;
+    };
+  }, [filters.startDate, filters.endDate]);
 
   const fetchTeamAttendance = useCallback(async () => {
     try {
@@ -544,6 +574,80 @@ function EmployeeAttendanceTab() {
             </div>
           </div>
         </div>
+
+        {/* Top Ranker — visible to every employee. Hidden when the reward system
+            is disabled or nobody has scored yet. Rendered independently of the
+            "My Reward Points" card below so that card is unaffected. */}
+        {rewardEnabled && topRankers.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-base leading-none">🏆</span>
+              <h2 className="text-sm font-semibold text-gray-900">Top Ranker</h2>
+              {topRankers.length > 1 && (
+                <span className="text-[10px] uppercase tracking-wider text-amber-600 font-semibold bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                  {topRankers.length}-way tie
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {topRankers.map((top) => (
+                <div
+                  key={top.employee_id}
+                  className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"
+                >
+                  <span className="text-sm font-semibold text-amber-900">
+                    {top.employee_name}
+                  </span>
+                  <span className="text-xs font-medium text-amber-700">
+                    {top.reward_points} pts
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* My Reward Points — only rendered while the reward system is enabled */}
+        {rewardEnabled && myReward && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="w-4 h-4 text-indigo-600" />
+              <h2 className="text-sm font-semibold text-gray-900">My Reward Points</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-4 py-3">
+                <p className="text-[10px] uppercase tracking-wider text-indigo-500 font-semibold">
+                  Total Reward Points
+                </p>
+                <p className="text-2xl font-bold text-indigo-700 mt-1">
+                  {myReward.reward_points}
+                </p>
+              </div>
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-4 py-3">
+                <p className="text-[10px] uppercase tracking-wider text-emerald-600 font-semibold">
+                  Current Rank
+                </p>
+                <p className="text-2xl font-bold text-emerald-700 mt-1">
+                  {myReward.rank}
+                  {myReward.total_ranked ? (
+                    <span className="text-sm font-medium text-emerald-600">
+                      {" "}
+                      of {myReward.total_ranked}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+              <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">
+                  Ranking Period
+                </p>
+                <p className="text-sm font-semibold text-gray-700 mt-1.5">
+                  {filters.startDate} to {filters.endDate}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Toggle Tabs (only show if user has direct reports) */}
         {isManager && (
