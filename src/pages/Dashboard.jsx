@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Home,
   XCircle,
+  Trophy,
 } from "lucide-react";
 
 const getInitials = (name) =>
@@ -29,6 +30,19 @@ const formatToday = () =>
     year: "numeric",
   });
 
+// Local date parts (never toISOString) so the default range is not shifted by UTC.
+const getFirstDayOfMonth = () => {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-01`;
+};
+
+const getToday = () => {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(
+    t.getDate()
+  ).padStart(2, "0")}`;
+};
+
 const Dashboard = () => {
   const [todayClockIns, setTodayClockIns] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
@@ -43,6 +57,55 @@ const Dashboard = () => {
   });
 
   const orgID = localStorage.getItem("orgID");
+
+  // ── Reward ranking (independent of the existing dashboard fetches) ────────
+  const [rankingEnabled, setRankingEnabled] = useState(false);
+  const [ranking, setRanking] = useState([]);
+  const [rankingLoading, setRankingLoading] = useState(true);
+  // Visibility is decided once, after the first response. Keeping this separate
+  // from rankingLoading means later refetches never unmount the widget — if they
+  // did, the date inputs would be destroyed mid-interaction (closing the native
+  // picker) and the page would jump as the section collapsed.
+  const [rankingInitialized, setRankingInitialized] = useState(false);
+  const [rankingRange, setRankingRange] = useState({
+    from: getFirstDayOfMonth(),
+    to: getToday(),
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // A date input reports an empty value while the user is still completing it.
+    // Skip those interim states instead of querying with a blank range.
+    if (!rankingRange.from || !rankingRange.to) return undefined;
+
+    const fetchRanking = async () => {
+      try {
+        setRankingLoading(true);
+        const res = await api.get("/rewards/ranking", {
+          params: { from: rankingRange.from, to: rankingRange.to },
+        });
+        if (cancelled) return;
+        setRankingEnabled(Boolean(res?.data?.rewardSystemEnabled));
+        setRanking(Array.isArray(res?.data?.data) ? res.data.data : []);
+      } catch {
+        if (cancelled) return;
+        // Reward ranking is additive — never disturb the rest of the dashboard.
+        setRankingEnabled(false);
+        setRanking([]);
+      } finally {
+        if (!cancelled) {
+          setRankingLoading(false);
+          setRankingInitialized(true);
+        }
+      }
+    };
+
+    fetchRanking();
+    return () => {
+      cancelled = true;
+    };
+  }, [rankingRange.from, rankingRange.to]);
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -408,6 +471,108 @@ const Dashboard = () => {
           </div>
 
         </div>
+
+        {/* Employee Reward Ranking — only rendered while the reward system is enabled.
+            Gated on rankingInitialized (not rankingLoading) so refetches triggered by
+            the date inputs keep this section mounted. */}
+        {rankingInitialized && rankingEnabled && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-indigo-600" />
+                <h2 className="text-sm font-semibold text-gray-900">Employee Reward Ranking</h2>
+              </div>
+              <div className="flex items-end gap-2">
+                <div>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
+                    From
+                  </label>
+                  <input
+                    type="date"
+                    value={rankingRange.from}
+                    onChange={(e) =>
+                      setRankingRange((prev) => ({ ...prev, from: e.target.value }))
+                    }
+                    className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase tracking-wide">
+                    To
+                  </label>
+                  <input
+                    type="date"
+                    value={rankingRange.to}
+                    onChange={(e) =>
+                      setRankingRange((prev) => ({ ...prev, to: e.target.value }))
+                    }
+                    className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {rankingLoading ? (
+              <div className="p-8 text-center text-sm text-gray-500">Updating ranking…</div>
+            ) : ranking.length === 0 ? (
+              <div className="p-8 text-center text-sm text-gray-500">
+                No employees to rank for the selected period.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="py-3 pl-5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 w-20">
+                        Rank
+                      </th>
+                      <th className="py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Employee
+                      </th>
+                      <th className="py-3 pr-5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Reward Points
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ranking.map((row, idx) => (
+                      <tr
+                        key={row.employee_id}
+                        className={`border-t border-gray-100 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}
+                      >
+                        <td className="py-3 pl-5">
+                          <span className="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-md bg-indigo-50 text-indigo-700 text-sm font-semibold">
+                            {row.rank}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold flex items-center justify-center flex-shrink-0">
+                              {getInitials(row.employee_name)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">
+                                {row.employee_name}
+                              </p>
+                              {row.email && (
+                                <p className="text-xs text-gray-400 truncate">{row.email}</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-5 text-right">
+                          <span className="text-sm font-semibold text-gray-900">
+                            {row.reward_points}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   );

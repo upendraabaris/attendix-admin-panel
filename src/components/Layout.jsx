@@ -17,7 +17,8 @@ import {
   MessageSquare,
   Settings,
   Layers,
-    Home,   
+    Home,
+  Trophy,
 } from "lucide-react";
 import {
   Tooltip,
@@ -198,6 +199,7 @@ const Layout = ({ children }) => {
       { name: "Reports", href: "/reports", icon: FileBarChart },
       { name: "Chat", href: "/chat", icon: MessageSquare },
       { name: "Support", href: "/support", icon: LifeBuoy },
+      { name: "Reward Settings", href: "/reward-settings", icon: Trophy },
       { name: "Tracking Settings", href: "/tracking-settings", icon: Settings },
     ];
   } else if (isSupportRole) {
